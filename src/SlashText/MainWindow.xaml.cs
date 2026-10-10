@@ -181,14 +181,14 @@ public partial class MainWindow : Window
             _settings.Capture.Recording ??= new RecordingSettings();
             if (AppPaths.IsCapturePilot)
             {
-                Title = AppPaths.IsAboutPilot ? "SlashDesk — Piloto Sobre 3.3.0 · #68" : AppPaths.IsSettingsPilot ? "SlashDesk — Piloto Configurações 3.3.0 · #67" : AppPaths.IsStatisticsPilot ? "SlashDesk — Piloto Estatísticas 3.3.0 · #66" : AppPaths.IsQuickAccentPilot ? "SlashDesk — Piloto Acento Rápido 3.3.0 · #65" : AppPaths.IsCaptureOcrPilot ? "SlashDesk — Piloto Captura + OCR 3.3.0" : AppPaths.IsCaptureComplementsPilot ? "SlashDesk — Piloto Complementos da Captura 3.3.0 · #74" : AppPaths.IsShortcutsPilot ? "SlashDesk — Piloto Atalhos 3.3.0 · #64" : "SlashDesk — Piloto Captura 3.3.0 · #63";
-                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot)
+                Title = AppPaths.IsAuxiliaryPilot ? "SlashDesk — Piloto Interfaces auxiliares 3.3.0 · #69" : AppPaths.IsAboutPilot ? "SlashDesk — Piloto Sobre 3.3.0 · #68" : AppPaths.IsSettingsPilot ? "SlashDesk — Piloto Configurações 3.3.0 · #67" : AppPaths.IsStatisticsPilot ? "SlashDesk — Piloto Estatísticas 3.3.0 · #66" : AppPaths.IsQuickAccentPilot ? "SlashDesk — Piloto Acento Rápido 3.3.0 · #65" : AppPaths.IsCaptureOcrPilot ? "SlashDesk — Piloto Captura + OCR 3.3.0" : AppPaths.IsCaptureComplementsPilot ? "SlashDesk — Piloto Complementos da Captura 3.3.0 · #74" : AppPaths.IsShortcutsPilot ? "SlashDesk — Piloto Atalhos 3.3.0 · #64" : "SlashDesk — Piloto Captura 3.3.0 · #63";
+                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot)
                 {
                     _settings.CheckUpdatesOnStartup = false;
                     _settings.StartWithWindows = false;
                 }
                 _settings.OnboardingCompleted = true;
-                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot) _settings.CloseToTray = false;
+                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot) _settings.CloseToTray = false;
                 if (!File.Exists(AppPaths.SettingsFile))
                     _settings.Capture.OutputDirectoryTemplate = Path.Combine(AppPaths.DataDirectory, "Capturas", "{year}", "{month}");
                 StartWithWindowsCheckBox.IsEnabled = false;
@@ -274,7 +274,8 @@ public partial class MainWindow : Window
                 "Atalhos globais de captura",
                 ConfigureCaptureShortcuts);
             RefreshCaptureHistory();
-            if (AppPaths.IsAboutPilot) ShowView(AboutView, AboutTabButton);
+            if (AppPaths.IsAuxiliaryPilot) ShowView(SettingsView, SettingsTabButton);
+            else if (AppPaths.IsAboutPilot) ShowView(AboutView, AboutTabButton);
             else if (AppPaths.IsSettingsPilot) ShowView(SettingsView, SettingsTabButton);
             else if (AppPaths.IsStatisticsPilot) ShowView(StatisticsView, StatisticsTabButton);
             else if (AppPaths.IsQuickAccentPilot) ShowView(QuickAccentView, QuickAccentTabButton);
@@ -334,7 +335,7 @@ public partial class MainWindow : Window
 
         StatusText.Text =
             $"SlashDesk iniciado em modo reduzido · {startup.Failures.Count} módulo(s) indisponível(is)";
-        MessageBox.Show(
+        ShowAppDialog(
             "O SlashDesk iniciou, mas alguns módulos não puderam ser carregados:" +
             Environment.NewLine + Environment.NewLine +
             modules +
@@ -353,7 +354,7 @@ public partial class MainWindow : Window
             return true;
         }
 
-        MessageBox.Show(
+        ShowAppDialog(
             "O arquivo snippets.md não pôde ser carregado e está protegido contra alterações. " +
             "Restaure um backup válido antes de salvar, excluir ou importar atalhos.",
             "Atalhos em modo protegido",
@@ -414,11 +415,12 @@ public partial class MainWindow : Window
 
         try
         {
-            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            if (_captureNotificationEvidenceLauncher is not null) _captureNotificationEvidenceLauncher(path);
+            else Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
         }
         catch (Exception exception)
         {
-            MessageBox.Show(
+            ShowAppDialog(
                 exception.Message,
                 "Não foi possível abrir a captura",
                 MessageBoxButton.OK,
@@ -557,7 +559,7 @@ public partial class MainWindow : Window
                     ["reason"] = exception is OperationCanceledException ? "target_changed" : "operation_failed"
                 });
                 StatusText.Text = $"Falha ao inserir {e.Snippet.Trigger}";
-                MessageBox.Show(
+                ShowAppDialog(
                     exception.Message,
                     "Não foi possível inserir o texto",
                     MessageBoxButton.OK,
@@ -748,7 +750,7 @@ public partial class MainWindow : Window
 
         if (!TriggerRule.TryValidate(candidate.Trigger, out var triggerError))
         {
-            MessageBox.Show(
+            ShowAppDialog(
                 triggerError,
                 "Atalho incompatível",
                 MessageBoxButton.OK,
@@ -787,7 +789,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
-            MessageBox.Show(
+            ShowAppDialog(
                 exception.Message,
                 "Não foi possível salvar",
                 MessageBoxButton.OK,
@@ -838,7 +840,7 @@ public partial class MainWindow : Window
         catch (Exception exception)
         {
             RefreshNavigation();
-            MessageBox.Show(
+            ShowAppDialog(
                 exception.Message,
                 "Não foi possível excluir",
                 MessageBoxButton.OK,
@@ -930,7 +932,7 @@ public partial class MainWindow : Window
             rows is < 1 or > 10 ||
             columns is < 1 or > 8)
         {
-            MessageBox.Show(
+            ShowAppDialog(
                 "Use de 1 a 10 linhas e de 1 a 8 colunas.",
                 "Tabela",
                 MessageBoxButton.OK,
@@ -994,7 +996,7 @@ public partial class MainWindow : Window
         {
             if (urlText is not null)
             {
-                MessageBox.Show("Informe um endereço completo iniciado por http:// ou https://.");
+                ShowAppDialog("Informe um endereço completo iniciado por http:// ou https://.");
             }
             return;
         }
@@ -1045,7 +1047,7 @@ public partial class MainWindow : Window
         var info = new System.IO.FileInfo(picker.FileName);
         if (info.Length > 5 * 1024 * 1024)
         {
-            MessageBox.Show(
+            ShowAppDialog(
                 "Escolha uma imagem com até 5 MB.",
                 "Imagem muito grande",
                 MessageBoxButton.OK,
@@ -1987,7 +1989,7 @@ public partial class MainWindow : Window
     {
         if (!TryReadCaptureSettings(out var error))
         {
-            MessageBox.Show(
+            ShowAppDialog(
                 error,
                 "Configuração de captura",
                 MessageBoxButton.OK,
@@ -2179,7 +2181,7 @@ public partial class MainWindow : Window
     {
         if (!TryReadCaptureSettings(out var error))
         {
-            MessageBox.Show(
+            ShowAppDialog(
                 error,
                 "Regra de captura",
                 MessageBoxButton.OK,
@@ -2289,7 +2291,7 @@ public partial class MainWindow : Window
     {
         if (!TryReadCaptureSettings(out var currentError))
         {
-            MessageBox.Show(currentError, "Configurações de captura",
+            ShowAppDialog(currentError, "Configurações de captura",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -2383,7 +2385,7 @@ public partial class MainWindow : Window
                 if (wasVisible)
                 {
                     ShowFromTray();
-                    MessageBox.Show(
+                    ShowAppDialog(
                         "Posicione o cursor sobre a janela que será capturada.",
                         "Captura longa",
                         MessageBoxButton.OK,
@@ -2443,7 +2445,7 @@ public partial class MainWindow : Window
             if (wasVisible)
             {
                 ShowFromTray();
-                MessageBox.Show(
+                ShowAppDialog(
                     exception.Message,
                     "Captura longa",
                     MessageBoxButton.OK,
@@ -2588,7 +2590,7 @@ public partial class MainWindow : Window
             if (wasVisible)
             {
                 ShowFromTray();
-                MessageBox.Show(
+                ShowAppDialog(
                     exception.Message,
                     "Não foi possível capturar",
                     MessageBoxButton.OK,
@@ -2641,7 +2643,7 @@ public partial class MainWindow : Window
         }
         if (!TryReadCaptureSettings(out var settingsError))
         {
-            MessageBox.Show(settingsError, "Gravação", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShowAppDialog(settingsError, "Gravação", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         await _settingsStore.SaveAsync(_settings);
@@ -2730,7 +2732,7 @@ public partial class MainWindow : Window
             ShowFromTray();
             AppDiagnosticLog.Write("recording.interface-restored",
                 ("recordingId", failedRecordingId), ("media", "MP4"), ("result", "failure"));
-            MessageBox.Show(
+            ShowAppDialog(
                 exception.Message +
                 "\n\nO SlashDesk usa H.264/Media Foundation. Em edições N/KN, instale o Media Feature Pack do Windows." +
                 $"\nLogs: {AppPaths.LogsDirectory}",
@@ -2750,7 +2752,7 @@ public partial class MainWindow : Window
         }
         if (!TryReadCaptureSettings(out var settingsError))
         {
-            MessageBox.Show(settingsError, "GIF", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShowAppDialog(settingsError, "GIF", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         await _settingsStore.SaveAsync(_settings);
@@ -2780,7 +2782,7 @@ public partial class MainWindow : Window
                 ("recordingId", completedRecordingId), ("media", "GIF"), ("result", "captured"));
             if (recording.Metrics?.DroppedFrames > 0)
             {
-                MessageBox.Show(
+                ShowAppDialog(
                     $"O pipeline descartou {recording.Metrics.DroppedFrames:N0} quadro(s) por sobrecarga. " +
                     "O tempo foi preservado no GIF e o evento foi registrado nos logs.",
                     "GIF finalizado com sobrecarga",
@@ -2833,7 +2835,7 @@ public partial class MainWindow : Window
             ShowFromTray();
             AppDiagnosticLog.Write("recording.interface-restored",
                 ("recordingId", failedRecordingId), ("media", "GIF"), ("result", "failure"));
-            MessageBox.Show(
+            ShowAppDialog(
                 exception.Message,
                 "Não foi possível criar o GIF",
                 MessageBoxButton.OK,
@@ -2917,7 +2919,7 @@ public partial class MainWindow : Window
     {
         if (!CaptureInlineEditor.HasImage)
         {
-            MessageBox.Show("Abra uma imagem ou faça uma captura antes de editar.", "Edição rápida",
+            ShowAppDialog("Abra uma imagem ou faça uma captura antes de editar.", "Edição rápida",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -3028,7 +3030,7 @@ public partial class MainWindow : Window
     {
         if (!CaptureInlineEditor.HasImage)
         {
-            MessageBox.Show("Abra uma imagem ou faça uma captura antes de editar.", "Editor avançado",
+            ShowAppDialog("Abra uma imagem ou faça uma captura antes de editar.", "Editor avançado",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -3115,7 +3117,7 @@ public partial class MainWindow : Window
         if (_pendingCaptureEdit is not null || _captureCommitInProgress)
         { StatusText.Text = "Conclua ou cancele a captura atual antes de abrir outra imagem."; return false; }
         if (!CaptureInlineEditor.HasUnsavedChanges && !CaptureInlineEditor.HasPendingCrop) return true;
-        return MessageBox.Show("Há alterações ou uma seleção de recorte pendentes. Descartá-las e abrir outra imagem?",
+        return ShowAppDialog("Há alterações ou uma seleção de recorte pendentes. Descartá-las e abrir outra imagem?",
             "Editor de imagem", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
     }
 
@@ -3140,7 +3142,7 @@ public partial class MainWindow : Window
 
     private void CaptureDiscardChanges_OnClick(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show("Voltar à última versão salva nesta sessão?", "Descartar alterações", MessageBoxButton.YesNo,
+        if (ShowAppDialog("Voltar à última versão salva nesta sessão?", "Descartar alterações", MessageBoxButton.YesNo,
                 MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes) CaptureInlineEditor.DiscardChanges();
     }
 
@@ -3222,7 +3224,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Runtime.InteropServices.ExternalException)
         {
-            MessageBox.Show(exception.Message, "Salvar captura", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShowAppDialog(exception.Message, "Salvar captura", MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
         finally
@@ -3238,7 +3240,7 @@ public partial class MainWindow : Window
         if (CaptureInlineEditor.HasPendingCrop || _captureCommitInProgress) return;
         if (!CaptureInlineEditor.HasImage)
         {
-            MessageBox.Show("Não há uma imagem no editor.", "Copiar",
+            ShowAppDialog("Não há uma imagem no editor.", "Copiar",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -3257,7 +3259,7 @@ public partial class MainWindow : Window
         if (CaptureInlineEditor.HasPendingCrop || _captureCommitInProgress) return;
         if (!CaptureInlineEditor.HasImage)
         {
-            MessageBox.Show("Não há uma imagem no editor.", "Salvar",
+            ShowAppDialog("Não há uma imagem no editor.", "Salvar",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -3284,7 +3286,7 @@ public partial class MainWindow : Window
         }
         if (!CaptureInlineEditor.HasImage)
         {
-            MessageBox.Show("Abra uma imagem ou faça uma captura antes de concluir.", "Concluir",
+            ShowAppDialog("Abra uma imagem ou faça uma captura antes de concluir.", "Concluir",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -3699,7 +3701,7 @@ public partial class MainWindow : Window
         var path = _captureService.ResolveFilePath(record);
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
-            MessageBox.Show(
+            ShowAppDialog(
                 "O arquivo não está mais disponível.",
                 "Histórico",
                 MessageBoxButton.OK,
@@ -3723,7 +3725,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
-            MessageBox.Show(
+            ShowAppDialog(
                 exception.Message,
                 "Histórico",
                 MessageBoxButton.OK,
@@ -3752,7 +3754,7 @@ public partial class MainWindow : Window
         {
             return;
         }
-        var choice = MessageBox.Show(
+        var choice = ShowAppDialog(
             "Sim: excluir também o arquivo local.\nNão: remover somente do histórico.",
             "Excluir captura",
             MessageBoxButton.YesNoCancel,
@@ -3927,7 +3929,7 @@ public partial class MainWindow : Window
                     }
                     else
                     {
-                        MessageBox.Show(
+                        ShowAppDialog(
                             "Esta compilação instalada ainda não possui um instalador transacional. " +
                             "A página oficial será aberta para uma atualização manual que preserva " +
                             "%LocalAppData%\\SlashDesk.",
@@ -3982,7 +3984,7 @@ public partial class MainWindow : Window
         {
             progressWindow.AllowClose();
             AppDiagnosticLog.WriteException("update.prepare.failed", exception);
-            MessageBox.Show(
+            ShowAppDialog(
                 "A atualização não foi aplicada. O executável atual e SlashDeskData foram " +
                 "preservados.\n\n" + exception.Message,
                 "Falha na atualização",
@@ -4225,7 +4227,7 @@ public partial class MainWindow : Window
 
         if (!CanDiscardShortcutDraft()) { e.Cancel = true; _exitRequested = false; return; }
         _activeUpdateCancellation?.Cancel();
-        if (CaptureInlineEditor.HasUnsavedChanges && MessageBox.Show("Há alterações de imagem não salvas. Sair sem salvar?", "Editor de imagem",
+        if (CaptureInlineEditor.HasUnsavedChanges && ShowAppDialog("Há alterações de imagem não salvas. Sair sem salvar?", "Editor de imagem",
                 MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
         { e.Cancel = true; _exitRequested = false; return; }
         _pendingCaptureEdit?.TrySetResult(null);

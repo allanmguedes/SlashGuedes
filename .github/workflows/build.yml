@@ -133,6 +133,24 @@ jobs:
           path: about-evidence/
           if-no-files-found: warn
 
+      - name: Auxiliary real WPF choices, focus and notifications
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem src/SlashText/bin -Recurse -Filter SlashDesk.exe | Select-Object -First 1
+          $output = Join-Path $PWD 'auxiliary-evidence'
+          $process = Start-Process $exe.FullName -ArgumentList "--auxiliary-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Auxiliary smoke timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Auxiliary smoke failed' }
+          Get-Content "$output/result.txt"
+
+      - name: Upload auxiliary evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlashDesk-auxiliary-controls-evidence
+          path: auxiliary-evidence/
+          if-no-files-found: warn
+
       - name: Visual foundation contract and gallery smoke
         shell: pwsh
         run: |

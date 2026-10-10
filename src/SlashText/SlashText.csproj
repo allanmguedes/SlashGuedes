@@ -24,11 +24,13 @@
     <CapturePilotBuild Condition="'$(StatisticsPilotBuild)' == 'true'">true</CapturePilotBuild>
     <CapturePilotBuild Condition="'$(SettingsPilotBuild)' == 'true'">true</CapturePilotBuild>
     <CapturePilotBuild Condition="'$(AboutPilotBuild)' == 'true'">true</CapturePilotBuild>
+    <CapturePilotBuild Condition="'$(AuxiliaryPilotBuild)' == 'true'">true</CapturePilotBuild>
     <SlashDeskDistribution Condition="'$(SlashDeskDistribution)' == ''">Installed</SlashDeskDistribution>
   </PropertyGroup>
 
   <ItemGroup>
     <AssemblyMetadata Include="SlashDeskAboutPilot" Value="true" Condition="'$(AboutPilotBuild)' == 'true'" />
+    <AssemblyMetadata Include="SlashDeskAuxiliaryPilot" Value="true" Condition="'$(AuxiliaryPilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskDistribution" Value="$(SlashDeskDistribution)" />
     <AssemblyMetadata Include="SlashDeskCaptureComplementsPilot" Value="true" Condition="'$(CaptureComplementsPilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskShortcutsPilot" Value="true" Condition="'$(ShortcutsPilotBuild)' == 'true'" />

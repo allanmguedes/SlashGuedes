@@ -50,7 +50,7 @@ public sealed class OnboardingWindow : Window
         });
         headingCopy.Children.Add(new TextBlock
         {
-            Text = "Texto, acentos e capturas sem conta, upload ou nuvem.",
+            Text = "Texto, acentos, capturas e gravações no seu dia a dia.", TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 4, 0, 0),
             Foreground = (Brush)Application.Current.FindResource("MutedBrush")
         });
@@ -59,38 +59,41 @@ public sealed class OnboardingWindow : Window
         root.Children.Add(heading);
 
         var features = new UniformGrid { Rows = 2, Columns = 2 };
-        Grid.SetRow(features, 2);
         features.Children.Add(Card("01", "Atalhos de texto", "Digite /atalho e confirme para inserir textos reutilizáveis."));
-        features.Children.Add(Card("02", "Acento Rápido", "Segure a tecla configurada após uma letra para escolher o caractere."));
+        features.Children.Add(Card("02", "Acento Rápido", "Segure uma letra e toque na tecla de ativação para escolher o caractere."));
         features.Children.Add(Card("03", "Captura local", "Capture monitor, região ou janela e marque a imagem antes de salvar."));
         features.Children.Add(Card(
             "04",
             "Traga seus atalhos",
             "Importe arquivos do Text Blaze, Espanso ou outro SlashDesk; o original fica protegido por backup."));
-        root.Children.Add(features);
+        var featuresScroll = new ScrollViewer { Content = features, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        Grid.SetRow(featuresScroll, 2);
+        root.Children.Add(featuresScroll);
 
         var footer = new Grid();
         footer.ColumnDefinitions.Add(new ColumnDefinition());
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         footer.Children.Add(new TextBlock
         {
-            Text = "100% local  ·  sem conta  ·  sem upload",
+            Text = "Seus dados ficam com você · sem conta",
             VerticalAlignment = VerticalAlignment.Center,
             Foreground = (Brush)Application.Current.FindResource("MutedBrush")
         });
         var finish = new Button
         {
-            Content = "Começar a usar",
+            Content = "Começar a usar", IsDefault = true,
             Style = (Style)Application.Current.FindResource("PrimaryButton"),
             HorizontalAlignment = HorizontalAlignment.Right,
             MinWidth = 150
         };
+
         finish.Click += (_, _) => DialogResult = true;
         Grid.SetColumn(finish, 1);
         footer.Children.Add(finish);
         Grid.SetRow(footer, 4);
         root.Children.Add(footer);
         Content = root;
+        AuxiliaryWindowTheme.Apply(this);
     }
 
     private static Border Card(string number, string title, string description)

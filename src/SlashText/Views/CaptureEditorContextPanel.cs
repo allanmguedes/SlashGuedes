@@ -149,7 +149,7 @@ public sealed class CaptureEditorContextPanel : UserControl
             AddButton("Cancelar seleção", "X", () => _editor.CancelCrop());
             _applyCrop = AddButton("Aplicar recorte", "Check", () =>
             {
-                if (!_editor.ApplyCrop()) MessageBox.Show("Selecione ao menos 8 × 8 pixels.", "Recorte", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (!_editor.ApplyCrop()) AuxiliaryWindowTheme.ShowMessage(Window.GetWindow(this), "Selecione ao menos 8 × 8 pixels.", "Recorte", MessageBoxButton.OK, MessageBoxImage.Information);
             }, primary: true);
             _applyCrop.IsEnabled = _editor.HasPendingCrop;
         }

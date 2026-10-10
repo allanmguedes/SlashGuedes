@@ -34,13 +34,13 @@ public partial class CaptureShortcutDialog : Window
         var shortcuts = new[] { MonitorShortcut, RegionShortcut, WindowShortcut, ScrollingShortcut };
         if (shortcuts.Any(item => !GlobalCaptureShortcutService.IsValid(item)))
         {
-            MessageBox.Show("Use uma tecla, roda ou botão do mouse válido. A roda exige um modificador.",
+            AuxiliaryWindowTheme.ShowMessage(this, "Use uma tecla, roda ou botão do mouse válido. A roda exige um modificador.",
                 "Atalhos de captura", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (shortcuts.Distinct(StringComparer.OrdinalIgnoreCase).Count() != shortcuts.Length)
         {
-            MessageBox.Show("Cada ação precisa ter um atalho diferente.", "Atalhos de captura",
+            AuxiliaryWindowTheme.ShowMessage(this, "Cada ação precisa ter um atalho diferente.", "Atalhos de captura",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }

@@ -28,9 +28,9 @@ public sealed class VariableInputWindow : Window
         SourceInitialized += (_, _) => ThemeService.ApplyToWindow(this);
 
         var root = new Grid { Margin = new Thickness(24) };
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(16) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(16) });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(20) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
@@ -48,6 +48,7 @@ public sealed class VariableInputWindow : Window
             Content = fieldsPanel,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
+
         Grid.SetRow(fieldsScroll, 2);
         root.Children.Add(fieldsScroll);
 
@@ -55,7 +56,7 @@ public sealed class VariableInputWindow : Window
         {
             var label = new TextBlock
             {
-                Text = Humanize(field.Name),
+                Text = Humanize(field.Name), TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 5)
             };
             label.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
@@ -65,6 +66,7 @@ public sealed class VariableInputWindow : Window
                 Margin = new Thickness(0, 0, 0, 13),
                 MinWidth = 360
             };
+            System.Windows.Automation.AutomationProperties.SetName(input, Humanize(field.Name));
             _inputs[field.Name] = input;
             fieldsPanel.Children.Add(label);
             fieldsPanel.Children.Add(input);
@@ -94,6 +96,7 @@ public sealed class VariableInputWindow : Window
         buttons.Children.Add(insert);
 
         Content = root;
+        AuxiliaryWindowTheme.Apply(this);
         Loaded += (_, _) =>
         {
             Topmost = true;

@@ -9,7 +9,7 @@ public sealed class PromptDialog : Window
 {
     private readonly TextBox _input;
 
-    private PromptDialog(string title, string label, string initialValue)
+    internal PromptDialog(string title, string label, string initialValue)
     {
         Title = title;
         Width = 480;
@@ -43,6 +43,7 @@ public sealed class PromptDialog : Window
             IsCancel = true,
             Margin = new Thickness(0, 0, 10, 0)
         });
+
         var confirm = new Button
         {
             Content = "Aplicar",
@@ -57,6 +58,7 @@ public sealed class PromptDialog : Window
         buttons.Children.Add(confirm);
         panel.Children.Add(buttons);
         Content = panel;
+        AuxiliaryWindowTheme.Apply(this);
         Loaded += (_, _) =>
         {
             Activate();
