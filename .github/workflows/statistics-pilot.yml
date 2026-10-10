@@ -1,0 +1,73 @@
+name: Statistics Pilot Windows
+
+on:
+  push:
+    branches: [feat/3.3.0-statistics]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore and build isolated pilot
+        shell: pwsh
+        run: |
+          dotnet restore SlashText.sln -p:Platform=x64
+          if ($LASTEXITCODE -ne 0) { throw 'Restore failed' }
+          dotnet build SlashText.sln -c Release --no-restore -p:Platform=x64 -p:StatisticsPilotBuild=true
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
+      - name: Real WPF controls and persistence
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem src/SlashText/bin -Recurse -Filter SlashDesk.exe | Select-Object -First 1
+          $output = Join-Path $PWD 'statistics-evidence'
+          $process = Start-Process $exe.FullName -ArgumentList "--statistics-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Statistics WPF timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Statistics WPF failed' }
+          Get-Content "$output/result.txt"
+      - name: Publish portable pilot
+        shell: pwsh
+        run: |
+          dotnet restore src/SlashText/SlashText.csproj --runtime win-x64 -p:Platform=x64
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime restore failed' }
+          dotnet publish src/SlashText/SlashText.csproj -c Release -p:Platform=x64 -p:PublishProfile=Portable -p:StatisticsPilotBuild=true --no-restore --output publish-statistics
+          if ($LASTEXITCODE -ne 0) { throw 'Publish failed' }
+          $files = @(Get-ChildItem publish-statistics -Force)
+          if ($files.Count -ne 1 -or $files[0].Name -ne 'SlashDesk.exe') { throw 'Portable must contain only SlashDesk.exe' }
+      - name: Validate published EXE and package
+        shell: pwsh
+        run: |
+          $output = Join-Path $PWD 'statistics-evidence/portable'
+          $exe = (Resolve-Path publish-statistics/SlashDesk.exe).Path
+          $process = Start-Process $exe -ArgumentList "--statistics-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Published WPF timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Published WPF failed' }
+          New-Item statistics-pilot-package -ItemType Directory -Force | Out-Null
+          Copy-Item publish-statistics/SlashDesk.exe statistics-pilot-package/SlashDesk.exe
+          Copy-Item docs/statistics-pilot-testing.md statistics-pilot-package/LEIA-ANTES.md
+          Set-Content statistics-pilot-package/Abrir-Piloto-Estatisticas.cmd -Encoding ascii -Value '@echo off','start "" "%~dp0SlashDesk.exe"'
+          $probe = Join-Path $env:RUNNER_TEMP 'SlashDesk Estatisticas çã com espaços'
+          New-Item $probe -ItemType Directory -Force | Out-Null
+          Copy-Item publish-statistics/SlashDesk.exe "$probe/SlashDesk.exe"
+          $process = Start-Process "$probe/SlashDesk.exe" -ArgumentList '--portable-smoke' -WindowStyle Hidden -PassThru -Wait
+          if ($process.ExitCode -ne 0) { throw 'Isolated startup failed' }
+          if (-not (Test-Path "$probe/SlashDeskPilotData/snippets.md") -or (Test-Path "$probe/SlashDeskData")) { throw 'Pilot isolation failed' }
+          Get-FileHash statistics-pilot-package/SlashDesk.exe -Algorithm SHA256
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SlashDesk-statistics-evidence
+          path: statistics-evidence/
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SlashDesk-3.3.0-statistics-pilot-win-x64
+          path: statistics-pilot-package/
+          if-no-files-found: error

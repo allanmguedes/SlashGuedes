@@ -1437,154 +1437,88 @@
                         </Grid>
                     </ScrollViewer>
 
-                    <ScrollViewer x:Name="StatisticsView" Visibility="Collapsed"
-                                  VerticalScrollBarVisibility="Auto">
-                        <Grid Margin="24" MaxWidth="1180" HorizontalAlignment="Center">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="20"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="24"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="18"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <StackPanel>
-                                <TextBlock Text="Estatísticas" Style="{StaticResource PageTitle}"/>
-                                <TextBlock Text="Veja quanto tempo o SlashDesk devolveu ao seu dia."
-                                           Style="{StaticResource PageDescription}"/>
-                            </StackPanel>
-
-                            <UniformGrid Grid.Row="2" Columns="4">
-                                <Border Style="{StaticResource MetricCard}">
-                                    <StackPanel>
-                                        <TextBlock Text="Expansões de texto"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock x:Name="TotalExpansionsText"
-                                                   Style="{StaticResource MetricValue}"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Style="{StaticResource MetricCard}">
-                                    <StackPanel>
-                                        <TextBlock Text="Caracteres poupados"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock x:Name="CharactersSavedText"
-                                                   Style="{StaticResource MetricValue}"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Style="{StaticResource MetricCard}">
-                                    <StackPanel>
-                                        <TextBlock Text="Acentos inseridos"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock x:Name="QuickAccentTotalText"
-                                                   Style="{StaticResource MetricValue}"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Style="{StaticResource MetricCard}" Margin="0">
-                                    <StackPanel>
-                                        <TextBlock Text="Capturas realizadas"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock x:Name="CaptureTotalText"
-                                                   Style="{StaticResource MetricValue}"/>
-                                    </StackPanel>
-                                </Border>
-                            </UniformGrid>
-
-                            <Grid Grid.Row="4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="1.25*"/>
-                                    <ColumnDefinition Width="20"/>
-                                    <ColumnDefinition Width="0.75*"/>
-                                </Grid.ColumnDefinitions>
-                                <Border Style="{StaticResource SettingsCard}">
-                                    <StackPanel>
-                                        <TextBlock Text="Atalhos mais usados"
-                                                   FontSize="17"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Text="Ranking por quantidade de expansões"
-                                                   Margin="0,4,0,12"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <StackPanel x:Name="StatisticsRankingPanel"/>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Grid.Column="2"
-                                        Style="{StaticResource SettingsCard}">
-                                    <StackPanel>
-                                        <TextBlock Text="Atividade por recurso"
-                                                   FontSize="17"
-                                                   FontWeight="SemiBold"/>
-                                        <Grid Margin="0,14,0,12">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel>
-                                                <TextBlock Text="Atalhos ativos" Foreground="{DynamicResource MutedBrush}"/>
-                                                <TextBlock x:Name="UsedSnippetsText" Style="{StaticResource MetricValue}"/>
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-                                                <TextBlock Text="Acento favorito" Foreground="{DynamicResource MutedBrush}"/>
-                                                <TextBlock x:Name="QuickAccentFavoriteText" Style="{StaticResource MetricValue}"
-                                                           HorizontalAlignment="Right"/>
-                                            </StackPanel>
-                                        </Grid>
-                                        <TextBlock Text="Capturas por tipo" Foreground="{DynamicResource MutedBrush}"/>
-                                        <Grid Margin="0,9,0,14">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel>
-                                                <TextBlock Text="Região" Margin="0,3"/>
-                                                <TextBlock Text="Monitor" Margin="0,3"/>
-                                                <TextBlock Text="Janela" Margin="0,3"/>
-                                                <TextBlock Text="GIF" Margin="0,3"/>
-                                                <TextBlock Text="MP4" Margin="0,3"/>
-                                            </StackPanel>
-                                            <StackPanel Grid.Column="1">
-                                                <TextBlock x:Name="CaptureRegionTotalText" Margin="0,3" HorizontalAlignment="Right"/>
-                                                <TextBlock x:Name="CaptureMonitorTotalText" Margin="0,3" HorizontalAlignment="Right"/>
-                                                <TextBlock x:Name="CaptureWindowTotalText" Margin="0,3" HorizontalAlignment="Right"/>
-                                                <TextBlock x:Name="CaptureGifTotalText" Margin="0,3" HorizontalAlignment="Right"/>
-                                                <TextBlock x:Name="CaptureMp4TotalText" Margin="0,3" HorizontalAlignment="Right"/>
-                                            </StackPanel>
-                                        </Grid>
-                                        <TextBlock Text="Caracteres mais inseridos" Foreground="{DynamicResource MutedBrush}"/>
-                                        <WrapPanel x:Name="QuickAccentCharactersPanel"
-                                                   Margin="0,8,0,0"/>
-                                    </StackPanel>
-                                </Border>
+                    <ScrollViewer x:Name="StatisticsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" lab:LabMotion.Entrance="Page">
+                        <StackPanel Margin="30,28,30,24" MaxWidth="1320" HorizontalAlignment="Stretch">
+                            <Grid Margin="0,0,0,25"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="CADA PEQUENO GANHO CONTA" Style="{StaticResource Lab.Metadata}" Foreground="{DynamicResource Lab.accent-text}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Mais tempo para o que importa." Style="{StaticResource Lab.Heading}" Margin="0,7,0,0"/>
+                                    <TextBlock x:Name="StatisticsStatusText" Text="Contagens locais, atualizadas com o uso." Style="{StaticResource Lab.Metadata}" Margin="0,6,0,0" AutomationProperties.LiveSetting="Polite"/>
+                                </StackPanel>
+                                <Button Grid.Column="1" x:Name="StatisticsHelpButton" Style="{StaticResource Lab.Button}" Padding="9" VerticalAlignment="Center" ToolTip="Ajuda das Estatísticas" AutomationProperties.Name="Ajuda das Estatísticas" Click="OpenStatisticsHelp_OnClick"><lab:LabIcon Kind="CircleHelp" Width="18" Height="18"/></Button>
                             </Grid>
-
-                            <Border Grid.Row="6" Style="{StaticResource SettingsCard}" Margin="0">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="1"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="1"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel>
-                                        <TextBlock Text="Tempo economizado" Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock x:Name="TimeSavedText" Style="{StaticResource MetricValue}"/>
-                                    </StackPanel>
-                                    <Border Grid.Column="1" Background="{DynamicResource DividerBrush}" Margin="18,0"/>
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Média por expansão" Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock x:Name="AverageCharactersText" Style="{StaticResource MetricValue}"/>
-                                    </StackPanel>
-                                    <Border Grid.Column="3" Background="{DynamicResource DividerBrush}" Margin="18,0"/>
-                                    <StackPanel Grid.Column="4">
-                                        <TextBlock Text="Privacidade" Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock Text="Somente contagens locais" Margin="0,9,0,0"
-                                                   FontSize="16" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Grid>
+                            <Border x:Name="StatisticsErrorPanel" Style="{StaticResource Lab.Card}" BorderBrush="{DynamicResource Lab.error}" Visibility="Collapsed" Margin="0,0,0,20">
+                                <TextBlock Text="Não foi possível ler as contagens de atalhos e acentos. Os demais recursos continuam disponíveis. Confira o arquivo de uso e reabra o SlashDesk." Style="{StaticResource Lab.Text}" AutomationProperties.LiveSetting="Polite"/>
                             </Border>
-                        </Grid>
+                            <UniformGrid x:Name="StatisticsMetricsGrid" Columns="4" Margin="-8,0,-8,12">
+                                <Border Style="{StaticResource Lab.Stats.MetricCard}"><StackPanel>
+                                    <lab:LabIcon Kind="Keyboard" Width="21" Height="21" Foreground="{DynamicResource Lab.accent-text}" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="Expansões de texto" Style="{StaticResource Lab.Metadata}" Margin="0,13,0,13"/>
+                                    <TextBlock x:Name="TotalExpansionsText" Style="{StaticResource Lab.Stats.Value}"/>
+                                </StackPanel></Border>
+                                <Border Style="{StaticResource Lab.Stats.MetricCard}"><StackPanel>
+                                    <lab:LabIcon Kind="Type" Width="21" Height="21" Foreground="{DynamicResource Lab.accent-text}" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="Caracteres poupados" Style="{StaticResource Lab.Metadata}" Margin="0,13,0,13"/>
+                                    <TextBlock x:Name="CharactersSavedText" Style="{StaticResource Lab.Stats.Value}"/>
+                                </StackPanel></Border>
+                                <Border Style="{StaticResource Lab.Stats.MetricCard}"><StackPanel>
+                                    <lab:LabIcon Kind="Languages" Width="21" Height="21" Foreground="{DynamicResource Lab.accent-text}" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="Acentos inseridos" Style="{StaticResource Lab.Metadata}" Margin="0,13,0,13"/>
+                                    <TextBlock x:Name="QuickAccentTotalText" Style="{StaticResource Lab.Stats.Value}"/>
+                                </StackPanel></Border>
+                                <Border Style="{StaticResource Lab.Stats.MetricCard}"><StackPanel>
+                                    <lab:LabIcon Kind="Camera" Width="21" Height="21" Foreground="{DynamicResource Lab.accent-text}" HorizontalAlignment="Left"/>
+                                    <TextBlock Text="Capturas realizadas" Style="{StaticResource Lab.Metadata}" Margin="0,13,0,13"/>
+                                    <TextBlock x:Name="CaptureTotalText" Style="{StaticResource Lab.Stats.Value}" ToolTip="Capturas que permanecem no histórico local"/>
+                                </StackPanel></Border>
+                            </UniformGrid>
+                            <Grid x:Name="StatisticsMainGrid" Margin="0,0,0,18"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <Border x:Name="StatisticsRankingCard" Style="{StaticResource Lab.Card}"><StackPanel>
+                                    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="Keyboard" Width="18" Height="18" Foreground="{DynamicResource Lab.accent-text}" Margin="0,0,10,0"/><TextBlock Text="Atalhos mais usados" Style="{StaticResource Lab.Stats.Title}"/></StackPanel>
+                                    <TextBlock Text="Até oito atalhos · barras relativas ao mais usado" Style="{StaticResource Lab.Metadata}" Margin="0,6,0,4"/>
+                                    <StackPanel x:Name="StatisticsRankingPanel"/>
+                                    <Border BorderBrush="{DynamicResource Lab.line}" BorderThickness="0,1,0,0" Padding="0,14,0,0" Margin="0,12,0,0">
+                                        <StackPanel Orientation="Horizontal"><TextBlock Text="Atalhos com uso registrado" Style="{StaticResource Lab.Metadata}"/><TextBlock x:Name="UsedSnippetsText" Style="{StaticResource Lab.Text}" FontWeight="SemiBold" Margin="10,0,0,0"/></StackPanel>
+                                    </Border>
+                                </StackPanel></Border>
+                                <Border x:Name="StatisticsCaptureCard" Grid.Column="2" Style="{StaticResource Lab.Card}"><StackPanel>
+                                    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="Camera" Width="18" Height="18" Foreground="{DynamicResource Lab.accent-text}" Margin="0,0,10,0"/><TextBlock Text="Capturas por tipo" Style="{StaticResource Lab.Stats.Title}"/></StackPanel>
+                                    <TextBlock x:Name="StatisticsCaptureHintText" Text="Base: capturas que permanecem no histórico local." Style="{StaticResource Lab.Metadata}" Margin="0,6,0,16"/>
+                                    <Grid Margin="0,0,0,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Região" Style="{StaticResource Lab.Metadata}"/><TextBlock x:Name="CaptureRegionTotalText" Grid.Column="1" Style="{StaticResource Lab.Text}" FontWeight="SemiBold"/></Grid>
+                                    <ProgressBar x:Name="StatisticsRegionBar" Style="{StaticResource Lab.Stats.Bar}" Margin="0,0,0,15"/>
+                                    <Grid Margin="0,0,0,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Monitor" Style="{StaticResource Lab.Metadata}"/><TextBlock x:Name="CaptureMonitorTotalText" Grid.Column="1" Style="{StaticResource Lab.Text}" FontWeight="SemiBold"/></Grid>
+                                    <ProgressBar x:Name="StatisticsMonitorBar" Style="{StaticResource Lab.Stats.Bar}" Margin="0,0,0,15"/>
+                                    <Grid Margin="0,0,0,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="Janela" Style="{StaticResource Lab.Metadata}"/><TextBlock x:Name="CaptureWindowTotalText" Grid.Column="1" Style="{StaticResource Lab.Text}" FontWeight="SemiBold"/></Grid>
+                                    <ProgressBar x:Name="StatisticsWindowBar" Style="{StaticResource Lab.Stats.Bar}" Margin="0,0,0,15"/>
+                                    <Grid Margin="0,0,0,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="GIF" Style="{StaticResource Lab.Metadata}"/><TextBlock x:Name="CaptureGifTotalText" Grid.Column="1" Style="{StaticResource Lab.Text}" FontWeight="SemiBold"/></Grid>
+                                    <ProgressBar x:Name="StatisticsGifBar" Style="{StaticResource Lab.Stats.Bar}" Margin="0,0,0,15"/>
+                                    <Grid Margin="0,0,0,5"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="MP4" Style="{StaticResource Lab.Metadata}"/><TextBlock x:Name="CaptureMp4TotalText" Grid.Column="1" Style="{StaticResource Lab.Text}" FontWeight="SemiBold"/></Grid>
+                                    <ProgressBar x:Name="StatisticsMp4Bar" Style="{StaticResource Lab.Stats.Bar}" Margin="0,0,0,15"/>
+                                    <TextBlock Text="Área e mídia podem se sobrepor; estes valores não formam uma soma. Captura longa e outros tipos continuam incluídos no total." Style="{StaticResource Lab.Metadata}" Margin="0,8,0,0"/>
+                                </StackPanel></Border>
+                            </Grid>
+                            <UniformGrid x:Name="StatisticsDetailsGrid" Columns="3" Margin="-9,0,-9,0">
+                                <Border Style="{StaticResource Lab.Card}" Margin="9,0,9,18"><StackPanel>
+                                    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="Clock3" Width="18" Height="18" Foreground="{DynamicResource Lab.accent-text}" Margin="0,0,10,0"/><TextBlock Text="Tempo economizado" Style="{StaticResource Lab.Stats.Title}"/></StackPanel>
+                                    <TextBlock x:Name="TimeSavedText" Style="{StaticResource Lab.Stats.Value}" Margin="0,16,0,8"/>
+                                    <TextBlock Text="Estimativa: 200 caracteres poupados por minuto." Style="{StaticResource Lab.Metadata}"/>
+                                    <TextBlock Text="Média de caracteres por expansão" Style="{StaticResource Lab.Metadata}" Margin="0,16,0,4"/>
+                                    <TextBlock x:Name="AverageCharactersText" Style="{StaticResource Lab.Text}" FontWeight="SemiBold"/>
+                                </StackPanel></Border>
+                                <Border Style="{StaticResource Lab.Card}" Margin="9,0,9,18"><StackPanel>
+                                    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="Languages" Width="18" Height="18" Foreground="{DynamicResource Lab.accent-text}" Margin="0,0,10,0"/><TextBlock Text="Acentos favoritos" Style="{StaticResource Lab.Stats.Title}"/></StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,16,0,8"><Border Background="{DynamicResource Lab.tint}" CornerRadius="7" Padding="12,3" MinWidth="48"><TextBlock x:Name="QuickAccentFavoriteText" Style="{StaticResource Lab.Text}" FontSize="28" Foreground="{DynamicResource Lab.accent-text}" HorizontalAlignment="Center"/></Border><TextBlock x:Name="QuickAccentFavoriteCountText" Style="{StaticResource Lab.Metadata}" Margin="10,0,0,0" VerticalAlignment="Center"/></StackPanel>
+                                    <TextBlock Text="Caracteres mais inseridos" Style="{StaticResource Lab.Metadata}" Margin="0,0,0,10"/>
+                                    <WrapPanel x:Name="QuickAccentCharactersPanel"/>
+                                </StackPanel></Border>
+                                <Border x:Name="StatisticsPrivacyCard" Style="{StaticResource Lab.Card}" Margin="9,0,9,18"><StackPanel>
+                                    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="ShieldCheck" Width="18" Height="18" Foreground="{DynamicResource Lab.accent-text}" Margin="0,0,10,0"/><TextBlock Text="Privacidade" Style="{StaticResource Lab.Stats.Title}"/></StackPanel>
+                                    <TextBlock Text="Somente contagens locais." Style="{StaticResource Lab.Text}" Margin="0,16,0,8"/>
+                                    <TextBlock Text="Sem registrar o conteúdo digitado. Sem envio de estatísticas." Style="{StaticResource Lab.Metadata}"/>
+                                    <TextBlock Text="Os dados refletem o uso acumulado e o histórico disponível, sem comparação mensal." Style="{StaticResource Lab.Metadata}" Margin="0,16,0,0"/>
+                                </StackPanel></Border>
+                            </UniformGrid>
+                        </StackPanel>
                     </ScrollViewer>
 
                     <ScrollViewer x:Name="SettingsView" Visibility="Collapsed"

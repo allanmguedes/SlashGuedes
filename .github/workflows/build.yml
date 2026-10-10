@@ -78,6 +78,25 @@ jobs:
           path: quick-accent-evidence/
           if-no-files-found: warn
 
+      - name: Statistics real WPF metrics and presentation
+        shell: pwsh
+        run: |
+          ./scripts/visual-foundation-smoke.ps1
+          $exe = Get-ChildItem src/SlashText/bin -Recurse -Filter SlashDesk.exe | Select-Object -First 1
+          $output = Join-Path $PWD 'statistics-evidence'
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList "--statistics-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Statistics smoke timed out' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Statistics smoke failed' }
+          Get-Content "$output/result.txt"
+
+      - name: Upload statistics evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlashDesk-statistics-controls-evidence
+          path: statistics-evidence/
+          if-no-files-found: warn
+
       - name: Visual foundation contract and gallery smoke
         shell: pwsh
         run: |

@@ -21,6 +21,7 @@
     <CapturePilotBuild Condition="'$(CaptureOcrPilotBuild)' == 'true'">true</CapturePilotBuild>
     <CapturePilotBuild Condition="'$(ShortcutsPilotBuild)' == 'true'">true</CapturePilotBuild>
     <CapturePilotBuild Condition="'$(QuickAccentPilotBuild)' == 'true'">true</CapturePilotBuild>
+    <CapturePilotBuild Condition="'$(StatisticsPilotBuild)' == 'true'">true</CapturePilotBuild>
     <SlashDeskDistribution Condition="'$(SlashDeskDistribution)' == ''">Installed</SlashDeskDistribution>
   </PropertyGroup>
 
@@ -29,6 +30,7 @@
     <AssemblyMetadata Include="SlashDeskCaptureComplementsPilot" Value="true" Condition="'$(CaptureComplementsPilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskShortcutsPilot" Value="true" Condition="'$(ShortcutsPilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskQuickAccentPilot" Value="true" Condition="'$(QuickAccentPilotBuild)' == 'true'" />
+    <AssemblyMetadata Include="SlashDeskStatisticsPilot" Value="true" Condition="'$(StatisticsPilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskCapturePilot" Value="true" Condition="'$(CapturePilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskCaptureOcrPilot" Value="true" Condition="'$(CaptureOcrPilotBuild)' == 'true'" />
   </ItemGroup>

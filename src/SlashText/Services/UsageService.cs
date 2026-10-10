@@ -19,6 +19,7 @@ public sealed class UsageService
 
     public IReadOnlyList<UsageRecord> Records => _records;
     public QuickAccentUsageRecord QuickAccent => _quickAccent;
+    public bool IsAvailable { get; private set; } = true;
 
     public UsageService(string? usageFile = null)
     {
@@ -28,6 +29,15 @@ public sealed class UsageService
 
     public async Task LoadAsync()
     {
+        // Startup/restore reads share the same gate as auxiliary counter updates.
+        await _writeLock.WaitAsync();
+        try { await LoadCoreAsync(); }
+        finally { _writeLock.Release(); }
+    }
+
+    private async Task LoadCoreAsync()
+    {
+        IsAvailable = true;
         _records.Clear();
         _quickAccent = new QuickAccentUsageRecord();
         if (!File.Exists(_usageFile))
@@ -43,26 +53,36 @@ public sealed class UsageService
             {
                 _records.AddRange(
                     JsonSerializer.Deserialize<List<UsageRecord>>(json, ReadOptions) ?? []);
+                RejectNullRecords();
                 return;
             }
 
             var snapshot = JsonSerializer.Deserialize<UsageSnapshot>(json, ReadOptions);
             if (snapshot is null)
             {
+                IsAvailable = false;
                 return;
             }
 
             _records.AddRange(snapshot.Snippets ?? []);
             _quickAccent = snapshot.QuickAccent ?? new QuickAccentUsageRecord();
             _quickAccent.Characters ??= new Dictionary<string, long>(StringComparer.Ordinal);
+            RejectNullRecords();
         }
         catch (JsonException)
         {
+            IsAvailable = false;
             // Um arquivo inválido não impede o uso do aplicativo.
         }
         catch (IOException)
         {
+            IsAvailable = false;
             // As estatísticas são auxiliares; o expansor continua funcionando.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            IsAvailable = false;
+            // An unreadable usage file must not stop the other modules.
         }
     }
 
@@ -71,6 +91,8 @@ public sealed class UsageService
         await _writeLock.WaitAsync();
         try
         {
+            // Never replace unreadable existing data with a fresh, incomplete snapshot.
+            if (!IsAvailable) return;
             var record = _records.FirstOrDefault(item => item.SnippetId == snippet.Id);
             if (record is null)
             {
@@ -89,11 +111,19 @@ public sealed class UsageService
         }
     }
 
+    private void RejectNullRecords()
+    {
+        if (!_records.Any(item => item is null)) return;
+        _records.Clear();
+        IsAvailable = false;
+    }
+
     public async Task RecordQuickAccentAsync(char character)
     {
         await _writeLock.WaitAsync();
         try
         {
+            if (!IsAvailable) return;
             _quickAccent.Count++;
             _quickAccent.LastUsedAt = DateTimeOffset.Now;
             var key = character.ToString();

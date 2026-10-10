@@ -256,6 +256,11 @@ public sealed class ScreenHelpWindow : Window
                     "accent-preferences" => new[] { "Atraso", "Posição", "Unicode" },
                     "accent-sets" => new[] { "PT-BR", "Conjuntos", "Caracteres" },
                     "accent-exclude" => new[] { "Processos", "Separar por ;", "Salvar" },
+                    "statistics-shortcuts" => new[] { "Uso real", "Contagens", "Ranking" },
+                    "statistics-captures" => new[] { "Histórico", "Área / mídia", "Contagens" },
+                    "statistics-time" => new[] { "Caracteres", "÷ 200", "Minutos" },
+                    "statistics-accents" => new[] { "Inserir", "Contagem", "Favoritos" },
+                    "statistics-privacy" => new[] { "Local", "Sem conteúdo", "Sem envio" },
                     _ => new[] { "Ferramenta", "Cor", "Desenhar" } };
                 for (var i = 0; i < 3; i++)
                 {

@@ -180,7 +180,7 @@ public partial class MainWindow : Window
             _settings.Capture.Recording ??= new RecordingSettings();
             if (AppPaths.IsCapturePilot)
             {
-                Title = AppPaths.IsQuickAccentPilot ? "SlashDesk — Piloto Acento Rápido 3.3.0 · #65" : AppPaths.IsCaptureOcrPilot ? "SlashDesk — Piloto Captura + OCR 3.3.0" : AppPaths.IsCaptureComplementsPilot ? "SlashDesk — Piloto Complementos da Captura 3.3.0 · #74" : AppPaths.IsShortcutsPilot ? "SlashDesk — Piloto Atalhos 3.3.0 · #64" : "SlashDesk — Piloto Captura 3.3.0 · #63";
+                Title = AppPaths.IsStatisticsPilot ? "SlashDesk — Piloto Estatísticas 3.3.0 · #66" : AppPaths.IsQuickAccentPilot ? "SlashDesk — Piloto Acento Rápido 3.3.0 · #65" : AppPaths.IsCaptureOcrPilot ? "SlashDesk — Piloto Captura + OCR 3.3.0" : AppPaths.IsCaptureComplementsPilot ? "SlashDesk — Piloto Complementos da Captura 3.3.0 · #74" : AppPaths.IsShortcutsPilot ? "SlashDesk — Piloto Atalhos 3.3.0 · #64" : "SlashDesk — Piloto Captura 3.3.0 · #63";
                 _settings.CheckUpdatesOnStartup = false;
                 _settings.StartWithWindows = false;
                 _settings.OnboardingCompleted = true;
@@ -271,7 +271,8 @@ public partial class MainWindow : Window
                 "Atalhos globais de captura",
                 ConfigureCaptureShortcuts);
             RefreshCaptureHistory();
-            if (AppPaths.IsQuickAccentPilot) ShowView(QuickAccentView, QuickAccentTabButton);
+            if (AppPaths.IsStatisticsPilot) ShowView(StatisticsView, StatisticsTabButton);
+            else if (AppPaths.IsQuickAccentPilot) ShowView(QuickAccentView, QuickAccentTabButton);
             else if (AppPaths.IsCapturePilot && !AppPaths.IsShortcutsPilot) ShowView(CaptureView, CaptureTabButton);
 
             if (!_settings.OnboardingCompleted)
@@ -1325,6 +1326,11 @@ public partial class MainWindow : Window
         ShellMonitorStatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, monitorReady ? "SuccessBrush" : "MutedBrush");
 
         if (ReferenceEquals(view, ShortcutsView) && ShortcutsView.IsLoaded) LabMotion.PlayEntrance(ShortcutsView);
+        if (ReferenceEquals(view, StatisticsView))
+        {
+            UpdateStatisticsLayout(ActualWidth);
+            if (StatisticsView.IsLoaded) LabMotion.PlayEntrance(StatisticsView);
+        }
         if (ReferenceEquals(view, QuickAccentView))
         {
             UpdateQuickAccentLayout(ActualWidth);
@@ -1360,104 +1366,6 @@ public partial class MainWindow : Window
         WindowState = WindowState == WindowState.Maximized
             ? WindowState.Normal
             : WindowState.Maximized;
-
-    private void RefreshStatistics()
-    {
-        var records = _usageService.Records;
-        var total = records.Sum(item => item.Count);
-        var characters = records.Sum(item => item.CharactersSaved);
-        TotalExpansionsText.Text = total.ToString("N0");
-        UsedSnippetsText.Text = records.Count(item => item.Count > 0).ToString("N0");
-        CharactersSavedText.Text = characters.ToString("N0");
-        TimeSavedText.Text = $"{Math.Ceiling(characters / 200d):N0} min";
-        QuickAccentTotalText.Text = _usageService.QuickAccent.Count.ToString("N0");
-        AverageCharactersText.Text = total == 0
-            ? "0"
-            : $"{characters / (double)total:N0}";
-
-        var captures = _captureService.History;
-        CaptureTotalText.Text = captures.Count.ToString("N0");
-        CaptureRegionTotalText.Text = captures.Count(item =>
-            item.Type.Equals("regiao", StringComparison.OrdinalIgnoreCase)).ToString("N0");
-        CaptureMonitorTotalText.Text = captures.Count(item =>
-            item.Type.Equals("monitor", StringComparison.OrdinalIgnoreCase)).ToString("N0");
-        CaptureWindowTotalText.Text = captures.Count(item =>
-            item.Type.Equals("janela", StringComparison.OrdinalIgnoreCase)).ToString("N0");
-        CaptureGifTotalText.Text = captures.Count(item =>
-            item.MediaKind.Equals("gif", StringComparison.OrdinalIgnoreCase)).ToString("N0");
-        CaptureMp4TotalText.Text = captures.Count(item =>
-            item.MediaKind.Equals("video", StringComparison.OrdinalIgnoreCase)).ToString("N0");
-
-        StatisticsRankingPanel.Children.Clear();
-        var ranking = _snippets
-            .Select(item => new { Snippet = item, Usage = _usageService.For(item.Id) })
-            .Where(item => item.Usage?.Count > 0)
-            .OrderByDescending(item => item.Usage!.Count)
-            .Take(8)
-            .ToList();
-
-        if (ranking.Count == 0)
-        {
-            StatisticsRankingPanel.Children.Add(new TextBlock
-            {
-                Text = "Use um atalho para iniciar as estatísticas.",
-                Foreground = (Brush)FindResource("MutedBrush")
-            });
-        }
-        else
-        {
-            foreach (var item in ranking)
-            {
-                StatisticsRankingPanel.Children.Add(new TextBlock
-                {
-                    Text = $"{item.Snippet.Trigger}  ·  {item.Usage!.Count:N0} uso(s)",
-                    Margin = new Thickness(0, 5, 0, 5)
-                });
-            }
-        }
-
-        QuickAccentCharactersPanel.Children.Clear();
-        var quickAccentRanking = _usageService.QuickAccent.Characters
-            .Where(item => item.Value > 0)
-            .OrderByDescending(item => item.Value)
-            .ThenBy(item => item.Key, StringComparer.CurrentCultureIgnoreCase)
-            .Take(8)
-            .ToList();
-        QuickAccentFavoriteText.Text = quickAccentRanking.Count > 0
-            ? quickAccentRanking[0].Key
-            : "—";
-
-        if (quickAccentRanking.Count == 0)
-        {
-            QuickAccentCharactersPanel.Children.Add(new TextBlock
-            {
-                Text = "Os caracteres usados aparecerão aqui.",
-                Foreground = (Brush)FindResource("MutedBrush")
-            });
-        }
-        else
-        {
-            foreach (var item in quickAccentRanking)
-            {
-                QuickAccentCharactersPanel.Children.Add(new Border
-                {
-                    Background = (Brush)FindResource("AccentSubtleBrush"),
-                    CornerRadius = new CornerRadius(8),
-                    Padding = new Thickness(10, 6, 10, 6),
-                    Margin = new Thickness(0, 0, 7, 7),
-                    Child = new TextBlock
-                    {
-                        Text = $"{item.Key}  {item.Value:N0}×",
-                        Foreground = (Brush)FindResource("AccentBrush"),
-                        FontFamily = new FontFamily("Cascadia Mono, Consolas"),
-                        FontWeight = FontWeights.SemiBold
-                    }
-                });
-            }
-        }
-
-        RefreshMostUsed();
-    }
 
     private async void Settings_OnClick(object sender, RoutedEventArgs e)
     {
@@ -4224,6 +4132,7 @@ public partial class MainWindow : Window
     {
         UpdateResponsiveLayout(e.NewSize.Width);
         UpdateQuickAccentLayout(e.NewSize.Width);
+        UpdateStatisticsLayout(e.NewSize.Width);
         if (_captureEditorExpanded) UpdateCaptureEditorViewport();
     }
 
