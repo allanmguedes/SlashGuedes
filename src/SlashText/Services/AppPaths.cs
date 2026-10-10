@@ -36,6 +36,9 @@ public static class AppPaths
     public static bool IsSettingsPilot => IsCapturePilot &&
         (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetCustomAttributes<AssemblyMetadataAttribute>()
         .Any(item => item.Key == "SlashDeskSettingsPilot" && item.Value == "true");
+    public static bool IsAboutPilot => IsCapturePilot &&
+        (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetCustomAttributes<AssemblyMetadataAttribute>()
+        .Any(item => item.Key == "SlashDeskAboutPilot" && item.Value == "true");
     public static string BaseDirectory => Current.ExecutableDirectory;
     public static string DataDirectory => Current.DataDirectory;
     public static string SnippetsFile => Path.Combine(DataDirectory, "snippets.md");

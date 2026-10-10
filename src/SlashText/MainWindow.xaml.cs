@@ -38,7 +38,7 @@ public partial class MainWindow : Window
     private readonly CaptureService _captureService = new();
     private readonly GifRecordingService _gifRecordingService = new();
     private readonly GlobalCaptureShortcutService _captureShortcuts = new();
-    private readonly UpdateService _updateService = new();
+    private readonly UpdateService _updateService;
     private readonly PortableUpdateService _portableUpdateService = new();
     private readonly UpdateNotificationGate _updateNotificationGate = new();
     private readonly SingleFlightGate _expansionRequestGate = new();
@@ -127,8 +127,9 @@ public partial class MainWindow : Window
 
     public MainWindow() : this(captureEvidence: false) { }
 
-    internal MainWindow(bool captureEvidence)
+    internal MainWindow(bool captureEvidence, UpdateService? updateService = null)
     {
+        _updateService = updateService ?? new UpdateService();
         InitializeComponent();
         CategoryBox.ItemsSource = ShortcutCategories.All;
         SelectShortcutCategory("Geral");
@@ -180,14 +181,14 @@ public partial class MainWindow : Window
             _settings.Capture.Recording ??= new RecordingSettings();
             if (AppPaths.IsCapturePilot)
             {
-                Title = AppPaths.IsSettingsPilot ? "SlashDesk — Piloto Configurações 3.3.0 · #67" : AppPaths.IsStatisticsPilot ? "SlashDesk — Piloto Estatísticas 3.3.0 · #66" : AppPaths.IsQuickAccentPilot ? "SlashDesk — Piloto Acento Rápido 3.3.0 · #65" : AppPaths.IsCaptureOcrPilot ? "SlashDesk — Piloto Captura + OCR 3.3.0" : AppPaths.IsCaptureComplementsPilot ? "SlashDesk — Piloto Complementos da Captura 3.3.0 · #74" : AppPaths.IsShortcutsPilot ? "SlashDesk — Piloto Atalhos 3.3.0 · #64" : "SlashDesk — Piloto Captura 3.3.0 · #63";
-                if (!AppPaths.IsSettingsPilot)
+                Title = AppPaths.IsAboutPilot ? "SlashDesk — Piloto Sobre 3.3.0 · #68" : AppPaths.IsSettingsPilot ? "SlashDesk — Piloto Configurações 3.3.0 · #67" : AppPaths.IsStatisticsPilot ? "SlashDesk — Piloto Estatísticas 3.3.0 · #66" : AppPaths.IsQuickAccentPilot ? "SlashDesk — Piloto Acento Rápido 3.3.0 · #65" : AppPaths.IsCaptureOcrPilot ? "SlashDesk — Piloto Captura + OCR 3.3.0" : AppPaths.IsCaptureComplementsPilot ? "SlashDesk — Piloto Complementos da Captura 3.3.0 · #74" : AppPaths.IsShortcutsPilot ? "SlashDesk — Piloto Atalhos 3.3.0 · #64" : "SlashDesk — Piloto Captura 3.3.0 · #63";
+                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot)
                 {
                     _settings.CheckUpdatesOnStartup = false;
                     _settings.StartWithWindows = false;
                 }
                 _settings.OnboardingCompleted = true;
-                if (!AppPaths.IsSettingsPilot) _settings.CloseToTray = false;
+                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot) _settings.CloseToTray = false;
                 if (!File.Exists(AppPaths.SettingsFile))
                     _settings.Capture.OutputDirectoryTemplate = Path.Combine(AppPaths.DataDirectory, "Capturas", "{year}", "{month}");
                 StartWithWindowsCheckBox.IsEnabled = false;
@@ -210,8 +211,7 @@ public partial class MainWindow : Window
             StartWithWindowsCheckBox.IsChecked = _settings.StartWithWindows;
             ShowSuggestionsCheckBox.IsChecked = _settings.ShowSuggestions;
             CheckUpdatesCheckBox.IsChecked = _settings.CheckUpdatesOnStartup;
-            AboutVersionText.Text =
-                $"Versão {ProductVersion()} · Licença MIT · código aberto";
+            RefreshAboutPresentation();
             SettingsVersionText.Text =
                 $"Versão atual: {ProductVersion()}";
             UpdateChannelText.Text =
@@ -274,7 +274,8 @@ public partial class MainWindow : Window
                 "Atalhos globais de captura",
                 ConfigureCaptureShortcuts);
             RefreshCaptureHistory();
-            if (AppPaths.IsSettingsPilot) ShowView(SettingsView, SettingsTabButton);
+            if (AppPaths.IsAboutPilot) ShowView(AboutView, AboutTabButton);
+            else if (AppPaths.IsSettingsPilot) ShowView(SettingsView, SettingsTabButton);
             else if (AppPaths.IsStatisticsPilot) ShowView(StatisticsView, StatisticsTabButton);
             else if (AppPaths.IsQuickAccentPilot) ShowView(QuickAccentView, QuickAccentTabButton);
             else if (AppPaths.IsCapturePilot && !AppPaths.IsShortcutsPilot) ShowView(CaptureView, CaptureTabButton);
@@ -1191,6 +1192,11 @@ public partial class MainWindow : Window
         ShellMonitorStatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, monitorReady ? "SuccessBrush" : "MutedBrush");
 
         if (ReferenceEquals(view, ShortcutsView) && ShortcutsView.IsLoaded) LabMotion.PlayEntrance(ShortcutsView);
+        if (ReferenceEquals(view, AboutView))
+        {
+            RefreshAboutPresentation(); UpdateAboutLayout(ActualWidth);
+            if (AboutView.IsLoaded) LabMotion.PlayEntrance(AboutView);
+        }
         if (ReferenceEquals(view, SettingsView))
         {
             RefreshSettingsPresentation(); UpdateSettingsLayout(ActualWidth);
@@ -3785,13 +3791,13 @@ public partial class MainWindow : Window
 
     private async void CheckUpdates_OnClick(object sender, RoutedEventArgs e)
     {
-        if (AppPaths.IsCapturePilot) return;
+        if (AppPaths.IsCapturePilot || _manualUpdateCheckInProgress) return;
+        _manualUpdateCheckInProgress = true;
         CheckUpdatesButton.IsEnabled = false;
         SettingsCheckUpdatesButton.IsEnabled = false;
         try
         {
-            var result = await _updateService.CheckAsync(force: true);
-            UpdateUpdateDisplay(await _updateService.LoadStateAsync());
+            var result = await CheckUpdatesAndRefreshAsync();
             if (result.UpdateAvailable && result.Release is not null)
             {
                 _updateNotificationGate.Mark(result.Release.Version);
@@ -3799,7 +3805,7 @@ public partial class MainWindow : Window
             }
             else
             {
-                MessageBox.Show(
+                ShowSettingsDialog(
                     result.Message,
                     "Atualizações do SlashDesk",
                     MessageBoxButton.OK,
@@ -3810,7 +3816,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
-            MessageBox.Show(
+            ShowSettingsDialog(
                 $"Não foi possível consultar o GitHub.\n\n{exception.Message}",
                 "Atualizações do SlashDesk",
                 MessageBoxButton.OK,
@@ -3818,6 +3824,7 @@ public partial class MainWindow : Window
         }
         finally
         {
+            _manualUpdateCheckInProgress = false;
             CheckUpdatesButton.IsEnabled = true;
             SettingsCheckUpdatesButton.IsEnabled = true;
         }
@@ -4009,7 +4016,7 @@ public partial class MainWindow : Window
     {
         if (!string.IsNullOrWhiteSpace(_lastReleaseUrl))
         {
-            Process.Start(new ProcessStartInfo(_lastReleaseUrl) { UseShellExecute = true });
+            OpenAboutLink(_lastReleaseUrl);
         }
     }
 
@@ -4017,14 +4024,7 @@ public partial class MainWindow : Window
         (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())
             .GetName().Version?.ToString(3) ?? "0.0.0";
 
-    private void OpenGitHub_OnClick(object sender, RoutedEventArgs e)
-    {
-        Process.Start(new ProcessStartInfo(
-            "https://github.com/lucasllira/SlashText")
-        {
-            UseShellExecute = true
-        });
-    }
+    private void OpenGitHub_OnClick(object sender, RoutedEventArgs e) => OpenAboutLink(ProjectUrl);
 
     private void ReplaceList(IEnumerable<Snippet> snippets)
     {
@@ -4042,6 +4042,7 @@ public partial class MainWindow : Window
         UpdateQuickAccentLayout(e.NewSize.Width);
         UpdateStatisticsLayout(e.NewSize.Width);
         UpdateSettingsLayout(e.NewSize.Width);
+        UpdateAboutLayout(e.NewSize.Width);
         if (_captureEditorExpanded) UpdateCaptureEditorViewport();
     }
 

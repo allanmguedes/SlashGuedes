@@ -14,6 +14,7 @@
                 <ResourceDictionary Source="Styles/VisualLab/QuickAccent.xaml"/>
                 <ResourceDictionary Source="Styles/VisualLab/Statistics.xaml"/>
                 <ResourceDictionary Source="Styles/VisualLab/Settings.xaml"/>
+                <ResourceDictionary Source="Styles/VisualLab/About.xaml"/>
                 <ResourceDictionary Source="Styles/VisualLab/CaptureOverlay.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 

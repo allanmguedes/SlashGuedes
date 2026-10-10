@@ -115,6 +115,24 @@ jobs:
           path: settings-evidence/
           if-no-files-found: warn
 
+      - name: About real WPF identity, links and shared update state
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem src/SlashText/bin -Recurse -Filter SlashDesk.exe | Select-Object -First 1
+          $output = Join-Path $PWD 'about-evidence'
+          $process = Start-Process $exe.FullName -ArgumentList "--about-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'About smoke timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'About smoke failed' }
+          Get-Content "$output/result.txt"
+
+      - name: Upload about evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlashDesk-about-controls-evidence
+          path: about-evidence/
+          if-no-files-found: warn
+
       - name: Visual foundation contract and gallery smoke
         shell: pwsh
         run: |

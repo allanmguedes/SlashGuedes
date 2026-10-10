@@ -1583,124 +1583,68 @@
  </StackPanel>
 </ScrollViewer>
 
-                    <ScrollViewer x:Name="AboutView" Visibility="Collapsed"
-                                  VerticalScrollBarVisibility="Auto">
-                        <Grid Margin="24" MaxWidth="980" HorizontalAlignment="Center">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="22"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="20"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <Border Style="{StaticResource SettingsCard}"
-                                    Background="{DynamicResource AccentSubtleBrush}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="112"/>
-                                        <ColumnDefinition Width="22"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Image Source="Assets/SlashDesk.png"
-                                           Width="104"
-                                           Height="104"
-                                           Stretch="Uniform"
-                                           RenderOptions.BitmapScalingMode="HighQuality"/>
-                                    <StackPanel Grid.Column="2"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="SlashDesk"
-                                                   FontFamily="Segoe UI Variable Display"
-                                                   FontSize="32"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Text="Texto, acentos e capturas locais para Windows"
-                                                   Margin="0,4,0,0"
-                                                   FontSize="16"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock x:Name="AboutVersionText"
-                                                   Text="Versão atual · Licença MIT · código aberto"
-                                                   Margin="0,12,0,0"
-                                                   Foreground="{DynamicResource AccentBrush}"
-                                                   FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-
-                            <StackPanel Grid.Row="2">
-                                <TextBlock Text="Feito para reduzir trabalho repetitivo"
-                                           Style="{StaticResource PageTitle}"
-                                           FontSize="22"/>
-                                <TextBlock Margin="0,8,0,0"
-                                           TextWrapping="Wrap"
-                                           FontSize="15"
-                                           Text="Crie atalhos reutilizáveis, digite acentos em teclados internacionais e capture monitor, região ou janela com organização automática."/>
+                                        <ScrollViewer x:Name="AboutView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="AboutContent" Margin="30,24,30,24" MaxWidth="1320" HorizontalAlignment="Stretch">
+                            <StackPanel Margin="20,30,20,32" HorizontalAlignment="Center">
+                                <Border Width="96" Height="96" CornerRadius="22" Background="{DynamicResource Lab.tint}" BorderBrush="{DynamicResource Lab.line}" BorderThickness="1" HorizontalAlignment="Center" Margin="0,0,0,25">
+                                    <Image Source="Assets/SlashDesk.png" Width="72" Height="72" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="Ícone do SlashDesk"/>
+                                </Border>
+                                <TextBlock Text="SLASHDESK" Style="{StaticResource Lab.Metadata}" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                                <TextBlock x:Name="AboutHeroHeading" Style="{StaticResource Lab.About.Heading}">Ferramentas pequenas.<LineBreak/>Possibilidades maiores.</TextBlock>
+                                <TextBlock Style="{StaticResource Lab.About.Body}" FontSize="16" TextAlignment="Center" Margin="0,17,0,20">Texto, acentos, capturas e gravações.<LineBreak/>Tudo no seu ritmo.</TextBlock>
+                                <WrapPanel HorizontalAlignment="Center">
+                                    <Border Style="{StaticResource Lab.About.Badge}"><TextBlock x:Name="AboutVersionText" Text="Versão do aplicativo" Style="{StaticResource Lab.Text}" Foreground="{DynamicResource Lab.accent-text}" FontWeight="SemiBold"/></Border>
+                                    <Border Style="{StaticResource Lab.About.Badge}"><TextBlock Text="Licença MIT · código aberto" Style="{StaticResource Lab.Text}"/></Border>
+                                </WrapPanel>
                             </StackPanel>
-
-                            <UniformGrid Grid.Row="4" Columns="3">
-                                <Border Style="{StaticResource MetricCard}">
+                            <Grid x:Name="AboutCardsGrid" Margin="-8,0,-8,0">
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                                <Border x:Name="AboutWindowsCard" Style="{StaticResource Lab.About.Card}">
                                     <StackPanel>
-                                        <TextBlock Text="Principais recursos"
-                                                   FontSize="17"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Margin="0,10,0,0"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource MutedBrush}"
-                                                   Text="Atalhos / e :, variáveis, texto formatado, Acento Rápido, monitor ativo, região, janela, atalhos globais e regras de pasta."/>
+                                        <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="Monitor" Style="{StaticResource Lab.Icon}"/><TextBlock Text="Feito para Windows" Style="{StaticResource Lab.Heading}" FontSize="16" Margin="9,0,0,0"/></StackPanel>
+                                        <TextBlock x:Name="AboutDistributionText" Style="{StaticResource Lab.About.Body}" Margin="0,14,0,8"/>
+                                        <TextBlock Style="{StaticResource Lab.Metadata}" TextWrapping="Wrap" Text="Atalhos com /, texto formatado e variáveis. Acento Rápido. Captura longa, OCR, GIF e vídeo MP4 com áudio do PC e microfone."/>
                                     </StackPanel>
                                 </Border>
-                                <Border Style="{StaticResource MetricCard}">
+                                <Border x:Name="AboutPrivacyCard" Grid.Column="1" Style="{StaticResource Lab.About.Card}">
                                     <StackPanel>
-                                        <Path Data="{StaticResource Icon.Check}" Style="{StaticResource StandaloneIcon}"
-                                              Width="28" Height="28" HorizontalAlignment="Left"/>
-                                        <TextBlock Text="Privacidade" FontSize="17" FontWeight="SemiBold" Margin="0,12,0,0"/>
-                                        <TextBlock Margin="0,10,0,0" TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource MutedBrush}"
-                                                   Text="Seus atalhos, estatísticas, capturas e histórico permanecem na origem de dados escolhida."/>
+                                        <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="ShieldCheck" Style="{StaticResource Lab.Icon}"/><TextBlock Text="Privado por natureza" Style="{StaticResource Lab.Heading}" FontSize="16" Margin="9,0,0,0"/></StackPanel>
+                                        <TextBlock Style="{StaticResource Lab.About.Body}" Margin="0,14,0,8" Text="Atalhos, preferências e contagens ficam na origem de dados escolhida. Capturas são salvas na pasta definida por você."/>
+                                        <TextBlock Style="{StaticResource Lab.Metadata}" TextWrapping="Wrap" Text="Sem envio de estatísticas. A consulta de atualizações utiliza o GitHub."/>
                                     </StackPanel>
                                 </Border>
-                                <Border Style="{StaticResource SettingsCard}">
+                                <Border x:Name="AboutProjectCard" Grid.Column="2" Style="{StaticResource Lab.About.Card}">
                                     <StackPanel>
-                                        <TextBlock Text="Projeto aberto"
-                                                   FontSize="17"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Margin="0,10,0,0"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource MutedBrush}"
-                                                   Text="Código disponível no GitHub para estudo, auditoria e colaboração sob a licença MIT."/>
-                                        <TextBlock x:Name="UpdateChannelText"
-                                                   Margin="0,12,0,0"
-                                                   Text="Canal: estável"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock x:Name="LastUpdateCheckText"
-                                                   Margin="0,4,0,0"
-                                                   Text="Última verificação: ainda não verificado"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock x:Name="LastUpdateResultText"
-                                                   Margin="0,4,0,0"
-                                                   Text="Resultado: ainda não verificado"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <Button Content="Abrir projeto no GitHub"
-                                                HorizontalAlignment="Left"
-                                                Margin="0,14,0,0"
-                                                Style="{StaticResource PrimaryButton}"
-                                                Click="OpenGitHub_OnClick"/>
-                                        <Button x:Name="CheckUpdatesButton"
-                                                Content="Verificar agora"
-                                                HorizontalAlignment="Left"
-                                                Margin="0,8,0,0"
-                                                Click="CheckUpdates_OnClick"/>
-                                        <Button x:Name="ReleaseNotesButton"
-                                                Content="Visualizar notas da versão"
-                                                HorizontalAlignment="Left"
-                                                Margin="0,8,0,0"
-                                                Visibility="Collapsed"
-                                                Click="ReleaseNotes_OnClick"/>
+                                        <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="ExternalLink" Style="{StaticResource Lab.Icon}"/><TextBlock Text="Aberto para evoluir" Style="{StaticResource Lab.Heading}" FontSize="16" Margin="9,0,0,0"/></StackPanel>
+                                        <TextBlock Style="{StaticResource Lab.About.Body}" Margin="0,14,0,8" Text="Código do SlashDesk disponível no GitHub sob a licença MIT."/>
+                                        <TextBlock Style="{StaticResource Lab.Metadata}" TextWrapping="Wrap" Text="Componentes e conjuntos de ícones mantêm suas próprias licenças."/>
+                                        <Button x:Name="AboutProjectButton" Content="Explorar o projeto ↗" Style="{StaticResource Lab.Button}" HorizontalAlignment="Left" Margin="0,14,0,0" Click="OpenGitHub_OnClick"/>
                                     </StackPanel>
                                 </Border>
-                            </UniformGrid>
-                        </Grid>
+                            </Grid>
+                            <WrapPanel x:Name="AboutLinksPanel" HorizontalAlignment="Center" Margin="0,4,0,20">
+                                <Button x:Name="AboutCurrentReleaseNotesButton" Content="Notas da versão instalada ↗" Style="{StaticResource Lab.Button}" Margin="5" Click="AboutCurrentReleaseNotes_OnClick"/>
+                                <Button x:Name="AboutReportIssueButton" Content="Relatar um problema ↗" Style="{StaticResource Lab.Button}" Margin="5" Click="AboutReportIssue_OnClick"/>
+                                <Button x:Name="AboutLicenseButton" Content="Licença MIT ↗" Style="{StaticResource Lab.Button}" Margin="5" Click="AboutLicense_OnClick"/>
+                            </WrapPanel>
+                            <TextBlock x:Name="AboutLinkStatusText" Style="{StaticResource Lab.About.Body}" Foreground="{DynamicResource Lab.error}" TextWrapping="Wrap" Visibility="Collapsed" Margin="0,0,0,16" AutomationProperties.LiveSetting="Polite"/>
+                            <Border x:Name="AboutUpdatesCard" Style="{StaticResource Lab.Card}" Padding="22">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="RefreshCw" Style="{StaticResource Lab.Icon}"/><TextBlock Text="Atualizações" Style="{StaticResource Lab.Heading}" FontSize="16" Margin="9,0,0,0"/></StackPanel>
+                                    <TextBlock x:Name="UpdateChannelText" Text="Canal estável · GitHub Releases oficiais" Style="{StaticResource Lab.About.Body}" Margin="0,12,0,8"/>
+                                    <TextBlock x:Name="LastUpdateCheckText" Text="Última verificação: ainda não verificado" Style="{StaticResource Lab.Metadata}" TextWrapping="Wrap"/>
+                                    <TextBlock x:Name="LastUpdateResultText" Text="Resultado: ainda não verificado" Style="{StaticResource Lab.About.Body}" Margin="0,5,0,10" AutomationProperties.LiveSetting="Polite"/>
+                                    <WrapPanel>
+                                        <Button x:Name="CheckUpdatesButton" Content="Verificar agora" Style="{StaticResource Lab.Button}" Click="CheckUpdates_OnClick" Margin="0,0,8,6"/>
+                                        <Button x:Name="ReleaseNotesButton" Content="Notas da versão consultada ↗" Style="{StaticResource Lab.Button}" Visibility="Collapsed" Click="ReleaseNotes_OnClick" Margin="0,0,0,6"/>
+                                    </WrapPanel>
+                                    <TextBlock x:Name="AboutPilotNoteText" Style="{StaticResource Lab.Metadata}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
                     </ScrollViewer>
+
                 </Grid>
         </Border>
 
