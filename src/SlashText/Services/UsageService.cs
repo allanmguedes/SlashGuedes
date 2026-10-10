@@ -140,6 +140,13 @@ public sealed class UsageService
     public UsageRecord? For(Guid snippetId) =>
         _records.FirstOrDefault(item => item.SnippetId == snippetId);
 
+    internal async Task RunMaintenanceAsync(Action action)
+    {
+        await _writeLock.WaitAsync();
+        try { await Task.Run(action); }
+        finally { _writeLock.Release(); }
+    }
+
     public IReadOnlyDictionary<char, long> QuickAccentCharacterCounts() =>
         _quickAccent.Characters
             .Where(item => item.Key.Length == 1)

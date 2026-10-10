@@ -34,6 +34,8 @@ public sealed class BackupService
     private readonly bool _includeAssets;
     private readonly string _assetsDirectory;
     private readonly string _dataDirectory;
+    private readonly bool _includeCaptureEmotes;
+    private readonly string _captureEmotesDirectory;
 
     internal Action<int, string>? BeforeRestoreApply { get; set; }
 
@@ -41,12 +43,15 @@ public sealed class BackupService
         string? backupDirectory = null,
         IReadOnlyList<string>? sources = null,
         string? assetsDirectory = null,
-        string? dataDirectory = null)
+        string? dataDirectory = null,
+        string? captureEmotesDirectory = null)
     {
         _backupDirectory = backupDirectory ?? AppPaths.BackupsDirectory;
         _includeAssets = sources is null || assetsDirectory is not null;
         _assetsDirectory = assetsDirectory ?? AppPaths.AssetsDirectory;
         _dataDirectory = dataDirectory ?? AppPaths.DataDirectory;
+        _includeCaptureEmotes = sources is null || captureEmotesDirectory is not null;
+        _captureEmotesDirectory = captureEmotesDirectory ?? Path.Combine(_dataDirectory, "capture-emotes");
         _sources = sources ??
         [
             AppPaths.SnippetsFile,
@@ -197,7 +202,9 @@ public sealed class BackupService
             }
         }
 
-        return new RestorePlan(restoredFiles, includesAssets);
+        var includesEmotes = ReadIncludesCaptureEmotes(archive);
+        if (includesEmotes) CaptureStampCatalog.ValidateDirectory(Path.Combine(stagingDirectory, "capture-emotes"));
+        return new RestorePlan(restoredFiles, includesAssets, includesEmotes);
     }
 
     private void ApplyStagedRestore(
@@ -209,6 +216,7 @@ public sealed class BackupService
         Directory.CreateDirectory(rollbackDirectory);
         var appliedFiles = new List<AppliedFile>();
         AppliedDirectory? appliedAssets = null;
+        AppliedDirectory? appliedEmotes = null;
         var step = 0;
         try
         {
@@ -239,7 +247,7 @@ public sealed class BackupService
             if (plan.IncludesAssets)
             {
                 const string assetsLabel = "assets/";
-                BeforeRestoreApply?.Invoke(step, assetsLabel);
+                BeforeRestoreApply?.Invoke(step++, assetsLabel);
                 var stagedAssets = Path.Combine(stagingDirectory, "assets");
                 Directory.CreateDirectory(stagedAssets);
                 var targetAssets = Path.GetFullPath(_assetsDirectory);
@@ -269,9 +277,36 @@ public sealed class BackupService
                     throw;
                 }
             }
+            if (plan.IncludesCaptureEmotes)
+            {
+                BeforeRestoreApply?.Invoke(step, "capture-emotes/");
+                var staged = Path.Combine(stagingDirectory, "capture-emotes");
+                Directory.CreateDirectory(staged);
+                var target = Path.GetFullPath(_captureEmotesDirectory);
+                EnsureDirectoryWithinData(target);
+                var rollback = Path.Combine(rollbackDirectory, "capture-emotes");
+                var existed = Directory.Exists(target);
+                if (existed) Directory.Move(target, rollback);
+                try
+                {
+                    Directory.Move(staged, target);
+                    appliedEmotes = new AppliedDirectory(target, rollback, existed);
+                }
+                catch
+                {
+                    if (existed && !Directory.Exists(target) && Directory.Exists(rollback)) Directory.Move(rollback, target);
+                    throw;
+                }
+            }
         }
         catch
         {
+            if (appliedEmotes is not null)
+            {
+                DeleteDirectoryIfExists(appliedEmotes.Target);
+                if (appliedEmotes.Existed && Directory.Exists(appliedEmotes.Rollback))
+                    Directory.Move(appliedEmotes.Rollback, appliedEmotes.Target);
+            }
             if (appliedAssets is not null)
             {
                 DeleteDirectoryIfExists(appliedAssets.Target);
@@ -319,6 +354,22 @@ public sealed class BackupService
         return archive.Entries.Any(entry =>
             NormalizeArchivePath(entry.FullName)
                 .StartsWith("assets/", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool ReadIncludesCaptureEmotes(ZipArchive archive)
+    {
+        var manifest = archive.Entries.Single(entry => NormalizeArchivePath(entry.FullName).Equals(ManifestName, StringComparison.OrdinalIgnoreCase));
+        using var document = JsonDocument.Parse(manifest.Open());
+        if (document.RootElement.TryGetProperty("includesCaptureEmotes", out var flag))
+        {
+            if (flag.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) throw new InvalidDataException("Indicador da coleção de emojis inválido.");
+            var includes = flag.GetBoolean();
+            if (!includes && archive.Entries.Any(entry => NormalizeArchivePath(entry.FullName).StartsWith("capture-emotes/", StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidDataException("A coleção de emojis não corresponde ao manifesto.");
+            return includes;
+        }
+        // Backups written before this optional collection flag leave personal emojis untouched.
+        return archive.Entries.Any(entry => NormalizeArchivePath(entry.FullName).StartsWith("capture-emotes/", StringComparison.OrdinalIgnoreCase));
     }
 
     private void EnsureDirectoryWithinData(string directory)
@@ -409,7 +460,7 @@ public sealed class BackupService
             $".{fileName}-{Guid.NewGuid():N}.tmp");
         try
         {
-            CreateArchive(temporary, sources, _includeAssets);
+            CreateArchive(temporary, sources, _includeAssets, _includeCaptureEmotes);
             ValidateSnapshot(temporary);
             File.Move(temporary, destination, overwrite: false);
             return destination;
@@ -430,6 +481,17 @@ public sealed class BackupService
             .Select(path => new BackupSource(path, Path.GetFileName(path)))
             .ToList();
 
+        if (_includeCaptureEmotes)
+        {
+            CaptureStampCatalog.ValidateDirectory(_captureEmotesDirectory);
+            if (Directory.Exists(_captureEmotesDirectory))
+                foreach (var file in Directory.EnumerateFiles(_captureEmotesDirectory, "*", new EnumerationOptions { AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = false }))
+                {
+                    var name = Path.GetFileName(file);
+                    if (name == "catalog.json" || (Path.GetExtension(name) == ".png" && Guid.TryParseExact(Path.GetFileNameWithoutExtension(name), "N", out _)))
+                        sources.Add(new BackupSource(file, "capture-emotes/" + name));
+                }
+        }
         if (!_includeAssets || !Directory.Exists(_assetsDirectory))
         {
             return sources;
@@ -469,7 +531,8 @@ public sealed class BackupService
     private static void CreateArchive(
         string path,
         IReadOnlyList<BackupSource> sources,
-        bool includesAssets)
+        bool includesAssets,
+        bool includesCaptureEmotes)
     {
         var files = new List<BackupManifestFile>();
         using (var archive = ZipFile.Open(path, ZipArchiveMode.Create))
@@ -520,6 +583,7 @@ public sealed class BackupService
                         ?? "unknown",
                     AppPaths.Mode.ToString(),
                     includesAssets,
+                    includesCaptureEmotes,
                     files),
                 ManifestOptions));
         }
@@ -659,6 +723,11 @@ public sealed class BackupService
         {
             return;
         }
+        if (normalized.StartsWith("capture-emotes/", StringComparison.OrdinalIgnoreCase))
+        {
+            var name = normalized["capture-emotes/".Length..];
+            if (name == "catalog.json" || (Path.GetExtension(name) == ".png" && Guid.TryParseExact(Path.GetFileNameWithoutExtension(name), "N", out _) && !name.Contains('/'))) return;
+        }
 
         if (!normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ||
             normalized.Length <= "assets/".Length)
@@ -699,11 +768,13 @@ public sealed class BackupService
         string SlashDeskVersion,
         string DistributionMode,
         bool IncludesAssets,
+        bool IncludesCaptureEmotes,
         IReadOnlyList<BackupManifestFile> Files);
 
     private sealed record RestorePlan(
         IReadOnlyList<string> Files,
-        bool IncludesAssets);
+        bool IncludesAssets,
+        bool IncludesCaptureEmotes);
 
     private sealed record AppliedFile(
         string Target,

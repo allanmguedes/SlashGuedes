@@ -46,6 +46,25 @@ public sealed class CaptureStampCatalog
         }
     }
     private string Manifest => Path.Combine(_directory, "catalog.json");
+    internal static void InvalidateCurrent() => _current = null;
+    internal static void ValidateDirectory(string directory)
+    {
+        if (!Directory.Exists(directory)) return;
+        if (File.GetAttributes(directory).HasFlag(FileAttributes.ReparsePoint)) throw new InvalidDataException("Pasta de emojis inválida.");
+        var catalog = new CaptureStampCatalog(directory);
+        if (File.Exists(catalog.Manifest) && File.GetAttributes(catalog.Manifest).HasFlag(FileAttributes.ReparsePoint))
+            throw new InvalidDataException("Catálogo de emojis inválido.");
+        var entries = catalog.Read();
+        if (entries.Count == 0 && !File.Exists(catalog.Manifest) && Directory.EnumerateFiles(directory, "*.png").Any())
+            throw new InvalidDataException("A coleção de emojis está sem catálogo.");
+        foreach (var entry in entries)
+        {
+            var image = Path.Combine(directory, entry.Id + ".png");
+            if (!File.Exists(image) || File.GetAttributes(image).HasFlag(FileAttributes.ReparsePoint))
+                throw new InvalidDataException("A coleção de emojis contém uma imagem ausente ou inválida.");
+            catalog.GetImage("custom:" + entry.Id);
+        }
+    }
     public static bool IsCustom(string value) => value.StartsWith("custom:", StringComparison.Ordinal);
     private static string Id(string value)
     {

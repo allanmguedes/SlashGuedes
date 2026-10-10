@@ -56,6 +56,7 @@ public partial class MainWindow
         ShortcutSaveButton.IsEnabled = _snippetStorageAvailable && !_shortcutOperationInProgress;
         ShortcutDeleteButton.IsEnabled = _snippetStorageAvailable && _selected is not null && !_shortcutOperationInProgress;
         ShortcutImportButton.IsEnabled = _snippetStorageAvailable && !_shortcutOperationInProgress;
+        if (SettingsImportButton is not null) SettingsImportButton.IsEnabled = _snippetStorageAvailable && !_shortcutOperationInProgress;
         if (CategoryBox is not null) CategoryBox.IsEnabled = _snippetStorageAvailable && !_shortcutOperationInProgress;
         if (dirty && StatusText is not null) StatusText.Text = "Alterações não salvas";
     }

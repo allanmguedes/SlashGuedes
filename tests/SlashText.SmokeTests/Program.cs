@@ -1411,9 +1411,11 @@ try
 
     Require(
         typeof(SlashText.MainWindow).GetMethod(
-            "ApplyTrayItemsTheme",
-            BindingFlags.NonPublic | BindingFlags.Static) is not null,
-        "tema da bandeja possui aplicação recursiva para submenus");
+            "CreateTrayMenu",
+            BindingFlags.NonPublic | BindingFlags.Instance) is not null &&
+        typeof(SlashText.MainWindow).Assembly.GetType("SlashText.Views.TrayMenuTheme")?.GetMethod(
+            "Apply", BindingFlags.NonPublic | BindingFlags.Static) is not null,
+        "bandeja mantém composição nativa e aplicação do tema compartilhado; recursão verificada pelo settings-smoke");
 
     var fakeFactory = new FakeRecorderBackendFactory();
     using (var lifecycle = new ScreenRecordingService(fakeFactory, TimeSpan.FromSeconds(1)))

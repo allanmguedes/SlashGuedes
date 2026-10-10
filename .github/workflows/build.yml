@@ -97,6 +97,24 @@ jobs:
           path: statistics-evidence/
           if-no-files-found: warn
 
+      - name: Settings real WPF and emoji backup transactions
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem src/SlashText/bin -Recurse -Filter SlashDesk.exe | Select-Object -First 1
+          $output = Join-Path $PWD 'settings-evidence'
+          $process = Start-Process $exe.FullName -ArgumentList "--settings-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Settings smoke timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Settings smoke failed' }
+          Get-Content "$output/result.txt"
+
+      - name: Upload settings evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlashDesk-settings-controls-evidence
+          path: settings-evidence/
+          if-no-files-found: warn
+
       - name: Visual foundation contract and gallery smoke
         shell: pwsh
         run: |

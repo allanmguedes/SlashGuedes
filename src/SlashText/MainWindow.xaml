@@ -1521,192 +1521,67 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <ScrollViewer x:Name="SettingsView" Visibility="Collapsed"
-                                  VerticalScrollBarVisibility="Auto">
-                        <Grid Margin="24" MaxWidth="1060" HorizontalAlignment="Center">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="22"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="20"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="20"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <StackPanel>
-                                <TextBlock Text="Configurações" Style="{StaticResource PageTitle}"/>
-                                <TextBlock Text="Personalize o SlashDesk para trabalhar exatamente do seu jeito."
-                                           Style="{StaticResource PageDescription}"/>
-                            </StackPanel>
-
-                            <Grid Grid.Row="2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="20"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <Border Style="{StaticResource SettingsCard}">
-                                    <StackPanel>
-                                        <TextBlock Text="Aparência"
-                                                   FontSize="17"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Text="Tema do SlashDesk"
-                                                   Margin="0,18,0,0"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <ComboBox x:Name="ThemeBox"
-                                                  Margin="0,7,0,0"
-                                                  SelectionChanged="ThemeBox_OnSelectionChanged">
-                                            <ComboBoxItem Content="Seguir o Windows" Tag="System"/>
-                                            <ComboBoxItem Content="Claro" Tag="Light"/>
-                                            <ComboBoxItem Content="Preto" Tag="Dark"/>
-                                        </ComboBox>
-                                        <TextBlock Text="A mudança é aplicada em todas as telas, diálogos e menus."
-                                                   Margin="0,10,0,0"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Grid.Column="2"
-                                        Style="{StaticResource SettingsCard}">
-                                    <StackPanel>
-                                        <TextBlock Text="Comportamento"
-                                                   FontSize="17"
-                                                   FontWeight="SemiBold"/>
-                                        <CheckBox x:Name="CloseToTrayCheckBox" Style="{StaticResource ToggleSwitch}"
-                                                  Content="Manter na bandeja ao fechar"
-                                                  Margin="0,16,0,7"
-                                                  Click="Settings_OnClick"/>
-                                        <CheckBox x:Name="StartWithWindowsCheckBox" Style="{StaticResource ToggleSwitch}"
-                                                  Content="Iniciar com o Windows"
-                                                  Click="Settings_OnClick"/>
-                                        <CheckBox x:Name="ShowSuggestionsCheckBox" Style="{StaticResource ToggleSwitch}"
-                                                  Content="Mostrar sugestões ao digitar /"
-                                                  Click="Settings_OnClick"/>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-
-                            <Grid Grid.Row="4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="20"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <Border Style="{StaticResource SettingsCard}">
-                                    <StackPanel>
-                                        <TextBlock Text="Importar atalhos"
-                                                   FontSize="17"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Margin="0,10,0,0"
-                                                   TextWrapping="Wrap"
-                                                   Text="Migre seus atalhos sem recriar tudo. O SlashDesk converte formatos conhecidos e informa o que precisa de revisão."
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock Text="Origem"
-                                                   Margin="0,16,0,0"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <ComboBox x:Name="ImportSourceBox"
-                                                  SelectedIndex="0"
-                                                  Margin="0,7,0,0">
-                                            <ComboBoxItem Content="SlashDesk (snippets.md)" Tag="SlashDesk"/>
-                                            <ComboBoxItem Content="Text Blaze (JSON)" Tag="TextBlaze"/>
-                                            <ComboBoxItem Content="Espanso (YAML)" Tag="Espanso"/>
-                                        </ComboBox>
-                                        <Button Content="Selecionar arquivo e importar"
-                                                Style="{StaticResource PrimaryButton}"
-                                                Margin="0,12,0,0"
-                                                HorizontalAlignment="Left"
-                                                Click="ImportSnippets_OnClick"/>
-                                        <TextBlock Margin="0,10,0,0"
-                                                   TextWrapping="Wrap"
-                                                   Text="Antes de alterar o snippets.md, o estado atual é salvo automaticamente."
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                    </StackPanel>
-                                </Border>
-
-                                <Border Grid.Column="2"
-                                        Style="{StaticResource SettingsCard}">
-                                    <StackPanel>
-                                        <TextBlock Text="Backup e restauração"
-                                                   FontSize="17"
-                                                   FontWeight="SemiBold"/>
-                                        <TextBlock Margin="0,10,0,0"
-                                                   TextWrapping="Wrap"
-                                                   Text="Um ZIP local é criado por dia. O SlashDesk mantém as sete cópias mais recentes com atalhos, preferências, estatísticas e histórico."
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock x:Name="BackupSummaryText"
-                                                   Text="Carregando backups..."
-                                                   Margin="0,12,0,0"
-                                                   Foreground="{DynamicResource AccentBrush}"
-                                                   FontWeight="SemiBold"/>
-                                        <WrapPanel Margin="0,14,0,0">
-                                            <Button Content="Criar agora"
-                                                    Style="{StaticResource PrimaryButton}"
-                                                    Margin="0,0,8,8"
-                                                    Click="CreateBackup_OnClick"/>
-                                            <Button Content="Restaurar ZIP"
-                                                    Margin="0,0,8,8"
-                                                    Click="RestoreBackup_OnClick"/>
-                                            <Button Content="Abrir pasta"
-                                                    Margin="0,0,8,8"
-                                                    Click="OpenBackupFolder_OnClick"/>
-                                            <Button Content="Analisar imagens"
-                                                    Margin="0,0,0,8"
-                                                    ToolTip="Localizar imagens de atalhos que não estão mais em uso"
-                                                    Click="AnalyzeAssets_OnClick"/>
-                                        </WrapPanel>
-                                        <TextBlock x:Name="BackupLocationText"
-                                                   Margin="0,6,0,0"
-                                                   TextWrapping="Wrap"
-                                                   Text="Os backups permanecem na origem de dados selecionada. Nenhum arquivo é enviado para a nuvem."
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                    </StackPanel>
-                                </Border>
-                            </Grid>
-                            <Border Grid.Row="6" Style="{StaticResource SettingsCard}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="1.1*"/>
-                                        <ColumnDefinition Width="20"/>
-                                        <ColumnDefinition Width="1*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Path Data="{StaticResource Icon.Refresh}" Style="{StaticResource StandaloneIcon}" Margin="0,0,9,0"/>
-                                            <TextBlock Text="Atualizações" FontSize="17" FontWeight="SemiBold"/>
-                                        </StackPanel>
-                                        <TextBlock x:Name="SettingsVersionText" Margin="0,14,0,0"
-                                                   FontWeight="SemiBold" Text="Versão atual"/>
-                                        <TextBlock Text="Canal estável · GitHub Releases oficiais"
-                                                   Margin="0,4,0,0" Foreground="{DynamicResource MutedBrush}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2">
-                                        <CheckBox x:Name="CheckUpdatesCheckBox"
-                                                  Style="{StaticResource ToggleSwitch}"
-                                                  Content="Verificar atualizações automaticamente"
-                                                  Margin="0,0,0,10"
-                                                  Click="Settings_OnClick"/>
-                                        <TextBlock x:Name="SettingsLastUpdateCheckText"
-                                                   Text="Última verificação: ainda não verificado"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <TextBlock x:Name="SettingsLastUpdateResultText"
-                                                   Margin="0,5,0,0" TextWrapping="Wrap"
-                                                   Text="Resultado: ainda não verificado"
-                                                   Foreground="{DynamicResource MutedBrush}"/>
-                                        <Button x:Name="SettingsCheckUpdatesButton"
-                                                Content="Verificar agora"
-                                                Style="{StaticResource PrimaryButton}"
-                                                HorizontalAlignment="Left"
-                                                Margin="0,12,0,0"
-                                                Click="CheckUpdates_OnClick"/>
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </Grid>
-                    </ScrollViewer>
+<ScrollViewer x:Name="SettingsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" lab:LabMotion.Entrance="Page">
+ <StackPanel Margin="30,28,30,24" MaxWidth="1320" HorizontalAlignment="Stretch">
+  <Grid Margin="0,0,0,24"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <StackPanel><TextBlock Text="DO SEU JEITO" Style="{StaticResource Lab.Metadata}" Foreground="{DynamicResource Lab.accent-text}" FontWeight="SemiBold"/><TextBlock Text="Pequenos ajustes. Seu fluxo." Style="{StaticResource Lab.Heading}" Margin="0,7,0,0"/><TextBlock Text="Preferências e cuidados com seus dados, em um só lugar." Style="{StaticResource Lab.Metadata}" Margin="0,7,0,0"/></StackPanel>
+   <Button x:Name="SettingsHelpButton" Grid.Column="1" Style="{StaticResource Lab.Button}" VerticalAlignment="Center" Click="OpenSettingsHelp_OnClick" ToolTip="Como usar as Configurações" AutomationProperties.Name="Ajuda das Configurações"><lab:LabIcon Kind="CircleHelp" Width="18" Height="18"/></Button>
+  </Grid>
+  <Border Background="{DynamicResource Lab.tint}" CornerRadius="6" Padding="14" Margin="0,0,0,18"><TextBlock x:Name="SettingsOperationText" Text="As preferências são salvas automaticamente." TextWrapping="Wrap" Style="{StaticResource Lab.Text}"/></Border>
+  <Grid x:Name="SettingsCardsGrid"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="20"/><ColumnDefinition/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+   <Border x:Name="SettingsAppearanceCard" Style="{StaticResource Lab.Settings.Card}"><StackPanel>
+    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="Palette" Style="{StaticResource Lab.Settings.Icon}"/><TextBlock Text="Aparência" Style="{StaticResource Lab.Settings.Title}"/></StackPanel>
+    <TextBlock Text="Uma interface confortável, a qualquer hora." Style="{StaticResource Lab.Metadata}" Margin="0,12,0,16"/>
+    <UniformGrid Columns="3">
+     <Button x:Name="SettingsLightThemeButton" Tag="Light" Click="SettingsTheme_OnClick" Style="{StaticResource Lab.Settings.Theme}" AutomationProperties.Name="Tema Claro"><StackPanel><Border Height="62" Background="{StaticResource Lab.Settings.Preview.Light}" CornerRadius="4" Padding="7"><StackPanel><Border Background="{StaticResource Lab.Settings.Preview.LightPanel}" Height="8" CornerRadius="2"/><UniformGrid Columns="3" Margin="0,6,0,0"><Border Background="{StaticResource Lab.Settings.Preview.LightPanel}" Height="30" Margin="0,0,3,0" BorderBrush="{StaticResource Lab.Settings.Preview.LightAccent}" BorderThickness="0,0,0,2"/><Border Background="{StaticResource Lab.Settings.Preview.LightPanel}" Margin="0,0,3,0"/><Border Background="{StaticResource Lab.Settings.Preview.LightPanel}"/></UniformGrid></StackPanel></Border><TextBlock Text="Claro" Margin="0,7,0,0" FontSize="11"/></StackPanel></Button>
+     <Button x:Name="SettingsDarkThemeButton" Tag="Dark" Click="SettingsTheme_OnClick" Style="{StaticResource Lab.Settings.Theme}" AutomationProperties.Name="Tema Preto"><StackPanel><Border Height="62" Background="{StaticResource Lab.Settings.Preview.Dark}" CornerRadius="4" Padding="7"><StackPanel><Border Background="{StaticResource Lab.Settings.Preview.DarkPanel}" Height="8" CornerRadius="2"/><UniformGrid Columns="3" Margin="0,6,0,0"><Border Background="{StaticResource Lab.Settings.Preview.DarkPanel}" Height="30" Margin="0,0,3,0" BorderBrush="{StaticResource Lab.Settings.Preview.DarkAccent}" BorderThickness="0,0,0,2"/><Border Background="{StaticResource Lab.Settings.Preview.DarkPanel}" Margin="0,0,3,0"/><Border Background="{StaticResource Lab.Settings.Preview.DarkPanel}"/></UniformGrid></StackPanel></Border><TextBlock Text="Preto" Margin="0,7,0,0" FontSize="11"/></StackPanel></Button>
+     <Button x:Name="SettingsSystemThemeButton" Tag="System" Click="SettingsTheme_OnClick" Style="{StaticResource Lab.Settings.Theme}" AutomationProperties.Name="Tema Seguir o Windows"><StackPanel><Border Height="62" CornerRadius="4" Padding="7"><Border.Background><StaticResource ResourceKey="Lab.Settings.Preview.System"/></Border.Background><StackPanel><Border Background="{StaticResource Lab.Settings.Preview.SystemPanel}" Height="8"/><UniformGrid Columns="3" Margin="0,6,0,0"><Border Background="{StaticResource Lab.Settings.Preview.SystemPanel}" Height="30" Margin="0,0,3,0"/><Border Background="{StaticResource Lab.Settings.Preview.SystemPanel}" Margin="0,0,3,0"/><Border Background="{StaticResource Lab.Settings.Preview.SystemPanel}"/></UniformGrid></StackPanel></Border><TextBlock Text="Seguir o Windows" TextWrapping="Wrap" Margin="0,7,0,0" FontSize="11"/></StackPanel></Button>
+    </UniformGrid>
+    <ComboBox x:Name="ThemeBox" Visibility="Collapsed" SelectionChanged="ThemeBox_OnSelectionChanged"><ComboBoxItem Content="Seguir o Windows" Tag="System"/><ComboBoxItem Content="Claro" Tag="Light"/><ComboBoxItem Content="Preto" Tag="Dark"/></ComboBox>
+    <TextBlock Text="Aplicado às telas, menus e diálogos. Os movimentos seguem a preferência de acessibilidade do Windows." Style="{StaticResource Lab.Metadata}" Margin="0,14,0,0"/>
+   </StackPanel></Border>
+   <Border x:Name="SettingsBehaviorCard" Grid.Column="2" Style="{StaticResource Lab.Settings.Card}"><StackPanel>
+    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="Settings" Style="{StaticResource Lab.Settings.Icon}"/><TextBlock Text="Comportamento" Style="{StaticResource Lab.Settings.Title}"/></StackPanel>
+    <CheckBox x:Name="CloseToTrayCheckBox" Style="{StaticResource Lab.Switch}" Content="Manter na bandeja ao fechar" Margin="0,18,0,10" Click="Settings_OnClick"/>
+    <TextBlock Text="Continue usando os atalhos em segundo plano." Style="{StaticResource Lab.Metadata}" Margin="0,0,0,14"/>
+    <CheckBox x:Name="StartWithWindowsCheckBox" Style="{StaticResource Lab.Switch}" Content="Iniciar com o Windows" Margin="0,0,0,16" Click="Settings_OnClick"/>
+    <CheckBox x:Name="ShowSuggestionsCheckBox" Style="{StaticResource Lab.Switch}" Content="Mostrar sugestões ao digitar /" Click="Settings_OnClick"/>
+    <TextBlock x:Name="SettingsPilotNoteText" Text="" Style="{StaticResource Lab.Metadata}" Margin="0,16,0,0"/>
+   </StackPanel></Border>
+   <Border x:Name="SettingsImportCard" Grid.Row="1" Style="{StaticResource Lab.Settings.Card}"><StackPanel>
+    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="Upload" Style="{StaticResource Lab.Settings.Icon}"/><TextBlock Text="Importar atalhos" Style="{StaticResource Lab.Settings.Title}"/></StackPanel>
+    <TextBlock Text="Traga seus textos sem começar do zero." Style="{StaticResource Lab.Metadata}" Margin="0,12,0,16"/>
+    <TextBlock Text="Origem" Style="{StaticResource Lab.Metadata}"/>
+    <ComboBox x:Name="ImportSourceBox" Style="{StaticResource Lab.Combo}" SelectedIndex="0" Margin="0,7,0,12" AutomationProperties.Name="Origem da importação"><ComboBoxItem Content="SlashDesk (snippets.md)" Tag="SlashDesk"/><ComboBoxItem Content="Text Blaze (JSON)" Tag="TextBlaze"/><ComboBoxItem Content="Espanso (YAML)" Tag="Espanso"/></ComboBox>
+    <Button x:Name="SettingsImportButton" Style="{StaticResource Lab.Button}" Click="ImportSnippets_OnClick" HorizontalAlignment="Left"><StackPanel Orientation="Horizontal"><lab:LabIcon Kind="Upload" Width="17" Height="17" Margin="0,0,7,0"/><TextBlock Text="Selecionar arquivo"/></StackPanel></Button>
+    <TextBlock Text="Você revisa os conflitos antes de confirmar. Um backup protege o estado anterior." Style="{StaticResource Lab.Metadata}" Margin="0,14,0,0"/>
+   </StackPanel></Border>
+   <Border x:Name="SettingsBackupCard" Grid.Row="1" Grid.Column="2" Style="{StaticResource Lab.Settings.Card}"><StackPanel>
+    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="Archive" Style="{StaticResource Lab.Settings.Icon}"/><TextBlock Text="Backup e restauração" Style="{StaticResource Lab.Settings.Title}"/></StackPanel>
+    <TextBlock Text="Um ZIP diário. As sete cópias mais recentes." Style="{StaticResource Lab.Metadata}" Margin="0,12,0,0"/>
+    <Border Background="{DynamicResource Lab.shell}" CornerRadius="6" Padding="13" Margin="0,15,0,15"><StackPanel Orientation="Horizontal"><lab:LabIcon Kind="ShieldCheck" Style="{StaticResource Lab.Settings.Icon}"/><TextBlock x:Name="BackupSummaryText" Text="Carregando backups…" Style="{StaticResource Lab.Text}" TextWrapping="Wrap"/></StackPanel></Border>
+    <WrapPanel><Button x:Name="SettingsCreateBackupButton" Style="{StaticResource Lab.Button}" Content="Criar agora" Click="CreateBackup_OnClick" Margin="0,0,8,8"/><Button x:Name="SettingsRestoreBackupButton" Style="{StaticResource Lab.Button}" Content="Restaurar ZIP" Click="RestoreBackup_OnClick" Margin="0,0,8,8"/><Button Style="{StaticResource Lab.Button}" Content="Abrir pasta" Click="OpenBackupFolder_OnClick" Margin="0,0,8,8"/><Button x:Name="SettingsAnalyzeAssetsButton" Style="{StaticResource Lab.Button}" Content="Analisar imagens" Click="AnalyzeAssets_OnClick" Margin="0,0,0,8" ToolTip="Revisar imagens de atalhos sem uso; seus emojis pessoais são preservados"/></WrapPanel>
+    <TextBlock Text="Inclui atalhos, preferências, contagens, histórico, imagens dos atalhos e Meus emojis." Style="{StaticResource Lab.Metadata}" Margin="0,6,0,8"/>
+    <TextBlock x:Name="BackupLocationText" Style="{StaticResource Lab.Metadata}" TextWrapping="Wrap"/>
+   </StackPanel></Border>
+   <Border x:Name="SettingsUpdatesCard" Grid.Row="2" Style="{StaticResource Lab.Settings.Card}"><StackPanel>
+    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="RefreshCw" Style="{StaticResource Lab.Settings.Icon}"/><TextBlock Text="Atualizações" Style="{StaticResource Lab.Settings.Title}"/></StackPanel>
+    <TextBlock x:Name="SettingsVersionText" Text="Versão atual" Style="{StaticResource Lab.Text}" FontWeight="SemiBold" Margin="0,16,0,6"/><TextBlock Text="Canal estável · GitHub Releases oficiais" Style="{StaticResource Lab.Metadata}"/>
+    <CheckBox x:Name="CheckUpdatesCheckBox" Style="{StaticResource Lab.Switch}" Content="Verificar automaticamente" Margin="0,18,0,14" Click="Settings_OnClick"/>
+    <TextBlock x:Name="SettingsLastUpdateCheckText" Text="Última verificação: ainda não verificado" Style="{StaticResource Lab.Metadata}"/>
+    <TextBlock x:Name="SettingsLastUpdateResultText" Text="Resultado: ainda não verificado" Style="{StaticResource Lab.Metadata}" Margin="0,6,0,14"/>
+    <Button x:Name="SettingsCheckUpdatesButton" Style="{StaticResource Lab.Button}" Content="Verificar agora" HorizontalAlignment="Left" Click="CheckUpdates_OnClick"/>
+   </StackPanel></Border>
+   <Border x:Name="SettingsDataCard" Grid.Row="2" Grid.Column="2" Style="{StaticResource Lab.Settings.Card}"><StackPanel>
+    <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="ShieldCheck" Style="{StaticResource Lab.Settings.Icon}"/><TextBlock Text="Dados locais" Style="{StaticResource Lab.Settings.Title}"/></StackPanel>
+    <TextBlock Text="Seus textos continuam sendo seus." Style="{StaticResource Lab.Metadata}" Margin="0,12,0,0"/>
+    <Border Background="{DynamicResource Lab.shell}" CornerRadius="6" Padding="16" Margin="0,15,0,15"><TextBlock x:Name="SettingsDataPathText" Style="{StaticResource Lab.Text}" TextWrapping="Wrap" FontFamily="{StaticResource Lab.MonoFont}"/></Border>
+    <TextBlock Text="Atalhos, preferências, histórico e backups permanecem no computador." Style="{StaticResource Lab.Metadata}" Margin="0,0,0,14"/>
+    <Button Style="{StaticResource Lab.Button}" Content="Explorar dados" HorizontalAlignment="Left" Click="OpenSettingsData_OnClick"/>
+   </StackPanel></Border>
+  </Grid>
+ </StackPanel>
+</ScrollViewer>
 
                     <ScrollViewer x:Name="AboutView" Visibility="Collapsed"
                                   VerticalScrollBarVisibility="Auto">
