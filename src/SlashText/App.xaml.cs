@@ -15,6 +15,26 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        if (e.Args.Length > 0 && e.Args[0] == "--auxiliary-smoke")
+        {
+            _helperMode = true; ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var output = Path.GetFullPath(e.Args.Length > 1 ? e.Args[1] : "auxiliary-evidence");
+            base.OnStartup(e);
+            Dispatcher.BeginInvoke(new Action(async () =>
+            {
+                try { await Design.AuxiliarySmoke.RunAsync(output); Shutdown(0); }
+                catch (Exception exception) { Directory.CreateDirectory(output); File.WriteAllText(Path.Combine(output, "failure.txt"), exception.ToString()); Shutdown(1); }
+            }));
+            return;
+        }
+        if (e.Args.Length > 0 && e.Args[0] == "--auxiliary-gallery")
+        {
+            _helperMode = true; ShutdownMode = ShutdownMode.OnMainWindowClose;
+            base.OnStartup(e);
+            AppPaths.Initialize(new AppDataEnvironment(DistributionMode.Portable, Path.Combine(Path.GetTempPath(), "SlashDesk-auxiliary-preview"), Path.Combine(Path.GetTempPath(), "SlashDesk-unused"), isCapturePilot: true));
+            ThemeService.Apply("System");
+            MainWindow = new Design.AuxiliaryReviewWindow(); MainWindow.Show(); return;
+        }
         if (e.Args.Length > 0 && e.Args[0] == "--about-smoke")
         {
             _helperMode = true; ShutdownMode = ShutdownMode.OnExplicitShutdown;

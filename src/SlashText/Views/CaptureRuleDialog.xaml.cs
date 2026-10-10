@@ -95,7 +95,7 @@ public partial class CaptureRuleDialog : Window
     {
         if (!TryBuildResult(out var result, out var error))
         {
-            MessageBox.Show(error, "Configurações de captura", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AuxiliaryWindowTheme.ShowMessage(this, error, "Configurações de captura", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         Result = result;

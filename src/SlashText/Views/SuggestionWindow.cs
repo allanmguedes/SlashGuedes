@@ -28,7 +28,7 @@ public sealed class SuggestionWindow : Window
         MaxHeight = 280;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
-        ShowActivated = false;
+        ShowActivated = false; Focusable = false;
         ShowInTaskbar = false;
         Topmost = true;
         AllowsTransparency = true;
@@ -45,7 +45,7 @@ public sealed class SuggestionWindow : Window
                 ShadowDepth = 3,
                 Opacity = Services.ThemeService.IsDark ? 0.28 : 0.12
             },
-            Child = _items
+            Child = new ScrollViewer { Content = _items, MaxHeight = 250, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled }
         };
         Content = _surface;
 
@@ -79,6 +79,8 @@ public sealed class SuggestionWindow : Window
             row.Children.Add(new TextBlock
             {
                 Text = snippet.Trigger,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                ToolTip = snippet.Trigger,
                 FontFamily = new FontFamily("Cascadia Mono, Consolas"),
                 FontWeight = FontWeights.SemiBold,
                 Foreground = FindBrush("AccentBrush", new SolidColorBrush(Color.FromRgb(8, 126, 139)))
@@ -111,6 +113,9 @@ public sealed class SuggestionWindow : Window
                 SnippetChosen?.Invoke(snippet);
             };
             _items.Children.Add(item);
+            ((TextBlock)row.Children[0]).SetResourceReference(TextBlock.ForegroundProperty, "Lab.accent-text");
+            name.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
+            if (index == selectedIndex) { item.SetResourceReference(Border.BackgroundProperty, "Lab.tint"); item.SetResourceReference(Border.BorderBrushProperty, "Lab.accent"); }
         }
 
         if (!IsVisible)
@@ -118,21 +123,10 @@ public sealed class SuggestionWindow : Window
             Show();
         }
         UpdateLayout();
-        PositionInsideWorkingArea(position);
-    }
-
-    private void PositionInsideWorkingArea(Point position)
-    {
+        _surface.SetResourceReference(Border.BackgroundProperty, "Lab.panel"); _surface.SetResourceReference(Border.BorderBrushProperty, "Lab.line");
         var screen = Forms.Screen.FromPoint(new DrawingPoint((int)position.X, (int)position.Y));
-        var handle = new WindowInteropHelper(this).Handle;
-        var dpi = Math.Max(96u, GetDpiForWindow(handle));
-        var scale = dpi / 96d;
-        var width = Math.Max(1, (int)Math.Ceiling(ActualWidth * scale));
-        var height = Math.Max(1, (int)Math.Ceiling(ActualHeight * scale));
-        var area = screen.WorkingArea;
-        var left = Math.Clamp((int)position.X, area.Left, Math.Max(area.Left, area.Right - width));
-        var top = Math.Clamp((int)position.Y, area.Top, Math.Max(area.Top, area.Bottom - height));
-        _ = SetWindowPos(handle, IntPtr.Zero, left, top, width, height, SwpNoActivate | SwpNoZOrder);
+        FloatingWindowPlacement.Place(this, screen, "Caret", position);
+        if (selectedIndex >= 0 && selectedIndex < _items.Children.Count) ((FrameworkElement)_items.Children[selectedIndex]).BringIntoView();
     }
 
     private static Brush FindBrush(string key, Brush fallback) =>
@@ -144,17 +138,4 @@ public sealed class SuggestionWindow : Window
     [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
     private static extern int SetWindowLong(IntPtr window, int index, int value);
 
-    [DllImport("user32.dll")]
-    private static extern uint GetDpiForWindow(IntPtr window);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetWindowPos(
-        IntPtr window,
-        IntPtr insertAfter,
-        int x,
-        int y,
-        int width,
-        int height,
-        uint flags);
 }

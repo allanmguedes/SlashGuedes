@@ -15,7 +15,7 @@ internal sealed class UpdateProgressWindow : Window, IProgress<UpdateProgress>
     {
         Title = "Atualizando o SlashDesk";
         Width = 500;
-        Height = 190;
+        Height = 310;
         ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Background = (System.Windows.Media.Brush)Application.Current.FindResource("CanvasBrush");
@@ -35,7 +35,7 @@ internal sealed class UpdateProgressWindow : Window, IProgress<UpdateProgress>
         });
         _status = new TextBlock
         {
-            Text = "Conectando ao GitHub...",
+            Text = "Conectando ao GitHub...", TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 12, 0, 8)
         };
         panel.Children.Add(_status);
@@ -52,10 +52,13 @@ internal sealed class UpdateProgressWindow : Window, IProgress<UpdateProgress>
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 16, 0, 0)
         };
-        _cancel.Click += (_, _) => Cancellation.Cancel();
+
+        _cancel.Click += (_, _) => { Cancellation.Cancel(); _cancel.IsEnabled = false; };
         panel.Children.Add(_cancel);
         surface.Child = panel;
         Content = surface;
+        AuxiliaryWindowTheme.Apply(this);
+        PreviewKeyDown += (_, e) => { if (e.Key == System.Windows.Input.Key.Escape && _cancel.IsEnabled) { e.Handled = true; Cancellation.Cancel(); _cancel.IsEnabled = false; } };
         Closing += (_, args) =>
         {
             if (!CanClose)
@@ -76,7 +79,7 @@ internal sealed class UpdateProgressWindow : Window, IProgress<UpdateProgress>
             return;
         }
         _status.Text = value.Stage;
-        _cancel.IsEnabled = !value.IsApplying;
+        _cancel.IsEnabled = !value.IsApplying && !Cancellation.IsCancellationRequested;
         if (value.TotalBytes is > 0)
         {
             _progress.IsIndeterminate = false;

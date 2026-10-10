@@ -31,6 +31,7 @@ public sealed class RecordingControlWindow : Window
 
     internal RecordingControlWindow(IRecordingController service, string mediaName, RecordingSettings? settings = null)
     {
+        var targetScreen = FloatingWindowPlacement.ForegroundScreen();
         _service = service; _mediaName = mediaName; _settings = settings;
         _preparing = settings is not null;
         Title = "Controle de gravação";
@@ -149,7 +150,11 @@ public sealed class RecordingControlWindow : Window
             AppDiagnosticLog.Write("recording.overlay-closed", ("recordingId", _service.RecordingId.ToString("N")),
                 ("media", _mediaName), ("elapsedMs", _service.Elapsed.TotalMilliseconds));
         };
+
+        AuxiliaryWindowTheme.Apply(this);
         UpdateAudioButtons();
+        if (_audioPopup?.Child is DependencyObject popupRoot) AuxiliaryWindowTheme.ApplyTree(popupRoot);
+        Loaded += (_, _) => FloatingWindowPlacement.Place(this, targetScreen, "BottomCenter");
     }
 
     internal Task<bool> WaitForStartAsync() => _start.Task;
@@ -217,8 +222,9 @@ public sealed class RecordingControlWindow : Window
     }
     private void SetSource(Button button, bool on, string name, string icon, bool configured)
     {
-        button.Content = new LabIcon { Kind = icon, Width = 20, Height = 20, Foreground = Brush(on ? "AccentStrongBrush" : "MutedBrush") };
-        button.Background = on ? Brush("SelectedBrush") : Brushes.Transparent;
+        var glyph = new LabIcon { Kind = icon, Width = 20, Height = 20 };
+        glyph.SetResourceReference(LabIcon.ForegroundProperty, on ? "Lab.accent-text" : "Lab.muted"); button.Content = glyph;
+        if (on) button.SetResourceReference(Button.BackgroundProperty, "Lab.tint"); else button.Background = Brushes.Transparent;
         var ready = _preparing || _service is ScreenRecordingService { State: ScreenRecordingState.Recording };
         button.IsEnabled = !_checkingAudio && !_changingAudio && ready && (!(_preparing && _start.Task.IsCompleted)) && (_preparing || configured) && Volatile.Read(ref _stopRequested) == 0;
         var label = name + (_preparing ? (on ? " ligado" : " desligado") : (on ? " gravando" : " silenciado"));
@@ -248,7 +254,7 @@ public sealed class RecordingControlWindow : Window
         {
             if (_preparing) return;
             UpdateElapsed(progress.Elapsed); _status.Text = progress.Status;
-            _indicator.Background = Brush(progress.IsPaused ? "MutedBrush" : "DangerBrush");
+            _indicator.SetResourceReference(Border.BackgroundProperty, progress.IsPaused ? "Lab.muted" : "Lab.error");
             _pause.Content = new LabIcon { Kind = progress.IsPaused ? "Play" : "Pause", Width = 20, Height = 20 };
             _pause.ToolTip = progress.IsPaused ? "Continuar · Espaço" : "Pausar · Espaço";
             AutomationProperties.SetName(_pause, progress.IsPaused ? "Continuar" : "Pausar");

@@ -54,6 +54,9 @@ public sealed class RegionSelectionWindow : Window
         Canvas.SetLeft(help, 24);
         Canvas.SetTop(help, 24);
         _canvas.Children.Add(help);
+        help.SetResourceReference(Border.BackgroundProperty, "Lab.panel");
+        help.SetResourceReference(Border.BorderBrushProperty, "Lab.line");
+        ((TextBlock)help.Child).SetResourceReference(TextBlock.ForegroundProperty, "Lab.text");
         _canvas.Children.Add(_selection);
         Content = _canvas;
 

@@ -80,12 +80,14 @@ public sealed class GifPreviewWindow : Window
             Margin = new Thickness(10, 0, 0, 0),
             Style = (Style)Application.Current.FindResource("PrimaryButton")
         };
+
         save.Click += (_, _) => DialogResult = true;
         actions.Children.Add(cancel);
         actions.Children.Add(save);
         Grid.SetRow(actions, 4);
         root.Children.Add(actions);
         Content = root;
+        AuxiliaryWindowTheme.Apply(this);
 
         ShowFrame(0);
         _timer = new DispatcherTimer

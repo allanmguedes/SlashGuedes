@@ -7,7 +7,7 @@ namespace SlashText.Views;
 
 public sealed class QuickAccentWindow : Window
 {
-    private readonly StackPanel _panel = new() { Orientation = Orientation.Horizontal };
+    private readonly WrapPanel _panel = new() { Orientation = Orientation.Horizontal };
     private readonly Border _surface;
 
     public QuickAccentWindow()
@@ -37,6 +37,9 @@ public sealed class QuickAccentWindow : Window
             Child = _panel
         };
         Content = _surface;
+        _surface.SetResourceReference(Border.BackgroundProperty, "Lab.panel");
+        _surface.SetResourceReference(Border.BorderBrushProperty, "Lab.line");
+        SourceInitialized += (_, _) => FloatingWindowPlacement.PreventActivation(this);
     }
 
     public void UpdateChoices(string choices, int selectedIndex, string position, bool showUnicode)
@@ -76,14 +79,16 @@ public sealed class QuickAccentWindow : Window
             });
         }
 
-        Show();
-        Left = Math.Max(8, (SystemParameters.WorkArea.Width - ActualWidth) / 2);
-        Top = position switch
+        _surface.SetResourceReference(Border.BackgroundProperty, "Lab.panel");
+        _surface.SetResourceReference(Border.BorderBrushProperty, "Lab.line");
+        foreach (Border item in _panel.Children)
         {
-            "TopCenter" => 24,
-            "Center" => Math.Max(8, (SystemParameters.WorkArea.Height - ActualHeight) / 2),
-            _ => Math.Max(8, SystemParameters.WorkArea.Height - ActualHeight - 42)
-        };
+            var isSelected = _panel.Children.IndexOf(item) == selectedIndex;
+            if (isSelected) { item.SetResourceReference(Border.BackgroundProperty, "Lab.tint"); item.SetResourceReference(Border.BorderBrushProperty, "Lab.accent"); }
+            ((TextBlock)item.Child).SetResourceReference(TextBlock.ForegroundProperty, isSelected ? "Lab.accent-text" : "Lab.text");
+        }
+        var screen = FloatingWindowPlacement.ForegroundScreen();
+        Show(); FloatingWindowPlacement.Place(this, screen, position);
     }
 
     private static Brush FindBrush(string key, Brush fallback) =>

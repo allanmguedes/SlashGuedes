@@ -41,6 +41,7 @@ internal sealed class UpdateAvailableWindow : Window
         {
             Text = $"SlashDesk {result.LatestVersion} está disponível",
             FontSize = 23,
+            TextWrapping = TextWrapping.Wrap,
             FontWeight = FontWeights.SemiBold,
             Foreground = Resource<Brush>("InkBrush", Brushes.Black)
         };
@@ -87,6 +88,8 @@ internal sealed class UpdateAvailableWindow : Window
         Grid.SetRow(buttons, 3);
         root.Children.Add(buttons);
         Content = root;
+        AuxiliaryWindowTheme.Apply(this);
+
     }
 
     private Button CreateButton(string text, UpdateDecision decision)
