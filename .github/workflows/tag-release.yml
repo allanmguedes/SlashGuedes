@@ -10,15 +10,19 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: stable-release-tag
   cancel-in-progress: false
 
 jobs:
-  create-tag:
+  validate-tag:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      sha: ${{ steps.version.outputs.sha }}
 
     steps:
       - name: Checkout main
@@ -26,33 +30,92 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Validate version and create annotated tag
+      - name: Validate stable tag and main
+        id: version
         shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          $tag = '${{ inputs.tag }}'
-          if ($tag -notmatch '^v(?<version>(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))$') {
-            throw "A tag '$tag' não segue o formato estável vX.Y.Z."
+          $ErrorActionPreference = 'Stop'
+          $tag = $env:RELEASE_TAG
+          $match = [regex]::Match($tag, '\Av(?<version>(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*))\z')
+          if (-not $match.Success) {
+            throw 'A tag não segue o formato estável vX.Y.Z.'
           }
+          $version = $match.Groups['version'].Value
 
-          [xml]$project = Get-Content src/SlashText/SlashText.csproj
+          [xml]$project = Get-Content src/SlashText/SlashText.csproj -Raw
           $projectVersion = $project.Project.PropertyGroup.Version | Select-Object -First 1
-          if ($projectVersion -ne $Matches.version) {
+          if ($projectVersion -ne $version) {
             throw "A tag $tag não corresponde à versão $projectVersion do projeto."
           }
 
           git fetch origin main --tags
-          if (git rev-parse --verify --quiet "refs/tags/$tag") {
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível conferir a main e as tags.' }
+          git show-ref --verify --quiet "refs/tags/$tag"
+          if ($LASTEXITCODE -eq 0) {
             throw "A tag $tag já existe."
           }
+          if ($LASTEXITCODE -ne 1) { throw 'Não foi possível verificar se a tag já existe.' }
 
           $mainSha = git rev-parse origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível resolver a main.' }
           $headSha = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível resolver o checkout.' }
           if ($headSha -ne $mainSha) {
             throw "O checkout ($headSha) não corresponde à main ($mainSha)."
           }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "sha=$mainSha" >> $env:GITHUB_OUTPUT
+
+  create-tag:
+    needs: validate-tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout validated main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate-tag.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Create annotated stable tag
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ needs.validate-tag.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.validate-tag.outputs.version }}
+          VALIDATED_SHA: ${{ needs.validate-tag.outputs.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = $env:RELEASE_TAG
+          $version = $env:RELEASE_VERSION
+          $validatedSha = $env:VALIDATED_SHA
+          if ($tag -cne "v$version" -or $tag -cnotmatch '\Av(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\z') {
+            throw 'Tag estável validada inválida.'
+          }
+          git fetch origin main --tags
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível conferir a main e as tags.' }
+          $mainSha = git rev-parse origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível resolver a main.' }
+          $headSha = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível resolver o checkout.' }
+          if ($mainSha -ne $validatedSha -or $headSha -ne $validatedSha) {
+            throw 'A main ou o checkout mudou após a validação. Execute novamente o workflow.'
+          }
+          git show-ref --verify --quiet "refs/tags/$tag"
+          if ($LASTEXITCODE -eq 0) { throw "A tag $tag já existe." }
+          if ($LASTEXITCODE -ne 1) { throw 'Não foi possível verificar se a tag já existe.' }
 
           git config user.name "github-actions[bot]"
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível configurar o autor da tag.' }
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a $tag -m "SlashDesk $($Matches.version)"
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível configurar o autor da tag.' }
+          git tag -a $tag $validatedSha -m "SlashDesk $version"
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível criar a tag anotada.' }
           git push origin "refs/tags/$tag"
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível publicar a tag.' }

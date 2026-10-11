@@ -13,41 +13,75 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate-build-release:
     runs-on: windows-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      stableVersion: ${{ steps.version.outputs.stableVersion }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      sha: ${{ steps.source.outputs.sha }}
+      portableZip: ${{ steps.package.outputs.portableZip }}
+      portableChecksum: ${{ steps.package.outputs.portableChecksum }}
 
     steps:
+      - name: Resolve and validate release tag
+        id: version
+        shell: pwsh
+        env:
+          RELEASE_TAG_INPUT: ${{ inputs.release_tag }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = switch ($env:GITHUB_EVENT_NAME) {
+            'workflow_dispatch' { $env:RELEASE_TAG_INPUT }
+            'push' { $env:GITHUB_REF_NAME }
+            default { throw 'Evento de publicação inválido.' }
+          }
+          $match = [regex]::Match($tag, '\Av(?<base>(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*))(?:-(?<prerelease>[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?\z')
+          if (-not $match.Success) {
+            throw 'A tag não segue vX.Y.Z ou SemVer prerelease.'
+          }
+          $suffix = $match.Groups['prerelease'].Value
+          foreach ($identifier in $suffix.Split('.')) {
+            if ($identifier -cmatch '\A[0-9]+\z' -and $identifier.Length -gt 1 -and $identifier[0] -eq '0') {
+              throw 'Identificador numérico prerelease não pode começar com zero.'
+            }
+          }
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$($tag.Substring(1))" >> $env:GITHUB_OUTPUT
+          "stableVersion=$($match.Groups['base'].Value)" >> $env:GITHUB_OUTPUT
+          "prerelease=$((-not [string]::IsNullOrEmpty($suffix)).ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
       - name: Checkout tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
+          ref: refs/tags/${{ steps.version.outputs.tag }}
           fetch-depth: 0
+          persist-credentials: false
 
-      - name: Validate SemVer tag and project version
-        id: version
+      - name: Validate project version and tag source
+        id: source
         shell: pwsh
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_BASE_VERSION: ${{ steps.version.outputs.stableVersion }}
         run: |
-          $tag = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
-            '${{ inputs.release_tag }}'
-          } else {
-            '${{ github.ref_name }}'
-          }
-          if ($tag -notmatch '^v(?<base>(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*))(?<suffix>-[0-9A-Za-z.-]+)?$') {
-            throw "A tag '$tag' não segue vX.Y.Z ou SemVer prerelease."
-          }
-          [xml]$project = Get-Content src/SlashText/SlashText.csproj
+          $ErrorActionPreference = 'Stop'
+          $tag = $env:RELEASE_TAG
+          [xml]$project = Get-Content src/SlashText/SlashText.csproj -Raw
           $projectVersion = $project.Project.PropertyGroup.Version | Select-Object -First 1
-          $tagVersion = $Matches.base
-          if ($projectVersion -ne $tagVersion) {
+          if ($projectVersion -ne $env:RELEASE_BASE_VERSION) {
             throw "A tag $tag não corresponde à versão $projectVersion do projeto."
           }
-          "tag=$tag" >> $env:GITHUB_OUTPUT
-          "version=$($tag.TrimStart('v'))" >> $env:GITHUB_OUTPUT
-          "stableVersion=$projectVersion" >> $env:GITHUB_OUTPUT
-          "prerelease=$($tag.Contains('-').ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          $tagSha = git rev-parse "refs/tags/$tag^{commit}"
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível resolver a tag existente.' }
+          $headSha = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível resolver o checkout.' }
+          if ($tagSha -ne $headSha) { throw 'O checkout não corresponde ao commit da tag.' }
+          "sha=$headSha" >> $env:GITHUB_OUTPUT
 
       - name: Setup .NET 10
         uses: actions/setup-dotnet@v4
@@ -93,8 +127,10 @@ jobs:
       - name: Package and calculate SHA-256
         id: package
         shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          $version = '${{ steps.version.outputs.version }}'
+          $version = $env:RELEASE_VERSION
           $portableFiles = Get-ChildItem publish-portable -Force
           if ($portableFiles.Count -ne 1 -or $portableFiles[0].Name -ne 'SlashDesk.exe') {
             throw 'A Release portátil deve conter somente SlashDesk.exe.'
@@ -122,26 +158,53 @@ jobs:
           path: release-assets/
           if-no-files-found: error
 
+  publish-release:
+    needs: validate-build-release
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout validated tag commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate-build-release.outputs.sha }}
+          persist-credentials: false
+
+      - name: Download validated release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: SlashDesk-${{ needs.validate-build-release.outputs.version }}-release-validation
+          path: release-assets/
+
       - name: Create GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.validate-build-release.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.validate-build-release.outputs.version }}
+          RELEASE_BASE_VERSION: ${{ needs.validate-build-release.outputs.stableVersion }}
+          RELEASE_PRERELEASE: ${{ needs.validate-build-release.outputs.prerelease }}
+          PORTABLE_ZIP: ${{ needs.validate-build-release.outputs.portableZip }}
+          PORTABLE_CHECKSUM: ${{ needs.validate-build-release.outputs.portableChecksum }}
         run: |
+          $ErrorActionPreference = 'Stop'
           $arguments = @(
-            'release', 'create', '${{ steps.version.outputs.tag }}',
-            '${{ steps.package.outputs.portableZip }}',
-            '${{ steps.package.outputs.portableChecksum }}',
-            '--repo', '${{ github.repository }}',
+            'release', 'create', $env:RELEASE_TAG,
+            $env:PORTABLE_ZIP,
+            $env:PORTABLE_CHECKSUM,
+            '--repo', $env:GITHUB_REPOSITORY,
             '--verify-tag',
-            '--title', "SlashDesk ${{ steps.version.outputs.version }}"
+            '--title', "SlashDesk $env:RELEASE_VERSION"
           )
-          $notesPath = "docs/releases/${{ steps.version.outputs.stableVersion }}.md"
-          if (Test-Path $notesPath) {
+          $notesPath = "docs/releases/${env:RELEASE_BASE_VERSION}.md"
+          if (Test-Path -LiteralPath $notesPath) {
             $arguments += '--notes-file', $notesPath
           } else {
             $arguments += '--generate-notes'
           }
-          if ('${{ steps.version.outputs.prerelease }}' -eq 'true') {
+          if ($env:RELEASE_PRERELEASE -eq 'true') {
             $arguments += '--prerelease'
           }
           gh @arguments
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível publicar a Release.' }
