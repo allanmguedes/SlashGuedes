@@ -99,8 +99,10 @@ Applied server policy after #93 integration:
 Apply future changes together with the repository controls, after pin integration,
 so pending branches can be rebased and compatibility can be checked.
 Older branches with mutable refs will need updates before their workflows run
-under the stricter server policy. The scanners planned in #94 may require a
-deliberate extension of the allowlist. See
+under the stricter server policy. The #94 baseline extends the selected allowlist
+only with `github/codeql-action/init@*` and `github/codeql-action/analyze@*`, keeping
+SHA enforcement and read-only token defaults. The analyzer job alone has the
+reviewed `security-events:write` permission. See [security baseline](security-baseline.md) and
 [repository release controls](repository-release-controls.md) for approval,
 main/tag policies, exceptions and verification.
 

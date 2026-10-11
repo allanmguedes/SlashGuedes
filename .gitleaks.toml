@@ -1,0 +1,20 @@
+title = "SlashDesk reviewed secret scanning policy"
+[extend]
+useDefault = true
+
+# A-004: resource identifiers, not credentials. AND also constrains the path.
+[[rules]]
+id = "generic-api-key"
+[[rules.allowlists]]
+description = "Deterministic Ui resource keys; translation values remain scanned"
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^Ui\.[A-F0-9]{16}$''']
+paths = ['''(^|/)src/SlashText/Localization/(pt-BR|en|es)\.json$''']
+
+[[rules.allowlists]]
+description = "Reviewed SHA-256 field in the frozen visual contract"
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^tokens\.json"\s*:\s*"[a-f0-9]{64}"$''']
+paths = ['''(^|/)docs/design/3\.3\.0/contract-manifest\.json$''']

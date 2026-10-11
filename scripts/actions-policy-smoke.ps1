@@ -1,7 +1,7 @@
 param([string]$WorkflowDirectory = (Join-Path $PSScriptRoot '../.github/workflows'))
 
 $ErrorActionPreference = 'Stop'
-$allowedActions = @('actions/checkout', 'actions/setup-dotnet', 'actions/upload-artifact', 'actions/download-artifact')
+$allowedActions = @('actions/checkout', 'actions/setup-dotnet', 'actions/upload-artifact', 'actions/download-artifact', 'github/codeql-action/init', 'github/codeql-action/analyze')
 $writeJobs = @('tag-release.yml/create-tag', 'release.yml/publish-release')
 $files = @(Get-ChildItem -LiteralPath $WorkflowDirectory -File | Where-Object { $_.Extension -in @('.yml', '.yaml') })
 if ($files.Count -eq 0) { throw 'No workflows found.' }
@@ -49,8 +49,10 @@ foreach ($file in $files) {
                 if ($memberIndent -ne $indent + 2) { throw "Unexpected permission indentation: $context" }
                 $entries.Add($member.Trim())
             }
-            if ($entries.Count -ne 1 -or $entries[0] -cnotmatch '^contents: (read|write)$') {
-                throw "Only contents:read/write is currently reviewed: $context"
+            $codeqlPermissions = $indent -eq 4 -and $context -ceq 'codeql.yml/analyze' -and
+                (($entries | Sort-Object) -join ',') -ceq 'contents: read,security-events: write'
+            if (-not $codeqlPermissions -and ($entries.Count -ne 1 -or $entries[0] -cnotmatch '^contents: (read|write)$')) {
+                throw "Only reviewed contents and CodeQL security-events permissions are allowed: $context"
             }
             if ($entries[0] -eq 'contents: write') {
                 if ($indent -ne 4 -or $context -cnotin $writeJobs) { throw "Unexpected write permission: $context" }
@@ -68,11 +70,12 @@ foreach ($file in $files) {
 
         if ($line -match '^\s+(?:-\s+)?uses:\s*(.*)$') {
             $reference = $Matches[1]
-            if ($reference -cnotmatch '^(?<action>[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)@(?<sha>[0-9a-f]{40})\s+#\s+(?<version>v[0-9]+\.[0-9]+\.[0-9]+)\s*$') {
+            if ($reference -cnotmatch '^(?<action>[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+(?:/[a-zA-Z0-9_-]+)?)@(?<sha>[0-9a-f]{40})\s+#\s+(?<version>v[0-9]+\.[0-9]+\.[0-9]+)\s*$') {
                 throw "Action requires full commit SHA and version comment: $context"
             }
             $action = $Matches.action
             if ($action -cnotin $allowedActions) { throw "Action requires allowlist review: $action" }
+            if ($action.StartsWith('github/codeql-action/') -and $context -cne 'codeql.yml/analyze') { throw "CodeQL action outside reviewed analyzer: $context" }
             $references++
             if ($action -eq 'actions/checkout') {
                 $checkouts++

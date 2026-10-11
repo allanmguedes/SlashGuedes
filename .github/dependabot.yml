@@ -1,5 +1,19 @@
 version: 2
 updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:15"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    groups:
+      nuget-servicing:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: [minor, patch]
+    # Major updates stay visible as separate PRs, including native OCR review.
   - package-ecosystem: github-actions
     directory: /
     schedule:

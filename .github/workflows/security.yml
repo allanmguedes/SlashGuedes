@@ -1,0 +1,62 @@
+name: Security Baseline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '23 12 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security-baseline:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout complete history
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Review workflow permissions and pins
+        shell: pwsh
+        run: |
+          ./scripts/actions-policy-smoke.ps1
+          ./scripts/actions-policy-regression.ps1
+      - name: Scan secrets and prove detection
+        shell: pwsh
+        run: ./scripts/security-secrets.ps1
+      - name: Setup .NET 10 with current servicing patches
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: 10.0.x
+      - name: Audit managed dependencies
+        shell: pwsh
+        run: ./scripts/security-dependencies.ps1
+      - name: Prove dependency audit failure handling
+        shell: pwsh
+        run: ./scripts/security-dependencies-regression.ps1
+      - name: Test inventory parser
+        run: python -m unittest discover -s scripts/security -p "test_*.py"
+      - name: Publish actual portable package
+        run: dotnet publish src/SlashText/SlashText.csproj --configuration Release -p:Platform=x64 -p:PublishProfile=Portable --output publish-security
+      - name: Inventory shipped components without executing the app
+        shell: pwsh
+        run: ./scripts/security-inventory.ps1 -Executable publish-security/SlashDesk.exe -OutputDirectory security-evidence/portable
+      - name: Publish actual installed staging
+        run: dotnet publish src/SlashText/SlashText.csproj --configuration Release -p:Platform=x64 -p:PublishProfile=Installed --output publish-security-installed
+      - name: Inventory installed components
+        shell: pwsh
+        run: ./scripts/security-inventory.ps1 -Executable publish-security-installed/SlashDesk.exe -OutputDirectory security-evidence/installed -Layout directory
+      - name: Upload non-secret security evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: SlashDesk-security-inventory
+          path: security-evidence/
+          retention-days: 14
+          if-no-files-found: warn

@@ -1,0 +1,18 @@
+{
+  "de4d04ec75095374d98f5dd7a60d14d7e2e0f76589db693eccf7ae658be8cb2b": {
+    "name": "Tesseract native x64",
+    "version": "5.0.0",
+    "evidence": "Analysis A, 2026-10-11: TessVersion export from restored Tesseract/5.2.0 package; exact SHA-256 match. No execution during inventory.",
+    "origin": "https://github.com/charlesw/tesseract",
+    "license": "Apache-2.0; bundled native transitive notices require issue #96 review",
+    "follow_up": "https://github.com/lucasllira/SlashText/issues/97"
+  },
+  "dfcb3e6ed0b16bc55bfdbcf53543cfe42a354b87c3e35bd3a95eebf005d73e76": {
+    "name": "Leptonica native x64",
+    "version": "1.82.0",
+    "evidence": "Analysis A, 2026-10-11: getLeptonicaVersion export from restored package; exact SHA-256 match. No execution during inventory.",
+    "origin": "https://github.com/charlesw/tesseract",
+    "license": "BSD-2-Clause; bundled codecs require issue #96 review",
+    "follow_up": "https://github.com/lucasllira/SlashText/issues/97"
+  }
+}

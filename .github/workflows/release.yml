@@ -97,7 +97,12 @@ jobs:
         run: dotnet restore SlashText.sln -p:Platform=x64
 
       - name: Build Release x64
-        run: dotnet build SlashText.sln --configuration Release --no-restore -p:Platform=x64
+        # Dependency audit is independent of compilation and fails on advisories
+        # and source outages before packaging anything for approval.
+        run: |
+          ./scripts/security-dependencies.ps1
+          dotnet build SlashText.sln --configuration Release --no-restore -p:Platform=x64
+        shell: pwsh
 
       - name: UI integrity smoke
         shell: pwsh
@@ -128,6 +133,20 @@ jobs:
           -p:PublishProfile=Installed
           --no-restore
           --output publish-installed
+
+      - name: Inventory the exact portable and installed publish outputs
+        shell: pwsh
+        run: |
+          ./scripts/security-inventory.ps1 -Executable publish-portable/SlashDesk.exe -OutputDirectory component-inventory/portable
+          ./scripts/security-inventory.ps1 -Executable publish-installed/SlashDesk.exe -OutputDirectory component-inventory/installed -Layout directory
+
+      - name: Upload release component inventory
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: SlashDesk-${{ steps.version.outputs.version }}-component-inventory
+          path: component-inventory/
+          retention-days: 30
+          if-no-files-found: error
 
       - name: Package and calculate SHA-256
         id: package

@@ -3,7 +3,7 @@
   "selected_actions": {
     "github_owned_allowed": false,
     "verified_allowed": false,
-    "patterns_allowed": ["actions/checkout@*", "actions/setup-dotnet@*", "actions/upload-artifact@*", "actions/download-artifact@*"]
+    "patterns_allowed": ["actions/checkout@*", "actions/setup-dotnet@*", "actions/upload-artifact@*", "actions/download-artifact@*", "github/codeql-action/init@*", "github/codeql-action/analyze@*"]
   },
   "workflow_permissions": { "default_workflow_permissions": "read", "can_approve_pull_request_reviews": false }
 }

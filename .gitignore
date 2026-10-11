@@ -33,3 +33,8 @@ publish-auxiliary/
 languages-evidence/
 languages-pilot-package/
 publish-languages/
+publish-security/
+publish-security-installed/
+security-evidence/
+component-inventory/
+scripts/security/__pycache__/

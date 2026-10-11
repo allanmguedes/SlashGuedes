@@ -3,6 +3,10 @@ $checker = Join-Path $PSScriptRoot 'actions-policy-smoke.ps1'
 $source = Join-Path $PSScriptRoot '../.github/workflows'
 $fixture = Join-Path ([IO.Path]::GetTempPath()) "SlashDesk actions tests $([guid]::NewGuid().ToString('N'))"
 $cases = @(
+    @{ file = 'codeql.yml'; old = '      security-events: write'; replacement = '      contents: write'; label = 'CodeQL contents elevation' },
+    @{ file = 'codeql.yml'; old = '      security-events: write'; replacement = "      security-events: write`n      actions: write"; label = 'CodeQL extra permission' },
+    @{ file = 'build.yml'; old = 'actions/checkout@[0-9a-f]{40}\s+# v4\.4\.0'; replacement = 'github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3'; label = 'CodeQL outside analyzer' },
+    @{ file = 'build.yml'; old = '    runs-on: windows-latest'; replacement = "    permissions:`n      contents: read`n      security-events: write`n    runs-on: windows-latest"; label = 'security upload outside CodeQL' },
     @{ file = 'build.yml'; old = 'actions/checkout@[0-9a-f]{40}'; replacement = 'actions/checkout@v4'; label = 'mutable tag' },
     @{ file = 'build.yml'; old = 'actions/checkout@[0-9a-f]{40}'; replacement = 'actions/checkout@1234567'; label = 'short SHA' },
     @{ file = 'build.yml'; old = '# v4\.4\.0'; replacement = '# undocumented'; label = 'missing version' },
