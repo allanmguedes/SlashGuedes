@@ -16,10 +16,56 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: GitHub Actions pin and permission policy
+        shell: pwsh
+        run: |
+          ./scripts/actions-policy-smoke.ps1
+          ./scripts/actions-policy-regression.ps1
+
+      - name: Create artifact transport probe
+        id: artifact-probe
+        shell: pwsh
+        run: |
+          $probe = Join-Path $env:RUNNER_TEMP 'slashdesk-actions-probe-upload'
+          New-Item -Path $probe -ItemType Directory | Out-Null
+          $file = Join-Path $probe 'probe.txt'
+          'SlashDesk artifact transport check' | Set-Content -LiteralPath $file -Encoding utf8NoBOM
+          "sha=$((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash)" >> $env:GITHUB_OUTPUT
+
+      - name: Upload artifact transport probe
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: SlashDesk-actions-transport-probe
+          path: ${{ runner.temp }}/slashdesk-actions-probe-upload/
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Download artifact transport probe
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: SlashDesk-actions-transport-probe
+          path: ${{ runner.temp }}/slashdesk-actions-probe-download/
+
+      - name: Verify artifact transport probe
+        shell: pwsh
+        env:
+          EXPECTED_SHA: ${{ steps.artifact-probe.outputs.sha }}
+        run: |
+          $probe = Join-Path $env:RUNNER_TEMP 'slashdesk-actions-probe-download'
+          $files = @(Get-ChildItem -LiteralPath $probe -File -Recurse)
+          if ($files.Count -ne 1 -or $files[0].Name -ne 'probe.txt') {
+            throw 'Artifact transport returned unexpected files.'
+          }
+          $actual = (Get-FileHash -LiteralPath $files[0].FullName -Algorithm SHA256).Hash
+          if ($actual -cne $env:EXPECTED_SHA) { throw 'Artifact transport checksum differs.' }
+          Write-Output 'Artifact transport probe: OK (upload/download pins; SHA-256 matches; read-only job)'
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: 10.0.x
 
@@ -56,7 +102,7 @@ jobs:
 
       - name: Upload shortcuts workspace evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-shortcuts-workspace-evidence
           path: shortcuts-evidence/
@@ -76,7 +122,7 @@ jobs:
 
       - name: Upload Quick Accent evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-quick-accent-controls-evidence
           path: quick-accent-evidence/
@@ -95,7 +141,7 @@ jobs:
 
       - name: Upload statistics evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-statistics-controls-evidence
           path: statistics-evidence/
@@ -113,7 +159,7 @@ jobs:
 
       - name: Upload settings evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-settings-controls-evidence
           path: settings-evidence/
@@ -131,7 +177,7 @@ jobs:
 
       - name: Upload about evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-about-controls-evidence
           path: about-evidence/
@@ -149,7 +195,7 @@ jobs:
 
       - name: Upload auxiliary evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-auxiliary-controls-evidence
           path: auxiliary-evidence/
@@ -178,7 +224,7 @@ jobs:
 
       - name: Upload visual foundation evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-visual-foundation-evidence
           path: gallery-evidence/
@@ -353,42 +399,42 @@ jobs:
           Get-FileHash shortcuts-pilot-package/SlashDesk.exe -Algorithm SHA256
 
       - name: Upload shortcuts pilot candidate
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-3.3.0-shortcuts-pilot-win-x64
           path: shortcuts-pilot-package/
           if-no-files-found: error
 
       - name: Upload visual foundation gallery
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-visual-foundation-gallery-win-x64
           path: gallery-package/
           if-no-files-found: error
 
       - name: Upload capture pilot candidate
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-3.3.0-capture-complements-pilot-win-x64
           path: capture-pilot-package/
           if-no-files-found: error
 
       - name: Upload installed staging
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-3.2.0-installed-staging-win-x64
           path: publish-installed/
           if-no-files-found: error
 
       - name: Upload portable test candidate
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-3.2.0-portable-test-candidate-win-x64
           path: package/
           if-no-files-found: error
 
       - name: Upload capture toolbar visual preview
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-capture-toolbar-visual-preview-win-x64
           path: preview-package/

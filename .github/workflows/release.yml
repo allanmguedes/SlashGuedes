@@ -56,7 +56,7 @@ jobs:
           "prerelease=$((-not [string]::IsNullOrEmpty($suffix)).ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
 
       - name: Checkout tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: refs/tags/${{ steps.version.outputs.tag }}
           fetch-depth: 0
@@ -84,7 +84,7 @@ jobs:
           "sha=$headSha" >> $env:GITHUB_OUTPUT
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: 10.0.x
 
@@ -152,7 +152,7 @@ jobs:
           "portableChecksum=$portableZip.sha256" >> $env:GITHUB_OUTPUT
 
       - name: Upload temporary Actions artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SlashDesk-${{ steps.version.outputs.version }}-release-validation
           path: release-assets/
@@ -166,13 +166,13 @@ jobs:
 
     steps:
       - name: Checkout validated tag commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ needs.validate-build-release.outputs.sha }}
           persist-credentials: false
 
       - name: Download validated release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: SlashDesk-${{ needs.validate-build-release.outputs.version }}-release-validation
           path: release-assets/
