@@ -16,26 +16,26 @@ public static class TriggerRule
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            error = "Informe um atalho.";
+            error = UiText.Get("Informe um atalho.");
             return false;
         }
 
         if (value.Length < MinimumLength)
         {
-            error = "O atalho precisa começar com / e ter pelo menos um caractere.";
+            error = UiText.Get("O atalho precisa começar com / e ter pelo menos um caractere.");
             return false;
         }
 
         if (value.Length > MaximumLength)
         {
-            error = $"O atalho pode ter no máximo {MaximumLength} caracteres.";
+            error = UiText.Format($"O atalho pode ter no máximo {MaximumLength} caracteres.");
             return false;
         }
 
         if (!IsSupportedPrefix(value[0]) ||
             value.Skip(1).Any(character => !IsSupportedCharacter(character)))
         {
-            error = "O atalho deve começar com / e usar somente letras, números, hífen ou sublinhado.";
+            error = UiText.Get("O atalho deve começar com / e usar somente letras, números, hífen ou sublinhado.");
             return false;
         }
 

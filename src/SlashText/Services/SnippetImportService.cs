@@ -26,7 +26,7 @@ public sealed partial class SnippetImportService
     {
         if (!File.Exists(filePath))
         {
-            throw new FileNotFoundException("O arquivo selecionado não foi encontrado.", filePath);
+            throw new FileNotFoundException(UiText.Get("O arquivo selecionado não foi encontrado."), filePath);
         }
 
         return source switch
@@ -57,7 +57,7 @@ public sealed partial class SnippetImportService
             folders.ValueKind != JsonValueKind.Array)
         {
             throw new InvalidDataException(
-                "O JSON não parece ser uma exportação do Text Blaze: a lista 'folders' não foi encontrada.");
+                UiText.Get("O JSON não parece ser uma exportação do Text Blaze: a lista 'folders' não foi encontrada."));
         }
 
         var snippets = new List<Snippet>();
@@ -82,13 +82,13 @@ public sealed partial class SnippetImportService
                     string.IsNullOrWhiteSpace(name) ||
                     text is null)
                 {
-                    warnings.Add($"Um item da pasta '{category}' foi ignorado por não ter nome, atalho ou texto.");
+                    warnings.Add(UiText.Format($"Um item da pasta '{category}' foi ignorado por não ter nome, atalho ou texto."));
                     continue;
                 }
 
                 if (!TriggerRule.TryValidate(trigger, out _))
                 {
-                    warnings.Add($"O atalho '{trigger}' foi ignorado porque usa caracteres incompatíveis.");
+                    warnings.Add(UiText.Format($"O atalho '{trigger}' foi ignorado porque usa caracteres incompatíveis."));
                     continue;
                 }
 
@@ -101,7 +101,7 @@ public sealed partial class SnippetImportService
                 if (unsupported > 0)
                 {
                     warnings.Add(
-                        $"{trigger}: {unsupported} comando(s) do Text Blaze foram mantidos como texto para revisão.");
+                        UiText.Format($"{trigger}: {unsupported} comando(s) do Text Blaze foram mantidos como texto para revisão."));
                 }
 
                 snippets.Add(new Snippet
@@ -210,7 +210,7 @@ public sealed partial class SnippetImportService
 
             if (replacement is null)
             {
-                warnings.Add("Uma entrada do Espanso foi ignorada porque não possui 'replace'.");
+                warnings.Add(UiText.Get("Uma entrada do Espanso foi ignorada porque não possui 'replace'."));
                 continue;
             }
 
@@ -219,7 +219,7 @@ public sealed partial class SnippetImportService
                 var trigger = NormalizeTrigger(rawTrigger, out var convertedColonPrefix);
                 if (!TriggerRule.TryValidate(trigger, out _))
                 {
-                    warnings.Add($"O atalho '{trigger}' foi ignorado porque usa caracteres incompatíveis.");
+                    warnings.Add(UiText.Format($"O atalho '{trigger}' foi ignorado porque usa caracteres incompatíveis."));
                     continue;
                 }
 
@@ -242,7 +242,7 @@ public sealed partial class SnippetImportService
         if (snippets.Count == 0)
         {
             throw new InvalidDataException(
-                "Nenhum atalho Espanso compatível foi encontrado. Selecione um arquivo YAML que contenha 'match', 'trigger' e 'replace'.");
+                UiText.Get("Nenhum atalho Espanso compatível foi encontrado. Selecione um arquivo YAML que contenha 'match', 'trigger' e 'replace'."));
         }
 
         return new SnippetImportResult(RemoveDuplicateTriggers(snippets, warnings), warnings);
@@ -257,7 +257,7 @@ public sealed partial class SnippetImportService
         {
             if (!unique.TryAdd(snippet.Trigger, snippet))
             {
-                warnings.Add($"{snippet.Trigger}: atalho duplicado na origem; somente o primeiro foi importado.");
+                warnings.Add(UiText.Format($"{snippet.Trigger}: atalho duplicado na origem; somente o primeiro foi importado."));
             }
         }
 

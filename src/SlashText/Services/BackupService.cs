@@ -90,7 +90,7 @@ public sealed class BackupService
         if (!File.Exists(archivePath))
         {
             throw new FileNotFoundException(
-                "O backup selecionado não foi encontrado.",
+                UiText.Get("O backup selecionado não foi encontrado."),
                 archivePath);
         }
 
@@ -139,7 +139,7 @@ public sealed class BackupService
         if (entries.Count == 0 || entries.Count > MaximumRestoreEntries)
         {
             throw new InvalidDataException(
-                "O backup não contém uma quantidade válida de arquivos.");
+                UiText.Get("O backup não contém uma quantidade válida de arquivos."));
         }
 
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -153,7 +153,7 @@ public sealed class BackupService
             if (!paths.Add(relative))
             {
                 throw new InvalidDataException(
-                    $"O backup contém a entrada duplicada '{relative}'.");
+                    UiText.Format($"O backup contém a entrada duplicada '{relative}'."));
             }
             if (IsLinkEntry(entry) ||
                 entry.Length < 0 ||
@@ -161,7 +161,7 @@ public sealed class BackupService
                 totalBytes > MaximumRestoreTotalBytes - entry.Length)
             {
                 throw new InvalidDataException(
-                    $"A entrada '{relative}' não é segura para restauração.");
+                    UiText.Format($"A entrada '{relative}' não é segura para restauração."));
             }
             totalBytes += entry.Length;
 
@@ -185,7 +185,7 @@ public sealed class BackupService
                     written > MaximumRestoreEntryBytes)
                 {
                     throw new InvalidDataException(
-                        $"A entrada '{relative}' excedeu o tamanho declarado.");
+                        UiText.Format($"A entrada '{relative}' excedeu o tamanho declarado."));
                 }
                 output.Write(buffer, 0, read);
             }
@@ -193,7 +193,7 @@ public sealed class BackupService
             if (written != entry.Length)
             {
                 throw new InvalidDataException(
-                    $"A entrada '{relative}' foi extraída de forma incompleta.");
+                    UiText.Format($"A entrada '{relative}' foi extraída de forma incompleta."));
             }
 
             if (RestorableFiles.Contains(relative))
@@ -362,10 +362,10 @@ public sealed class BackupService
         using var document = JsonDocument.Parse(manifest.Open());
         if (document.RootElement.TryGetProperty("includesCaptureEmotes", out var flag))
         {
-            if (flag.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) throw new InvalidDataException("Indicador da coleção de emojis inválido.");
+            if (flag.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) throw new InvalidDataException(UiText.Get("Indicador da coleção de emojis inválido."));
             var includes = flag.GetBoolean();
             if (!includes && archive.Entries.Any(entry => NormalizeArchivePath(entry.FullName).StartsWith("capture-emotes/", StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidDataException("A coleção de emojis não corresponde ao manifesto.");
+                throw new InvalidDataException(UiText.Get("A coleção de emojis não corresponde ao manifesto."));
             return includes;
         }
         // Backups written before this optional collection flag leave personal emojis untouched.
@@ -388,7 +388,7 @@ public sealed class BackupService
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                "A pasta de assets está fora de SlashDeskData.");
+                UiText.Get("A pasta de assets está fora de SlashDeskData."));
         }
     }
 
@@ -408,7 +408,7 @@ public sealed class BackupService
                 StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                $"O backup contém o caminho inseguro '{relative}'.");
+                UiText.Format($"O backup contém o caminho inseguro '{relative}'."));
         }
         return destination;
     }
@@ -435,7 +435,7 @@ public sealed class BackupService
         var sources = CollectSources();
         if (sources.Count == 0)
         {
-            throw new InvalidOperationException("Ainda não há dados do SlashDesk para incluir no backup.");
+            throw new InvalidOperationException(UiText.Get("Ainda não há dados do SlashDesk para incluir no backup."));
         }
 
         var duplicate = sources
@@ -444,7 +444,7 @@ public sealed class BackupService
         if (duplicate is not null)
         {
             throw new InvalidDataException(
-                $"Mais de um arquivo produziria a entrada '{duplicate.Key}' no backup.");
+                UiText.Format($"Mais de um arquivo produziria a entrada '{duplicate.Key}' no backup."));
         }
 
         Directory.CreateDirectory(_backupDirectory);
@@ -514,7 +514,7 @@ public sealed class BackupService
             var fullAsset = Path.GetFullPath(asset);
             if (!fullAsset.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidDataException("Um asset está fora da pasta permitida.");
+                throw new InvalidDataException(UiText.Get("Um asset está fora da pasta permitida."));
             }
 
             var relative = Path.GetRelativePath(assetsRoot, fullAsset)
@@ -599,14 +599,14 @@ public sealed class BackupService
         if (manifestEntries.Count != 1)
         {
             throw new InvalidDataException(
-                "O backup deve conter exatamente um manifesto.");
+                UiText.Get("O backup deve conter exatamente um manifesto."));
         }
 
         using var document = JsonDocument.Parse(manifestEntries[0].Open());
         if (!document.RootElement.TryGetProperty("schemaVersion", out var schemaElement) ||
             !schemaElement.TryGetInt32(out var schemaVersion))
         {
-            throw new InvalidDataException("O manifesto não informa uma versão válida.");
+            throw new InvalidDataException(UiText.Get("O manifesto não informa uma versão válida."));
         }
 
         switch (schemaVersion)
@@ -618,7 +618,7 @@ public sealed class BackupService
                 ValidateCurrentSnapshot(archive, document.RootElement);
                 break;
             default:
-                throw new InvalidDataException("Versão de backup não suportada.");
+                throw new InvalidDataException(UiText.Get("Versão de backup não suportada."));
         }
     }
 
@@ -628,7 +628,7 @@ public sealed class BackupService
                 RestorableFiles.Contains(entry.Name)))
         {
             throw new InvalidDataException(
-                "O backup legado não contém dados restauráveis.");
+                UiText.Get("O backup legado não contém dados restauráveis."));
         }
     }
 
@@ -639,7 +639,7 @@ public sealed class BackupService
         if (!manifest.TryGetProperty("files", out var filesElement) ||
             filesElement.ValueKind != JsonValueKind.Array)
         {
-            throw new InvalidDataException("O manifesto não contém a lista de arquivos.");
+            throw new InvalidDataException(UiText.Get("O manifesto não contém a lista de arquivos."));
         }
 
         var archiveFiles = new Dictionary<string, ZipArchiveEntry>(
@@ -654,7 +654,7 @@ public sealed class BackupService
             if (!archiveFiles.TryAdd(normalized, entry))
             {
                 throw new InvalidDataException(
-                    $"O backup contém a entrada duplicada '{normalized}'.");
+                    UiText.Format($"O backup contém a entrada duplicada '{normalized}'."));
             }
         }
 
@@ -664,7 +664,7 @@ public sealed class BackupService
         {
             var file = element.Deserialize<BackupManifestFile>(ManifestOptions)
                 ?? throw new InvalidDataException(
-                    "O manifesto contém uma entrada inválida.");
+                    UiText.Get("O manifesto contém uma entrada inválida."));
             EnsureAllowedArchivePath(file.Path);
             if (file.Size < 0 ||
                 file.Sha256.Length != 64 ||
@@ -672,7 +672,7 @@ public sealed class BackupService
                 !manifestFiles.TryAdd(file.Path, file))
             {
                 throw new InvalidDataException(
-                    $"O manifesto contém dados inválidos para '{file.Path}'.");
+                    UiText.Format($"O manifesto contém dados inválidos para '{file.Path}'."));
             }
         }
 
@@ -681,7 +681,7 @@ public sealed class BackupService
             archiveFiles.Keys.Any(path => !manifestFiles.ContainsKey(path)))
         {
             throw new InvalidDataException(
-                "O conteúdo do ZIP não corresponde ao manifesto.");
+                UiText.Get("O conteúdo do ZIP não corresponde ao manifesto."));
         }
 
         foreach (var item in archiveFiles)
@@ -690,7 +690,7 @@ public sealed class BackupService
             if (item.Value.Length != expected.Size)
             {
                 throw new InvalidDataException(
-                    $"O tamanho de '{item.Key}' não corresponde ao manifesto.");
+                    UiText.Format($"O tamanho de '{item.Key}' não corresponde ao manifesto."));
             }
 
             using var stream = item.Value.Open();
@@ -701,7 +701,7 @@ public sealed class BackupService
                     StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException(
-                    $"O hash de '{item.Key}' não corresponde ao manifesto.");
+                    UiText.Format($"O hash de '{item.Key}' não corresponde ao manifesto."));
             }
         }
     }
@@ -716,7 +716,7 @@ public sealed class BackupService
                 string.IsNullOrWhiteSpace(part) || part is "." or ".."))
         {
             throw new InvalidDataException(
-                $"O backup contém o caminho inseguro '{path}'.");
+                UiText.Format($"O backup contém o caminho inseguro '{path}'."));
         }
 
         if (RestorableFiles.Contains(normalized))
@@ -733,7 +733,7 @@ public sealed class BackupService
             normalized.Length <= "assets/".Length)
         {
             throw new InvalidDataException(
-                $"O backup contém o arquivo não permitido '{path}'.");
+                UiText.Format($"O backup contém o arquivo não permitido '{path}'."));
         }
     }
 

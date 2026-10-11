@@ -1,12 +1,13 @@
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'localization-source.ps1')
 
-$xaml = Get-Content 'src/SlashText/MainWindow.xaml' -Raw
+$xaml = Resolve-InterfaceResourcesForInspection (Get-Content 'src/SlashText/MainWindow.xaml' -Raw)
 $code = Get-Content 'src/SlashText/MainWindow.xaml.cs' -Raw
 $app = Get-Content 'src/SlashText/App.xaml' -Raw
 $styles = Get-Content 'src/SlashText/Styles/VisualLab/CapturePilot.xaml' -Raw
-$ruleDialog = Get-Content 'src/SlashText/Views/CaptureRuleDialog.xaml' -Raw
+$ruleDialog = Resolve-InterfaceResourcesForInspection (Get-Content 'src/SlashText/Views/CaptureRuleDialog.xaml' -Raw)
 $ruleCode = Get-Content 'src/SlashText/Views/CaptureRuleDialog.xaml.cs' -Raw
-$shortcutDialog = Get-Content 'src/SlashText/Views/CaptureShortcutDialog.xaml' -Raw
+$shortcutDialog = Resolve-InterfaceResourcesForInspection (Get-Content 'src/SlashText/Views/CaptureShortcutDialog.xaml' -Raw)
 $shortcutCode = Get-Content 'src/SlashText/Views/CaptureShortcutDialog.xaml.cs' -Raw
 $inlineEditor = Get-Content 'src/SlashText/Views/CaptureWorkbenchEditor.cs' -Raw
 $advancedEditor = Get-Content 'src/SlashText/Views/CaptureEditorWindow.cs' -Raw
@@ -15,6 +16,9 @@ $captureService = Get-Content 'src/SlashText/Services/CaptureService.cs' -Raw
 $contextPanel = Get-Content 'src/SlashText/Views/CaptureEditorContextPanel.cs' -Raw
 $document = Get-Content 'src/SlashText/Services/CaptureEditorDocument.cs' -Raw
 $stampCatalog = Get-Content 'src/SlashText/Services/CaptureStampCatalog.cs' -Raw
+foreach ($captureSourceName in @('code','ruleCode','shortcutCode','inlineEditor','advancedEditor','emojiPicker','captureService','contextPanel','document','stampCatalog')) {
+    Set-Variable -Name $captureSourceName -Value (Resolve-InterfaceCallsForInspection (Get-Variable $captureSourceName -ValueOnly))
+}
 
 [xml]$null = $xaml
 [xml]$null = $app

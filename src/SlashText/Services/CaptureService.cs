@@ -202,13 +202,13 @@ public sealed class CaptureService
         var extension = Path.GetExtension(path).ToLowerInvariant();
         if (extension is not (".png" or ".jpg" or ".jpeg"))
         {
-            throw new ArgumentException("Salve a imagem editada em PNG ou JPEG.", nameof(path));
+            throw new ArgumentException(UiText.Get("Salve a imagem editada em PNG ou JPEG."), nameof(path));
         }
         var record = _history.FirstOrDefault(item =>
             string.Equals(ResolveFilePath(item), path, StringComparison.OrdinalIgnoreCase));
         if (record is not null && !record.MediaKind.Equals("image", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Uma edição estática não pode substituir uma gravação.");
+            throw new InvalidOperationException(UiText.Get("Uma edição estática não pode substituir uma gravação."));
         }
         var temporary = path + $".editing-{Guid.NewGuid():N}";
         try
@@ -336,7 +336,7 @@ public sealed class CaptureService
                        Path.GetExtension(resolvedPath).Equals(".jpeg", StringComparison.OrdinalIgnoreCase);
             var dialog = new Microsoft.Win32.SaveFileDialog
             {
-                Title = "Salvar uma cópia editada", FileName = Path.GetFileName(resolvedPath),
+                Title = UiText.Get("Salvar uma cópia editada"), FileName = Path.GetFileName(resolvedPath),
                 DefaultExt = jpeg ? ".jpg" : ".png", Filter = jpeg ? "JPEG|*.jpg|PNG|*.png" : "PNG|*.png|JPEG|*.jpg"
             };
             if (dialog.ShowDialog(owner) != true) return false;
@@ -359,7 +359,7 @@ public sealed class CaptureService
     {
         if (!File.Exists(path))
         {
-            throw new FileNotFoundException("O arquivo não está mais disponível.", path);
+            throw new FileNotFoundException(UiText.Get("O arquivo não está mais disponível."), path);
         }
         path = Path.GetFullPath(path);
         var data = new DataObject();

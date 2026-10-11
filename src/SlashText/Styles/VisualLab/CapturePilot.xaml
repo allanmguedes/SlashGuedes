@@ -168,7 +168,7 @@
                             <Border x:Name="Check" Width="18" Height="18" CornerRadius="9"
                                     HorizontalAlignment="Right" VerticalAlignment="Top"
                                     Background="{DynamicResource Lab.accent}" Visibility="Collapsed">
-                                <TextBlock Text="✓" Foreground="{DynamicResource Lab.on}"
+                                <TextBlock Text="{DynamicResource Ui.1DABBA21CDAD4454}" Foreground="{DynamicResource Lab.on}"
                                            FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                         </Grid>

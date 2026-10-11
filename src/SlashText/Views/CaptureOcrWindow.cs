@@ -39,7 +39,7 @@ public sealed class CaptureOcrWindow : Window
     public CaptureOcrWindow(DrawingBitmap snapshot, Action<bool>? busyChanged = null, CaptureOcrService? service = null)
     {
         _snapshot = new DrawingBitmap(snapshot); _busyChanged = busyChanged; _service = service ?? new();
-        Title = "Extrair texto"; Width = 820; Height = 700; MinWidth = 520; MinHeight = 440;
+        Title = UiText.Get("Extrair texto"); Width = 820; Height = 700; MinWidth = 520; MinHeight = 440;
         MaxWidth = Math.Max(520, SystemParameters.WorkArea.Width - 40); MaxHeight = Math.Max(440, SystemParameters.WorkArea.Height - 40);
         WindowStartupLocation = WindowStartupLocation.CenterOwner; ShowInTaskbar = false;
         ResizeMode = ResizeMode.NoResize;
@@ -51,11 +51,11 @@ public sealed class CaptureOcrWindow : Window
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(150) });
         root.RowDefinitions.Add(new RowDefinition());
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var header = new DockPanel(); _close = ActionButton("Fechar", Close); DockPanel.SetDock(_close, Dock.Right); header.Children.Add(_close);
-        header.Children.Add(new TextBlock { Text = "Extrair texto", FontSize = 23, FontWeight = FontWeights.SemiBold }); root.Children.Add(header);
+        var header = new DockPanel(); _close = ActionButton(UiText.Get("Fechar"), Close); DockPanel.SetDock(_close, Dock.Right); header.Children.Add(_close);
+        header.Children.Add(new TextBlock { Text = UiText.Get("Extrair texto"), FontSize = 23, FontWeight = FontWeights.SemiBold }); root.Children.Add(header);
         var statusPanel = new StackPanel { Margin = new Thickness(0, 8, 0, 12) };
-        var language = _service.Options.Languages switch { "por" => "Português", "eng" => "Inglês", _ => "Português + inglês" };
-        var subtitle = new TextBlock { Text = $"{language} · {_service.Options.Model} · processamento local", FontSize = 12 };
+        var language = _service.Options.Languages switch { "por" => UiText.Get("Português"), "eng" => UiText.Get("Inglês"), _ => UiText.Get("Português + inglês") };
+        var subtitle = new TextBlock { Text = UiText.Format($"{language} · {_service.Options.Model} · processamento local"), FontSize = 12 };
         subtitle.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); statusPanel.Children.Add(subtitle);
         _status.Margin = new Thickness(0, 8, 0, 0); AutomationProperties.SetLiveSetting(_status, AutomationLiveSetting.Polite);
         statusPanel.Children.Add(_status); Grid.SetRow(statusPanel, 1); root.Children.Add(statusPanel);
@@ -69,11 +69,11 @@ public sealed class CaptureOcrWindow : Window
         var previewBorder = new Border { Child = preview, Padding = new Thickness(8), CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 0, 0, 12) };
         previewBorder.SetResourceReference(Border.BackgroundProperty, "Lab.canvas"); Grid.SetRow(previewBorder, 2); root.Children.Add(previewBorder);
         _text.SetResourceReference(StyleProperty, "Lab.Field"); _text.VerticalContentAlignment = VerticalAlignment.Top; _text.Padding = new Thickness(12);
-        AutomationProperties.SetName(_text, "Texto reconhecido, editável"); Grid.SetRow(_text, 3); root.Children.Add(_text);
+        AutomationProperties.SetName(_text, UiText.Get("Texto reconhecido, editável")); Grid.SetRow(_text, 3); root.Children.Add(_text);
         var actions = new WrapPanel { Margin = new Thickness(0, 16, 0, 0), HorizontalAlignment = HorizontalAlignment.Right };
-        _retry = ActionButton("Tentar novamente", () => _ = ReadAsync());
-        _copySelected = ActionButton("Copiar seleção", () => Copy(_text.SelectedText));
-        _copyAll = ActionButton("Copiar tudo", () => Copy(_text.Text));
+        _retry = ActionButton(UiText.Get("Tentar novamente"), () => _ = ReadAsync());
+        _copySelected = ActionButton(UiText.Get("Copiar seleção"), () => Copy(_text.SelectedText));
+        _copyAll = ActionButton(UiText.Get("Copiar tudo"), () => Copy(_text.Text));
         actions.Children.Add(_retry); actions.Children.Add(_copySelected); actions.Children.Add(_copyAll);
         Grid.SetRow(actions, 4); root.Children.Add(actions);
         var surface = new Border { Child = root, CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1) };
@@ -90,7 +90,7 @@ public sealed class CaptureOcrWindow : Window
     {
         if (_running || _closed) return;
         _running = true; _cancellation = new CancellationTokenSource();
-        _text.Clear(); _text.IsEnabled = false; _status.Text = "Reconhecendo texto… Você pode cancelar a leitura.";
+        _text.Clear(); _text.IsEnabled = false; _status.Text = UiText.Get("Reconhecendo texto… Você pode cancelar a leitura.");
         _pulse.Start(); _busyChanged?.Invoke(true); UpdateActions();
         try
         {
@@ -98,16 +98,16 @@ public sealed class CaptureOcrWindow : Window
             if (_closed) return;
             _text.Text = result.Text;
             _status.Text = string.IsNullOrWhiteSpace(result.Text)
-                ? "Nenhum texto encontrado. Tente uma região mais próxima do texto ou uma imagem mais nítida."
+                ? UiText.Get("Nenhum texto encontrado. Tente uma região mais próxima do texto ou uma imagem mais nítida.")
                 : result.Confidence < 0.80f
-                    ? "Leitura com baixa confiança. Revise o texto; tente aproximar a seleção ou ajustar o OCR nas Configurações de captura."
-                    : "Texto pronto. Você pode corrigir e selecionar um trecho antes de copiar.";
+                    ? UiText.Get("Leitura com baixa confiança. Revise o texto; tente aproximar a seleção ou ajustar o OCR nas Configurações de captura.")
+                    : UiText.Get("Texto pronto. Você pode corrigir e selecionar um trecho antes de copiar.");
         }
         catch (OperationCanceledException) { }
         catch (Exception exception)
         {
             if (!_closed) _status.Text = exception is InvalidOperationException or TimeoutException ? exception.Message
-                : "Não foi possível reconhecer o texto. Tente novamente.";
+                : UiText.Get("Não foi possível reconhecer o texto. Tente novamente.");
         }
         finally
         {
@@ -119,16 +119,16 @@ public sealed class CaptureOcrWindow : Window
     }
     private void UpdateActions()
     {
-        _close.Content = _running ? "Cancelar leitura" : "Fechar";
-        AutomationProperties.SetName(_close, _running ? "Cancelar leitura" : "Fechar");
+        _close.Content = _running ? UiText.Get("Cancelar leitura") : UiText.Get("Fechar");
+        AutomationProperties.SetName(_close, _running ? UiText.Get("Cancelar leitura") : UiText.Get("Fechar"));
         _retry.IsEnabled = !_running; _copyAll.IsEnabled = !_running && !string.IsNullOrWhiteSpace(_text.Text);
         _copySelected.IsEnabled = !_running && !string.IsNullOrWhiteSpace(_text.SelectedText);
     }
     private bool Copy(string text)
     {
         if (_running || string.IsNullOrWhiteSpace(text)) return false;
-        try { Clipboard.SetText(text); CopiedText = true; _status.Text = "Texto copiado."; return true; }
-        catch (System.Runtime.InteropServices.COMException) { _status.Text = "A área de transferência está ocupada. Tente copiar novamente."; return false; }
+        try { Clipboard.SetText(text); CopiedText = true; _status.Text = UiText.Get("Texto copiado."); return true; }
+        catch (System.Runtime.InteropServices.COMException) { _status.Text = UiText.Get("A área de transferência está ocupada. Tente copiar novamente."); return false; }
     }
     private static Button ActionButton(string label, Action callback)
     {

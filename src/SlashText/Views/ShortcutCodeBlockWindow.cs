@@ -22,33 +22,33 @@ public sealed class ShortcutCodeBlockWindow : Window
 
     public ShortcutCodeBlockWindow(CodeBlockContent? initial = null)
     {
-        Title = initial is null ? "Inserir bloco de código" : "Editar bloco de código";
+        Title = initial is null ? UiText.Get("Inserir bloco de código") : UiText.Get("Editar bloco de código");
         Width = 760; Height = 570; WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize;
         Background = Brushes.Transparent; AllowsTransparency = true; ShowInTaskbar = false; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var root = new Grid { Margin = new Thickness(24) };
         foreach (var height in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto }) root.RowDefinitions.Add(new RowDefinition { Height = height });
         var header = new DockPanel();
-        var close = ActionButton("Fechar", "X", false); close.Content = new LabIcon { Kind = "X", Width = 16, Height = 16 }; close.Width = 32; close.Height = 32; close.Padding = new Thickness(6); close.Click += (_, _) => Close(); DockPanel.SetDock(close, Dock.Right); header.Children.Add(close);
+        var close = ActionButton(UiText.Get("Fechar"), "X", false); close.Content = new LabIcon { Kind = "X", Width = 16, Height = 16 }; close.Width = 32; close.Height = 32; close.Padding = new Thickness(6); close.Click += (_, _) => Close(); DockPanel.SetDock(close, Dock.Right); header.Children.Add(close);
         header.Children.Add(Label(Title, 21, true)); root.Children.Add(header);
         var metadata = new StackPanel { Margin = new Thickness(0, 20, 0, 14) };
-        metadata.Children.Add(Label("Linguagem", 12));
+        metadata.Children.Add(Label(UiText.Get("Linguagem"), 12));
         LanguageBox = new ComboBox { Margin = new Thickness(0, 7, 0, 0), MaxDropDownHeight = 320 };
-        LanguageBox.SetResourceReference(StyleProperty, "Lab.Combo"); AutomationProperties.SetName(LanguageBox, "Linguagem do código");
+        LanguageBox.SetResourceReference(StyleProperty, "Lab.Combo"); AutomationProperties.SetName(LanguageBox, UiText.Get("Linguagem do código"));
         var id = ShortcutCodeEditor.NormalizeLanguage(initial?.Language ?? "text");
         foreach (var item in ShortcutCodeEditor.Languages) LanguageBox.Items.Add(new ComboBoxItem { Content = item.Label, Tag = item.Id });
-        if (!ShortcutCodeEditor.Languages.Any(item => item.Id == id)) LanguageBox.Items.Add(new ComboBoxItem { Content = id + " (texto sem realce)", Tag = id });
+        if (!ShortcutCodeEditor.Languages.Any(item => item.Id == id)) LanguageBox.Items.Add(new ComboBoxItem { Content = id + UiText.Get(" (texto sem realce)"), Tag = id });
         LanguageBox.SelectedItem = LanguageBox.Items.OfType<ComboBoxItem>().Single(item => Equals(item.Tag, id));
         metadata.Children.Add(LanguageBox); Grid.SetRow(metadata, 1); root.Children.Add(metadata);
         CodeEditor = ShortcutCodeEditor.Create(readOnly: false); CodeEditor.Text = initial?.Code ?? "";
-        AutomationProperties.SetName(CodeEditor, "Conteúdo do bloco de código"); ShortcutCodeEditor.BindLanguage(CodeEditor, () => (string)((ComboBoxItem)LanguageBox.SelectedItem).Tag);
+        AutomationProperties.SetName(CodeEditor, UiText.Get("Conteúdo do bloco de código")); ShortcutCodeEditor.BindLanguage(CodeEditor, () => (string)((ComboBoxItem)LanguageBox.SelectedItem).Tag);
         var editorSurface = new Border { Child = CodeEditor, CornerRadius = new CornerRadius(7), BorderThickness = new Thickness(1), ClipToBounds = true };
         editorSurface.SetResourceReference(Border.BorderBrushProperty, "Lab.line-strong"); Grid.SetRow(editorSurface, 2); root.Children.Add(editorSurface);
         var hint = new StackPanel { Margin = new Thickness(0, 12, 0, 16) };
-        var info = Label("O código fica literal, incluindo {{variáveis}}. Salve o atalho para gravar o bloco.", 12); info.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); hint.Children.Add(info);
+        var info = Label(UiText.Get("O código fica literal, incluindo {{variáveis}}. Salve o atalho para gravar o bloco."), 12); info.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); hint.Children.Add(info);
         _error = Label("", 12); _error.SetResourceReference(TextBlock.ForegroundProperty, "Lab.error"); _error.Visibility = Visibility.Collapsed; hint.Children.Add(_error); Grid.SetRow(hint, 3); root.Children.Add(hint);
         var footer = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        CancelButton = ActionButton("Cancelar", "X", false); CancelButton.Margin = new Thickness(0, 0, 8, 0); CancelButton.Click += (_, _) => Close(); footer.Children.Add(CancelButton);
-        SaveButton = ActionButton("Salvar bloco", "Check", true); SaveButton.Click += (_, _) => Save(); footer.Children.Add(SaveButton); Grid.SetRow(footer, 4); root.Children.Add(footer);
+        CancelButton = ActionButton(UiText.Get("Cancelar"), "X", false); CancelButton.Margin = new Thickness(0, 0, 8, 0); CancelButton.Click += (_, _) => Close(); footer.Children.Add(CancelButton);
+        SaveButton = ActionButton(UiText.Get("Salvar bloco"), "Check", true); SaveButton.Click += (_, _) => Save(); footer.Children.Add(SaveButton); Grid.SetRow(footer, 4); root.Children.Add(footer);
         Surface = new Border { Child = root, Margin = new Thickness(8), CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1) };
         Surface.SetResourceReference(Border.BackgroundProperty, "Lab.panel"); Surface.SetResourceReference(Border.BorderBrushProperty, "Lab.line-strong"); Content = Surface;
         LabMotion.SetEntrance(Surface, "Popup"); Loaded += (_, _) => { LabMotion.PlayEntrance(Surface); CodeEditor.Focus(); };
@@ -61,7 +61,7 @@ public sealed class ShortcutCodeBlockWindow : Window
     internal void EnableBackdrop() => ModalBackdrop.Attach(this, Surface, Close);
     private void Save()
     {
-        if (CodeEditor.Text.Length == 0) { _error.Text = "Insira o código antes de salvar o bloco."; _error.Visibility = Visibility.Visible; CodeEditor.Focus(); return; }
+        if (CodeEditor.Text.Length == 0) { _error.Text = UiText.Get("Insira o código antes de salvar o bloco."); _error.Visibility = Visibility.Visible; CodeEditor.Focus(); return; }
         Result = new CodeBlockContent((string)((ComboBoxItem)LanguageBox.SelectedItem).Tag, CodeBlockMarkdown.Normalize(CodeEditor.Text)); DialogResult = true;
     }
     private static TextBlock Label(string text, double size, bool bold = false)

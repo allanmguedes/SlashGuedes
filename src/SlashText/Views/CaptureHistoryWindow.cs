@@ -34,7 +34,7 @@ public sealed class CaptureHistoryWindow : Window
     public CaptureHistoryWindow(IEnumerable<CaptureRecord> records, Func<CaptureRecord, string> resolvePath, string search, string filter)
     {
         _records = records.ToArray(); _resolvePath = resolvePath;
-        Title = "Histórico de capturas"; Width = 900; Height = 700; MinWidth = 500; MinHeight = 400;
+        Title = UiText.Get("Histórico de capturas"); Width = 900; Height = 700; MinWidth = 500; MinHeight = 400;
         WindowStyle = WindowStyle.None; AllowsTransparency = true; Background = Brushes.Transparent;
         WindowStartupLocation = WindowStartupLocation.CenterOwner; ShowInTaskbar = false;
         var root = new Grid { Margin = new Thickness(24) };
@@ -42,27 +42,27 @@ public sealed class CaptureHistoryWindow : Window
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition());
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var header = new DockPanel(); var close = Button("Fechar", "X", Close); DockPanel.SetDock(close, Dock.Right); header.Children.Add(close);
-        header.Children.Add(new TextBlock { Text = "Histórico de capturas", FontSize = 23, FontWeight = FontWeights.SemiBold }); root.Children.Add(header);
+        var header = new DockPanel(); var close = Button(UiText.Get("Fechar"), "X", Close); DockPanel.SetDock(close, Dock.Right); header.Children.Add(close);
+        header.Children.Add(new TextBlock { Text = UiText.Get("Histórico de capturas"), FontSize = 23, FontWeight = FontWeights.SemiBold }); root.Children.Add(header);
         var filters = new WrapPanel { Margin = new Thickness(0, 18, 0, 16) };
-        _search.Width = 300; _search.Margin = new Thickness(0, 0, 12, 6); _search.ToolTip = "Nome, tipo ou data (dd/MM/aaaa)";
-        AutomationProperties.SetName(_search, "Buscar capturas por nome ou data"); _search.SetResourceReference(StyleProperty, "Lab.Field");
+        _search.Width = 300; _search.Margin = new Thickness(0, 0, 12, 6); _search.ToolTip = UiText.Get("Nome, tipo ou data (dd/MM/aaaa)");
+        AutomationProperties.SetName(_search, UiText.Get("Buscar capturas por nome ou data")); _search.SetResourceReference(StyleProperty, "Lab.Field");
         _search.Text = search;
         var searchColumn = new StackPanel();
-        var searchLabel = new TextBlock { Text = "Buscar por nome, tipo ou data", FontSize = 11, Margin = new Thickness(0, 0, 0, 5) };
+        var searchLabel = new TextBlock { Text = UiText.Get("Buscar por nome, tipo ou data"), FontSize = 11, Margin = new Thickness(0, 0, 0, 5) };
         searchLabel.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); searchColumn.Children.Add(searchLabel); searchColumn.Children.Add(_search);
         filters.Children.Add(searchColumn);
-        var clearSearch = Button("Limpar busca", "X", () => { _search.Clear(); _search.Focus(); }); clearSearch.VerticalAlignment = VerticalAlignment.Bottom; filters.Children.Add(clearSearch);
+        var clearSearch = Button(UiText.Get("Limpar busca"), "X", () => { _search.Clear(); _search.Focus(); }); clearSearch.VerticalAlignment = VerticalAlignment.Bottom; filters.Children.Add(clearSearch);
         _filter.VerticalAlignment = VerticalAlignment.Bottom; _filter.Width = 155; _filter.Margin = new Thickness(12, 0, 0, 6); _filter.SetResourceReference(StyleProperty, "Lab.Combo");
-        foreach (var (label, key) in new[] { ("Todos", "all"), ("Monitor", "monitor"), ("Região", "regiao"), ("Janela", "janela"),
-            ("Captura longa", "rolagem"), ("Vídeo MP4", "video"), ("GIF", "gif") }) _filter.Items.Add(new ComboBoxItem { Content = label, Tag = key });
+        foreach (var (label, key) in new[] { (UiText.Get("Todos"), "all"), ("Monitor", "monitor"), (UiText.Get("Região"), "regiao"), (UiText.Get("Janela"), "janela"),
+            (UiText.Get("Captura longa"), "rolagem"), (UiText.Get("Vídeo MP4"), "video"), ("GIF", "gif") }) _filter.Items.Add(new ComboBoxItem { Content = label, Tag = key });
         _filter.SelectedItem = _filter.Items.Cast<ComboBoxItem>().FirstOrDefault(i => Equals(i.Tag, filter)) ?? _filter.Items[0];
-        AutomationProperties.SetName(_filter, "Filtrar histórico por tipo"); filters.Children.Add(_filter); Grid.SetRow(filters, 1); root.Children.Add(filters);
+        AutomationProperties.SetName(_filter, UiText.Get("Filtrar histórico por tipo")); filters.Children.Add(_filter); Grid.SetRow(filters, 1); root.Children.Add(filters);
         var scroll = new ScrollViewer { Content = _rows, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }; Grid.SetRow(scroll, 2); root.Children.Add(scroll);
         var footer = new DockPanel { Margin = new Thickness(0, 16, 0, 0) };
         var actions = new StackPanel { Orientation = Orientation.Horizontal }; DockPanel.SetDock(actions, Dock.Right); footer.Children.Add(actions);
-        _previous = Button("Anterior", "ArrowLeft", () => { _page--; Refresh(); scroll.ScrollToTop(); });
-        _next = Button("Próxima", "ChevronRight", () => { _page++; Refresh(); scroll.ScrollToTop(); });
+        _previous = Button(UiText.Get("Anterior"), "ArrowLeft", () => { _page--; Refresh(); scroll.ScrollToTop(); });
+        _next = Button(UiText.Get("Próxima"), "ChevronRight", () => { _page++; Refresh(); scroll.ScrollToTop(); });
         actions.Children.Add(_previous); actions.Children.Add(_next); footer.Children.Add(_status); Grid.SetRow(footer, 3); root.Children.Add(footer);
         var surface = new Border { Child = root, CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1) };
         surface.SetResourceReference(Border.BackgroundProperty, "Lab.panel"); surface.SetResourceReference(Border.BorderBrushProperty, "Lab.line");
@@ -86,9 +86,9 @@ public sealed class CaptureHistoryWindow : Window
             var row = new WrapPanel { Margin = new Thickness(10) };
             var text = new StackPanel { Width = 290, Margin = new Thickness(0, 0, 12, 8) };
             text.Children.Add(new TextBlock { Text = Path.GetFileName(path), TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = path, FontWeight = FontWeights.SemiBold });
-            var detail = new TextBlock { Text = $"{CaptureHistoryQuery.Label(record)} · {record.CreatedAt.ToLocalTime():dd/MM/yyyy HH:mm} · {record.Width}×{record.Height}" + (available ? "" : " · Arquivo ausente"), FontSize = 11, TextWrapping = TextWrapping.Wrap };
+            var detail = new TextBlock { Text = $"{CaptureHistoryQuery.Label(record)} · {record.CreatedAt.ToLocalTime():dd/MM/yyyy HH:mm} · {record.Width}×{record.Height}" + (available ? "" : UiText.Get(" · Arquivo ausente")), FontSize = 11, TextWrapping = TextWrapping.Wrap };
             detail.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); text.Children.Add(detail); row.Children.Add(text);
-            foreach (var (label, icon, action) in new[] { ("Abrir", "ExternalLink", "open"), ("Copiar", "Copy", "copy"), ("Editar", "PenLine", "edit"), ("Excluir", "Trash2", "delete") })
+            foreach (var (label, icon, action) in new[] { (UiText.Get("Abrir"), "ExternalLink", "open"), (UiText.Get("Copiar"), "Copy", "copy"), (UiText.Get("Editar"), "PenLine", "edit"), (UiText.Get("Excluir"), "Trash2", "delete") })
             {
                 if (action == "edit" && record.MediaKind != "image") continue;
                 var button = Button(label, icon, () => { RequestedRecord = record; RequestedAction = action; Close(); });
@@ -97,7 +97,7 @@ public sealed class CaptureHistoryWindow : Window
             var border = new Border { Child = row, Margin = new Thickness(0, 0, 0, 8), CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1) };
             border.SetResourceReference(Border.BackgroundProperty, "Lab.raised"); border.SetResourceReference(Border.BorderBrushProperty, "Lab.line"); _rows.Children.Add(border);
         }
-        _status.Text = records.Count == 0 ? "Nenhuma captura encontrada. Limpe a busca ou troque o filtro." : $"{records.Count:N0} capturas · página {_page + 1} de {pages}";
+        _status.Text = records.Count == 0 ? UiText.Get("Nenhuma captura encontrada. Limpe a busca ou troque o filtro.") : UiText.Format($"{records.Count:N0} capturas · página {_page + 1} de {pages}");
         _status.TextWrapping = TextWrapping.Wrap; _status.VerticalAlignment = VerticalAlignment.Center;
         _previous.IsEnabled = _page > 0; _next.IsEnabled = _page + 1 < pages;
     }

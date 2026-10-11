@@ -191,7 +191,7 @@ public sealed class GifRecordingService
                             if (framePaths.Count >= MaximumStoredFrames)
                             {
                                 throw TechnicalLimit(
-                                    $"O limite técnico de {MaximumStoredFrames:N0} quadros do GIF foi atingido.");
+                                    UiText.Format($"O limite técnico de {MaximumStoredFrames:N0} quadros do GIF foi atingido."));
                             }
                             if (lastStoredAt is not null)
                             {
@@ -208,7 +208,7 @@ public sealed class GifRecordingService
                             if (temporaryBytes > MaximumTemporaryBytes)
                             {
                                 throw TechnicalLimit(
-                                    "O GIF atingiu o limite técnico de 4 GiB de arquivos temporários.");
+                                    UiText.Get("O GIF atingiu o limite técnico de 4 GiB de arquivos temporários."));
                             }
                             framePaths.Add(framePath);
                             delays.Add(defaultDelay);
@@ -231,7 +231,7 @@ public sealed class GifRecordingService
             if (framePaths.Count == 0 || lastStoredAt is null)
             {
                 throw new InvalidOperationException(
-                    "A gravação foi finalizada antes de produzir um quadro GIF.");
+                    UiText.Get("A gravação foi finalizada antes de produzir um quadro GIF."));
             }
             delays[^1] = DelayBetween(lastStoredAt.Value, session.Elapsed);
             var activeSeconds = Math.Max(session.Elapsed.TotalSeconds, 0.001);
@@ -300,7 +300,7 @@ public sealed class GifRecordingService
     {
         if (recording.FrameCount == 0)
         {
-            throw new InvalidOperationException("O GIF não contém quadros para salvar.");
+            throw new InvalidOperationException(UiText.Get("O GIF não contém quadros para salvar."));
         }
         colorCount = RecordingPresetCatalog.NormalizeGifQuality(colorCount);
         var encodeClock = Stopwatch.StartNew();
@@ -351,7 +351,7 @@ public sealed class GifRecordingService
         {
             throw new ArgumentOutOfRangeException(
                 nameof(settings),
-                "Selecione um preset disponível de FPS e qualidade do GIF.");
+                UiText.Get("Selecione um preset disponível de FPS e qualidade do GIF."));
         }
     }
 
@@ -518,7 +518,7 @@ public sealed class GifRecordingService
     {
         AppDiagnosticLog.Write("gif.technical-limit", ("message", message));
         return new GifTechnicalLimitException(
-            message + " A gravação foi interrompida com uma mensagem explícita para proteger o computador.");
+            message + UiText.Get(" A gravação foi interrompida com uma mensagem explícita para proteger o computador."));
     }
 
     private static void Log(
@@ -581,7 +581,7 @@ public sealed class GifRecordingService
         var gif = File.ReadAllBytes(path);
         if (gif.Length < 13 || gif[0] != 'G' || gif[1] != 'I' || gif[2] != 'F')
         {
-            throw new InvalidDataException("O encoder criou um contêiner GIF inválido.");
+            throw new InvalidDataException(UiText.Get("O encoder criou um contêiner GIF inválido."));
         }
         ReadOnlySpan<byte> applicationId = "NETSCAPE2.0"u8;
         if (gif.AsSpan().IndexOf(applicationId) >= 0)
@@ -595,7 +595,7 @@ public sealed class GifRecordingService
         var insertionOffset = 13 + colorTableLength;
         if (insertionOffset > gif.Length)
         {
-            throw new InvalidDataException("A tabela de cores do GIF está incompleta.");
+            throw new InvalidDataException(UiText.Get("A tabela de cores do GIF está incompleta."));
         }
         ReadOnlySpan<byte> loopExtension =
         [

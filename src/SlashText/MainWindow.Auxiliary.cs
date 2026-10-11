@@ -16,8 +16,8 @@ public partial class MainWindow
         MessageBoxResult defaultResult = MessageBoxResult.None)
     {
         var dialog = new SettingsDialogWindow(message, title, buttons, image,
-            yesLabel: buttons == MessageBoxButton.YesNoCancel ? "Excluir arquivo" : "Continuar",
-            noLabel: "Remover do histórico");
+            yesLabel: buttons == MessageBoxButton.YesNoCancel ? UiText.Get("Excluir arquivo") : UiText.Get("Continuar"),
+            noLabel: UiText.Get("Remover do histórico"));
         LabMotion.SetReduced(dialog, LabMotion.GetReduced(this));
         if (IsVisible)
         {

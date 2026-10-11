@@ -46,10 +46,10 @@ public partial class MainWindow
             var text = new TextBlock { Text = label, FontSize = 13, VerticalAlignment = VerticalAlignment.Center }; text.SetBinding(TextBlock.ForegroundProperty, new Binding("Foreground") { Source = button }); content.Children.Add(text); button.Content = content;
             button.Click += async (_, _) => { popup.IsOpen = false; await action(); }; panel.Children.Add(button);
         }
-        Action("Duplicar atalho", "Copy", () => { DuplicateShortcut(snippet!); return Task.CompletedTask; });
-        Action(snippet?.IsFavorite == true ? "Remover dos favoritos" : "Adicionar aos favoritos", "Star", () => SetShortcutFlagAsync(snippet!, favorite: true));
-        Action(snippet?.IsPinned == true ? "Desafixar do topo" : "Fixar no topo", "Pin", () => SetShortcutFlagAsync(snippet!, favorite: false));
-        Action("Divulgar SlashDesk", "Link", () => { CreateShareShortcut(); return Task.CompletedTask; }, requiresSelection: false);
+        Action(UiText.Get("Duplicar atalho"), "Copy", () => { DuplicateShortcut(snippet!); return Task.CompletedTask; });
+        Action(snippet?.IsFavorite == true ? UiText.Get("Remover dos favoritos") : UiText.Get("Adicionar aos favoritos"), "Star", () => SetShortcutFlagAsync(snippet!, favorite: true));
+        Action(snippet?.IsPinned == true ? UiText.Get("Desafixar do topo") : UiText.Get("Fixar no topo"), "Pin", () => SetShortcutFlagAsync(snippet!, favorite: false));
+        Action(UiText.Get("Divulgar SlashDesk"), "Link", () => { CreateShareShortcut(); return Task.CompletedTask; }, requiresSelection: false);
         LabMotion.SetEntrance(surface, "Popup"); LabMotion.SetReduced(surface, LabMotion.GetReduced(this));
         surface.PreviewKeyDown += (_, args) => { if (args.Key == Key.Escape) { popup.IsOpen = false; args.Handled = true; } };
         popup.Opened += (_, _) => { LabMotion.PlayEntrance(surface); surface.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)); };
@@ -79,7 +79,7 @@ public partial class MainWindow
         catch (Exception exception)
         {
             AppDiagnosticLog.Write("shortcuts.flag.save_failed", ("exceptionType", exception.GetType().Name));
-            StatusText.Text = "Não foi possível salvar a preferência. Tente novamente."; return false;
+            StatusText.Text = UiText.Get("Não foi possível salvar a preferência. Tente novamente."); return false;
         }
         finally { _shortcutOperationInProgress = false; ShortcutEditorPanel.IsEnabled = true; RefreshShortcutDraftState(); }
     }
@@ -97,7 +97,7 @@ public partial class MainWindow
         }
         var trigger = Candidate(suffix);
         while (TriggerRule.ConflictsWith(trigger, _snippets.Select(item => item.Trigger))) trigger = Candidate(++suffix);
-        NameBox.Text = source.Name + " (cópia)"; TriggerBox.Text = trigger; SelectShortcutCategory(source.Category);
+        NameBox.Text = source.Name + UiText.Get(" (cópia)"); TriggerBox.Text = trigger; SelectShortcutCategory(source.Category);
         FormatBox.SelectedIndex = source.Format == SnippetFormat.Markdown ? 1 : 0;
         RichTextMarkdownConverter.Load(ContentEditor, source.Content, source.Format);
         RefreshShortcutDraftState(); UpdatePreview(); NameBox.Focus(); NameBox.SelectAll();
@@ -124,7 +124,7 @@ public partial class MainWindow
         ShortcutPreviewExpander.Visibility = Visibility.Visible;
         ContentEditor.Height = expanded ? _shortcutExpandedEditorHeight : _shortcutNormalEditorHeight;
         PreviewBorder.Height = expanded ? _shortcutExpandedPreviewHeight : _shortcutNormalPreviewHeight;
-        ShortcutExpandEditorText.Text = expanded ? "Recolher editor" : "Expandir editor";
+        ShortcutExpandEditorText.Text = expanded ? UiText.Get("Recolher editor") : UiText.Get("Expandir editor");
         ShortcutExpandEditorIcon.Kind = expanded ? "Minimize2" : "Maximize2";
         UpdateResponsiveLayout(ActualWidth > 0 ? ActualWidth : Width);
         LabMotion.PlayEntrance(ShortcutEditorPanel); ContentEditor.Focus();
@@ -171,7 +171,7 @@ public partial class MainWindow
         ContentEditor.Focus(); ContentEditor.Selection.Select(start, end);
         try { InsertShortcutEmoji(value); }
         catch (Exception error) when (error is System.IO.IOException or ArgumentException or InvalidOperationException)
-        { StatusText.Text = "Não foi possível inserir o emoji. Tente novamente."; AppDiagnosticLog.Write("shortcuts.emoji.failed", ("exceptionType", error.GetType().Name)); }
+        { StatusText.Text = UiText.Get("Não foi possível inserir o emoji. Tente novamente."); AppDiagnosticLog.Write("shortcuts.emoji.failed", ("exceptionType", error.GetType().Name)); }
     }
     private void InsertShortcutEmoji(string value)
     {
@@ -192,7 +192,7 @@ public partial class MainWindow
         BeginNewSnippet(discardAlreadyConfirmed: true);
         var trigger = "/slashdesk"; var suffix = 2;
         while (TriggerRule.ConflictsWith(trigger, _snippets.Select(item => item.Trigger))) trigger = "/slashdesk" + suffix++;
-        NameBox.Text = "Divulgar SlashDesk"; TriggerBox.Text = trigger; SelectShortcutCategory("Geral");
+        NameBox.Text = UiText.Get("Divulgar SlashDesk"); TriggerBox.Text = trigger; SelectShortcutCategory("Geral");
         FormatBox.SelectedIndex = 0; RichTextMarkdownConverter.Load(ContentEditor, ShortcutShareMessage.Content, SnippetFormat.Plain);
         RefreshShortcutDraftState(); UpdatePreview();
     }
@@ -201,7 +201,7 @@ public partial class MainWindow
     private void OpenCodeBlock(Border? view)
     {
         if (view is null && ContentEditor.CaretPosition.Paragraph is { Parent: not FlowDocument })
-        { StatusText.Text = "Posicione o cursor fora de listas e tabelas para inserir um bloco de código."; return; }
+        { StatusText.Text = UiText.Get("Posicione o cursor fora de listas e tabelas para inserir um bloco de código."); return; }
         var start = ContentEditor.Selection.Start; var end = ContentEditor.Selection.End;
         var dialog = new ShortcutCodeBlockWindow(view is not null && ShortcutCodeBlockView.TryRead(view, out var previous) ? previous : null) { Owner = Window.GetWindow(ContentEditor) ?? this };
         LabMotion.SetReduced(dialog, LabMotion.GetReduced(this)); dialog.EnableBackdrop();
@@ -212,7 +212,7 @@ public partial class MainWindow
     private void ApplyCodeBlock(CodeBlockContent content, Border? existing = null)
     {
         if (existing is null && ContentEditor.CaretPosition.Paragraph is { Parent: not FlowDocument })
-        { StatusText.Text = "Posicione o cursor fora de listas e tabelas para inserir um bloco de código."; return; }
+        { StatusText.Text = UiText.Get("Posicione o cursor fora de listas e tabelas para inserir um bloco de código."); return; }
         ContentEditor.BeginChange();
         try
         {
@@ -231,7 +231,7 @@ public partial class MainWindow
                     // Split at the caret; preserve the text and formatting on both sides.
                     var position = ContentEditor.CaretPosition.InsertParagraphBreak();
                     var next = position.Paragraph!;
-                    if (next.Parent is not FlowDocument) throw new InvalidOperationException("Posicione o cursor em um parágrafo fora da tabela para inserir código.");
+                    if (next.Parent is not FlowDocument) throw new InvalidOperationException(UiText.Get("Posicione o cursor em um parágrafo fora da tabela para inserir código."));
                     ContentEditor.Document.Blocks.InsertBefore(next, block);
                     ContentEditor.CaretPosition = next.ContentStart.GetInsertionPosition(LogicalDirection.Forward);
                 }

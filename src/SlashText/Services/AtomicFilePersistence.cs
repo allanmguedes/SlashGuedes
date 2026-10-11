@@ -45,7 +45,7 @@ internal static class AtomicFilePersistence
         try
         {
             var directory = Path.GetDirectoryName(fullPath)
-                ?? throw new InvalidOperationException("O arquivo não possui uma pasta válida.");
+                ?? throw new InvalidOperationException(UiText.Get("O arquivo não possui uma pasta válida."));
             Directory.CreateDirectory(directory);
             var temporary = Path.Combine(
                 directory,

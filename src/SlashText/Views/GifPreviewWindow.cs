@@ -18,7 +18,7 @@ public sealed class GifPreviewWindow : Window
     public GifPreviewWindow(GifRecordingResult recording)
     {
         _recording = recording;
-        Title = "Prévia do GIF";
+        Title = UiText.Get("Prévia do GIF");
         Width = 900;
         Height = 680;
         MinWidth = 640;
@@ -40,13 +40,13 @@ public sealed class GifPreviewWindow : Window
             {
                 new TextBlock
                 {
-                    Text = "Prévia antes de salvar",
+                    Text = UiText.Get("Prévia antes de salvar"),
                     FontSize = 22,
                     FontWeight = FontWeights.SemiBold
                 },
                 new TextBlock
                 {
-                    Text = $"{recording.FrameCount} quadros · {recording.Fps} FPS · " +
+                    Text = UiText.Format($"{recording.FrameCount} quadros · {recording.Fps} FPS · ") +
                            $"{recording.Duration.TotalSeconds:0.0}s · " +
                            $"{recording.Width}×{recording.Height}",
                     Margin = new Thickness(0, 4, 0, 0),
@@ -75,7 +75,7 @@ public sealed class GifPreviewWindow : Window
         cancel.Click += (_, _) => DialogResult = false;
         var save = new Button
         {
-            Content = "Salvar GIF",
+            Content = UiText.Get("Salvar GIF"),
             MinWidth = 110,
             Margin = new Thickness(10, 0, 0, 0),
             Style = (Style)Application.Current.FindResource("PrimaryButton")

@@ -68,7 +68,7 @@ public partial class CaptureRuleDialog : Window
         var resolved = CaptureService.ResolveDirectoryTemplate(expanded, DateTimeOffset.Now);
         using var dialog = new Forms.FolderBrowserDialog
         {
-            Description = "Selecione a pasta onde as capturas serão salvas.",
+            Description = UiText.Get("Selecione a pasta onde as capturas serão salvas."),
             UseDescriptionForTitle = true,
             ShowNewFolderButton = true,
             SelectedPath = Directory.Exists(resolved)
@@ -95,7 +95,7 @@ public partial class CaptureRuleDialog : Window
     {
         if (!TryBuildResult(out var result, out var error))
         {
-            AuxiliaryWindowTheme.ShowMessage(this, error, "Configurações de captura", MessageBoxButton.OK, MessageBoxImage.Warning);
+            AuxiliaryWindowTheme.ShowMessage(this, error, UiText.Get("Configurações de captura"), MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         Result = result;
@@ -108,17 +108,17 @@ public partial class CaptureRuleDialog : Window
         var shortcuts = new[] { MonitorBox.Text.Trim(), RegionBox.Text.Trim(), WindowBox.Text.Trim(), ScrollingBox.Text.Trim() };
         if (shortcuts.Any(item => !GlobalCaptureShortcutService.IsValid(item)))
         {
-            error = "Use uma tecla, roda ou botão do mouse válido. A roda exige Ctrl, Alt, Shift ou Win.";
+            error = UiText.Get("Use uma tecla, roda ou botão do mouse válido. A roda exige Ctrl, Alt, Shift ou Win.");
             Sections.SelectedIndex = 1; return false;
         }
         if (shortcuts.Distinct(StringComparer.OrdinalIgnoreCase).Count() != shortcuts.Length)
         {
-            error = "Cada ação precisa ter um atalho diferente.";
+            error = UiText.Get("Cada ação precisa ter um atalho diferente.");
             Sections.SelectedIndex = 1; return false;
         }
         if (string.IsNullOrWhiteSpace(DirectoryBox.Text) || string.IsNullOrWhiteSpace(FileNameBox.Text))
         {
-            error = "Informe a pasta e o modelo de nome do arquivo.";
+            error = UiText.Get("Informe a pasta e o modelo de nome do arquivo.");
             Sections.SelectedIndex = 0; return false;
         }
         var editor = SelectedTag(AfterCaptureBox, "Direct") == "Editor";
@@ -126,7 +126,7 @@ public partial class CaptureRuleDialog : Window
         var save = SaveCheckBox.IsChecked == true;
         if (!editor && !copy && !save)
         {
-            error = "No modo direto, ative Copiar após capturar, Salvar automaticamente ou ambas.";
+            error = UiText.Get("No modo direto, ative Copiar após capturar, Salvar automaticamente ou ambas.");
             Sections.SelectedIndex = 0; return false;
         }
         var quality = int.TryParse(QualityBox.Text, out var parsed) ? Math.Clamp(parsed, 1, 100) : 90;

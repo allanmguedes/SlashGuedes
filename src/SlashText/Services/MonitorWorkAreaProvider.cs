@@ -26,13 +26,13 @@ public static class MonitorWorkAreaProvider
         var monitor = MonitorFromRect(ref rectangle, MonitorDefaultToNearest);
         if (monitor == nint.Zero)
         {
-            throw new InvalidOperationException("Não foi possível identificar o monitor da seleção.");
+            throw new InvalidOperationException(UiText.Get("Não foi possível identificar o monitor da seleção."));
         }
 
         var information = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
         if (!GetMonitorInfo(monitor, ref information))
         {
-            throw new InvalidOperationException("Não foi possível obter a área útil do monitor.");
+            throw new InvalidOperationException(UiText.Get("Não foi possível obter a área útil do monitor."));
         }
 
         var dpiX = 96u;

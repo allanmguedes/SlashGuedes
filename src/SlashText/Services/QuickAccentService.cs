@@ -227,7 +227,7 @@ public sealed class QuickAccentService : IDisposable
         if (_hook == IntPtr.Zero)
         {
             throw new InvalidOperationException(
-                $"O Windows não permitiu iniciar o Acento Rápido (erro {Marshal.GetLastWin32Error()}).");
+                UiText.Format($"O Windows não permitiu iniciar o Acento Rápido (erro {Marshal.GetLastWin32Error()})."));
         }
     }
 

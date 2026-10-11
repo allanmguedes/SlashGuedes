@@ -42,14 +42,14 @@ public partial class MainWindow
     {
         SettingsDataPathText.Text = AppPaths.DataDirectory;
         SettingsDataPathText.ToolTip = AppPaths.DataDirectory;
-        SettingsVersionText.Text = $"Versão atual: {ProductVersion()}";
-        SettingsPilotNoteText.Text = AppPaths.IsCapturePilot ? "Neste piloto, inicialização com o Windows e atualizações ficam desativadas. Suas preferências são preservadas." : "";
+        SettingsVersionText.Text = UiText.Format($"Versão atual: {ProductVersion()}");
+        SettingsPilotNoteText.Text = AppPaths.IsCapturePilot ? UiText.Get("Neste piloto, inicialização com o Windows e atualizações ficam desativadas. Suas preferências são preservadas.") : "";
         foreach (var button in new[] { SettingsLightThemeButton, SettingsDarkThemeButton, SettingsSystemThemeButton })
         {
             var selected = (string)button.Tag == _settings.Theme;
             button.SetResourceReference(Button.BorderBrushProperty, selected ? "Lab.accent" : "Lab.line");
             button.SetResourceReference(Button.BackgroundProperty, selected ? "Lab.tint" : "Lab.shell");
-            AutomationProperties.SetHelpText(button, selected ? "Tema selecionado" : "Selecionar este tema");
+            AutomationProperties.SetHelpText(button, selected ? UiText.Get("Tema selecionado") : UiText.Get("Selecionar este tema"));
         }
     }
 
@@ -70,6 +70,7 @@ public partial class MainWindow
             ShowSuggestionsCheckBox.IsChecked = _settings.ShowSuggestions;
             CheckUpdatesCheckBox.IsChecked = _settings.CheckUpdatesOnStartup;
             ThemeBox.SelectedItem = ThemeBox.Items.OfType<ComboBoxItem>().FirstOrDefault(item => (string)item.Tag == _settings.Theme);
+            SelectComboByTag(LanguageBox, UiText.Normalize(_settings.Language));
             RefreshSettingsPresentation();
         }
         finally { _initialized = initialized; }
@@ -77,12 +78,12 @@ public partial class MainWindow
 
     private async Task RunSettingsMaintenanceAsync(string message, Func<Task> action)
     {
-        if (_settingsOperationInProgress || _shortcutOperationInProgress) throw new InvalidOperationException("Aguarde a operação em andamento.");
+        if (_settingsOperationInProgress || _shortcutOperationInProgress) throw new InvalidOperationException(UiText.Get("Aguarde a operação em andamento."));
         if (_recordingControl is not null || _gifRecordingSession is not null || _activeUpdateCancellation is not null)
-            throw new InvalidOperationException("Finalize a gravação ou atualização antes da manutenção.");
+            throw new InvalidOperationException(UiText.Get("Finalize a gravação ou atualização antes da manutenção."));
         using var capture = _captureGate.TryEnter();
         using var expansion = _expansionRequestGate.TryEnter();
-        if (capture is null || expansion is null) throw new InvalidOperationException("Finalize a captura ou expansão em andamento antes de continuar.");
+        if (capture is null || expansion is null) throw new InvalidOperationException(UiText.Get("Finalize a captura ou expansão em andamento antes de continuar."));
         var accentEnabled = _quickAccentService.Enabled;
         var root = (FrameworkElement)Content;
         var wasEnabled = root.IsEnabled;
@@ -96,7 +97,7 @@ public partial class MainWindow
         try { await action(); }
         finally
         {
-            if (SettingsOperationText.Text == message) SettingsOperationText.Text = "Pronto.";
+            if (SettingsOperationText.Text == message) SettingsOperationText.Text = UiText.Get("Pronto.");
             root.IsEnabled = wasEnabled;
             _quickAccentService.Enabled = accentEnabled;
             _shortcutOperationInProgress = false;
@@ -108,7 +109,7 @@ public partial class MainWindow
     private void OpenSettingsData_OnClick(object sender, RoutedEventArgs e)
     {
         try { Directory.CreateDirectory(AppPaths.DataDirectory); Process.Start(new ProcessStartInfo(AppPaths.DataDirectory) { UseShellExecute = true }); }
-        catch (Exception exception) { SettingsOperationText.Text = "Não foi possível abrir a pasta: " + exception.Message; }
+        catch (Exception exception) { SettingsOperationText.Text = UiText.Get("Não foi possível abrir a pasta: ") + exception.Message; }
     }
 
     private void OpenSettingsHelp_OnClick(object sender, RoutedEventArgs e)
@@ -148,16 +149,16 @@ public partial class MainWindow
     }
     internal async Task TestSettingsBusyEvidenceAsync()
     {
-        await RunSettingsMaintenanceAsync("Verificando estado de operação…", async () =>
+        await RunSettingsMaintenanceAsync(UiText.Get("Verificando estado de operação…"), async () =>
         {
             if (((FrameworkElement)Content).IsEnabled || !_settingsOperationInProgress) throw new InvalidOperationException("Maintenance gate missing");
             if (await SetQuickAccentEnabledFromTrayAsync(!_settings.QuickAccentEnabled)) throw new InvalidOperationException("Tray bypassed maintenance gate");
             await Task.Yield();
         });
-        try { await RunSettingsMaintenanceAsync("Falha de teste", () => throw new IOException("Injected maintenance failure")); }
+        try { await RunSettingsMaintenanceAsync(UiText.Get("Falha de teste"), () => throw new IOException("Injected maintenance failure")); }
         catch (IOException) { }
         if (!((FrameworkElement)Content).IsEnabled || _settingsOperationInProgress) throw new InvalidOperationException("Failure left maintenance locked");
-        SettingsOperationText.Text = "As preferências são salvas automaticamente.";
-        StatusText.Text = "Pronto.";
+        SettingsOperationText.Text = UiText.Get("As preferências são salvas automaticamente.");
+        StatusText.Text = UiText.Get("Pronto.");
     }
 }

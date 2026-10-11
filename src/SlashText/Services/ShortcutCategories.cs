@@ -1,6 +1,9 @@
 namespace SlashText.Services;
 
-internal sealed record ShortcutCategory(string Name, string Icon);
+internal sealed record ShortcutCategory(string Name, string Icon)
+{
+    public string DisplayName => UiText.Get(Name);
+}
 
 internal static class ShortcutCategories
 {

@@ -17,7 +17,7 @@ internal static partial class ShortcutEmojiAssets
     internal static string Save(string value)
     {
         var catalog = CaptureStampCatalog.Current;
-        if (!catalog.TryGet(value, out var item)) throw new ArgumentException("Emoji indisponível.");
+        if (!catalog.TryGet(value, out var item)) throw new ArgumentException(UiText.Get("Emoji indisponível."));
         using var bitmap = catalog.GetImage(value)?.CreateBitmap() ?? NotoEmojiCatalog.CreateBitmap(value);
         using var png = new MemoryStream(); bitmap.Save(png, System.Drawing.Imaging.ImageFormat.Png);
         var bytes = png.ToArray();

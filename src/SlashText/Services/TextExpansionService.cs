@@ -138,7 +138,7 @@ public sealed class TextExpansionService
             }
             await Task.Delay(25, cancellationToken);
         }
-        throw new InvalidOperationException("Não foi possível devolver o foco ao aplicativo onde o atalho foi digitado.");
+        throw new InvalidOperationException(UiText.Get("Não foi possível devolver o foco ao aplicativo onde o atalho foi digitado."));
     }
 
     private static Task RequireTargetAsync(IntPtr targetWindow, CancellationToken cancellationToken)
@@ -148,7 +148,7 @@ public sealed class TextExpansionService
         if (!IsTargetForeground(targetWindow))
         {
             throw new OperationCanceledException(
-                "A expansão foi interrompida porque o usuário mudou de aplicativo.",
+                UiText.Get("A expansão foi interrompida porque o usuário mudou de aplicativo."),
                 cancellationToken);
         }
         return Task.CompletedTask;
@@ -158,12 +158,12 @@ public sealed class TextExpansionService
     {
         if (targetWindow == IntPtr.Zero || !IsWindow(targetWindow))
         {
-            throw new InvalidOperationException("A janela de destino não está mais disponível.");
+            throw new InvalidOperationException(UiText.Get("A janela de destino não está mais disponível."));
         }
         _ = GetWindowThreadProcessId(targetWindow, out var processId);
         if (processId == Environment.ProcessId)
         {
-            throw new InvalidOperationException("O SlashDesk não envia expansões para suas próprias janelas.");
+            throw new InvalidOperationException(UiText.Get("O SlashDesk não envia expansões para suas próprias janelas."));
         }
     }
 
@@ -250,7 +250,7 @@ public sealed class TextExpansionService
                 await Task.Delay(20 + (attempt * 15), cancellationToken);
             }
         }
-        throw new InvalidOperationException("A área de transferência está ocupada. Tente novamente.", lastException);
+        throw new InvalidOperationException(UiText.Get("A área de transferência está ocupada. Tente novamente."), lastException);
     }
 
     private static async Task TryRestoreClipboardAsync(WpfIDataObject data, string marker)
@@ -323,7 +323,7 @@ public sealed class TextExpansionService
         var sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
         if (sent != inputs.Length)
         {
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "O Windows não permitiu inserir o texto no aplicativo atual.");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), UiText.Get("O Windows não permitiu inserir o texto no aplicativo atual."));
         }
     }
 
@@ -351,4 +351,4 @@ public sealed class TextExpansionService
 }
 
 public sealed class ExpansionBusyException() : InvalidOperationException(
-    "Já existe uma expansão em andamento. Aguarde a conclusão e tente novamente.");
+    UiText.Get("Já existe uma expansão em andamento. Aguarde a conclusão e tente novamente."));

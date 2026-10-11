@@ -46,7 +46,7 @@ public sealed class RegionSelectionWindow : Window
             Padding = new Thickness(14, 9, 14, 9),
             Child = new TextBlock
             {
-                Text = $"{purpose}  ·  Esc cancela",
+                Text = UiText.Format($"{purpose}  ·  Esc cancela"),
                 Foreground = (Brush)Application.Current.FindResource("InkBrush"),
                 FontSize = 13
             }

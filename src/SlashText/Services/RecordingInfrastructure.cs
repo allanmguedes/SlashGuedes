@@ -107,9 +107,13 @@ internal sealed class MonotonicRecordingClock
 }
 
 internal sealed record RecordingPreset<T>(
-    string Name,
+    string SourceName,
     T Value,
-    string Description);
+    string SourceDescription)
+{
+    public string Name => UiText.Get(SourceName);
+    public string Description => UiText.Get(SourceDescription);
+}
 
 internal static class RecordingPresetCatalog
 {

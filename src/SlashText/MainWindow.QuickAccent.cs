@@ -77,7 +77,7 @@ public partial class MainWindow
 
     private void ShowQuickAccentDelayInputError()
     {
-        QuickAccentDelayErrorText.Text = "Informe um número inteiro entre 0 e 2.000 ms.";
+        QuickAccentDelayErrorText.Text = UiText.Get("Informe um número inteiro entre 0 e 2.000 ms.");
         QuickAccentDelayErrorText.Visibility = Visibility.Visible;
         QuickAccentDelayBox.SetResourceReference(Control.BorderBrushProperty, "Lab.error");
     }
@@ -127,7 +127,7 @@ public partial class MainWindow
             // An empty draft stays visible for correction; unrelated switches still save,
             // especially disabling the feature. Never replace a valid delay with a default.
             var validDelay = int.TryParse(QuickAccentDelayBox.Text, out var delay) && delay is >= 0 and <= 2000;
-            QuickAccentDelayErrorText.Text = "Informe um número inteiro entre 0 e 2.000 ms.";
+            QuickAccentDelayErrorText.Text = UiText.Get("Informe um número inteiro entre 0 e 2.000 ms.");
             QuickAccentDelayErrorText.Visibility = validDelay ? Visibility.Collapsed : Visibility.Visible;
             QuickAccentDelayBox.SetResourceReference(Control.BorderBrushProperty, validDelay ? "Lab.line" : "Lab.error");
             if (validDelay)
@@ -147,7 +147,7 @@ public partial class MainWindow
         catch (Exception exception)
         {
             AppDiagnosticLog.Write("quick-accent.settings.save_failed", ("exceptionType", exception.GetType().Name));
-            QuickAccentDelayErrorText.Text = "Não foi possível salvar as preferências. Tente novamente.";
+            QuickAccentDelayErrorText.Text = UiText.Get("Não foi possível salvar as preferências. Tente novamente.");
             QuickAccentDelayErrorText.Visibility = Visibility.Visible;
         }
         finally { _quickAccentSaveGate.Release(); }
@@ -193,8 +193,8 @@ public partial class MainWindow
         _quickAccentPreviewCharacters = _quickAccentService.GetPreviewChoices(char.ToLowerInvariant(letter));
         _quickAccentPreviewIndex = Math.Clamp(_quickAccentPreviewIndex, 0, Math.Max(0, _quickAccentPreviewCharacters.Length - 1));
         var enabled = _settings.QuickAccentEnabled;
-        var activation = _settings.QuickAccentActivationKey switch { "Left" => "←", "Right" => "→", _ => "Espaço" };
-        QuickAccentPreviewActivationText.Text = $"Segure {char.ToLowerInvariant(letter)} + toque em {activation} · solte a letra para inserir.";
+        var activation = _settings.QuickAccentActivationKey switch { "Left" => "←", "Right" => "→", _ => UiText.Get("Espaço") };
+        QuickAccentPreviewActivationText.Text = UiText.Format($"Segure {char.ToLowerInvariant(letter)} + toque em {activation} · solte a letra para inserir.");
         QuickAccentPreviewActivationText.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
         QuickAccentPreviewDisabledText.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;
         QuickAccentTestBox.IsEnabled = QuickAccentClearTestButton.IsEnabled = enabled;
@@ -219,8 +219,8 @@ public partial class MainWindow
                 content.Children.Add(unicodeText);
             }
             button.Content = content;
-            System.Windows.Automation.AutomationProperties.SetName(button, $"Inserir {character}, U+{(int)character:X4}, no campo de teste");
-            button.ToolTip = $"Inserir {character} no teste · U+{(int)character:X4}";
+            System.Windows.Automation.AutomationProperties.SetName(button, UiText.Format($"Inserir {character}, U+{(int)character:X4}, no campo de teste"));
+            button.ToolTip = UiText.Format($"Inserir {character} no teste · U+{(int)character:X4}");
             button.SetResourceReference(Control.BackgroundProperty, selected ? "Lab.tint" : "Lab.input");
             button.SetResourceReference(Control.BorderBrushProperty, selected ? "Lab.accent" : "Lab.line");
             button.SetResourceReference(Control.ForegroundProperty, selected ? "Lab.accent-text" : "Lab.text");
@@ -243,21 +243,21 @@ public partial class MainWindow
 
     private void UpdateQuickAccentSummaries()
     {
-        QuickAccentEnabledCheckBox.Content = _settings.QuickAccentEnabled ? "Ativado" : "Desativado";
-        QuickAccentUnicodeCheckBox.Content = _settings.QuickAccentShowUnicode ? "Ativado" : "Desativado";
-        QuickAccentSortCheckBox.Content = _settings.QuickAccentSortByUsage ? "Ativado" : "Desativado";
+        QuickAccentEnabledCheckBox.Content = _settings.QuickAccentEnabled ? UiText.Get("Ativado") : UiText.Get("Desativado");
+        QuickAccentUnicodeCheckBox.Content = _settings.QuickAccentShowUnicode ? UiText.Get("Ativado") : UiText.Get("Desativado");
+        QuickAccentSortCheckBox.Content = _settings.QuickAccentSortByUsage ? UiText.Get("Ativado") : UiText.Get("Desativado");
         QuickAccentPositionSummaryText.Text = _settings.QuickAccentToolbarPosition switch
-        { "TopCenter" => "Centro superior", "Center" => "Centro da tela", _ => "Centro inferior" };
+        { "TopCenter" => UiText.Get("Centro superior"), "Center" => UiText.Get("Centro da tela"), _ => UiText.Get("Centro inferior") };
         var count = (_settings.QuickAccentExcludedApps ?? string.Empty).Split(['\r', '\n', ',', ';'],
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).Count();
-        QuickAccentExcludedSummaryText.Text = count == 0 ? "Nenhum aplicativo" : count == 1 ? "1 aplicativo" : $"{count} aplicativos";
+        QuickAccentExcludedSummaryText.Text = count == 0 ? UiText.Get("Nenhum aplicativo") : count == 1 ? UiText.Get("1 aplicativo") : UiText.Format($"{count} aplicativos");
         foreach (var button in new[] { QuickAccentDelayPreset100Button, QuickAccentDelayPreset200Button, QuickAccentDelayPreset500Button })
         {
             var selected = button.Tag?.ToString() == _settings.QuickAccentInputDelayMs.ToString();
             button.SetResourceReference(Control.BackgroundProperty, selected ? "Lab.tint" : "Lab.panel");
             button.SetResourceReference(Control.ForegroundProperty, selected ? "Lab.accent-text" : "Lab.text");
             button.SetResourceReference(Control.BorderBrushProperty, selected ? "Lab.accent" : "Lab.line");
-            System.Windows.Automation.AutomationProperties.SetHelpText(button, selected ? "Atraso atual" : "Aplicar este atraso");
+            System.Windows.Automation.AutomationProperties.SetHelpText(button, selected ? UiText.Get("Atraso atual") : UiText.Get("Aplicar este atraso"));
         }
     }
 
@@ -286,15 +286,15 @@ public partial class MainWindow
         if (QuickAccentStateText is null) return;
         var state = !_settings.QuickAccentEnabled ? QuickAccentRuntimeState.Disabled :
             _quickAccentRuntimeForEvidence ?? _quickAccentService.GetRuntimeState();
-        var activation = _settings.QuickAccentActivationKey switch { "Left" => "←", "Right" => "→", _ => "Espaço" };
+        var activation = _settings.QuickAccentActivationKey switch { "Left" => "←", "Right" => "→", _ => UiText.Get("Espaço") };
         QuickAccentStateText.Text = !_quickAccentStartupCompleted && _settings.QuickAccentEnabled
-            ? "Preparando o Acento Rápido…"
+            ? UiText.Get("Preparando o Acento Rápido…")
             : state switch
             {
-                QuickAccentRuntimeState.Disabled => "Desativado · suas preferências estão preservadas.",
-                QuickAccentRuntimeState.Ready => $"Pronto para usar · segure a letra e toque em {activation}.",
-                QuickAccentRuntimeState.Paused => "Pausado neste aplicativo · está na lista de exclusões.",
-                _ => "Indisponível · não foi possível ativar o recurso."
+                QuickAccentRuntimeState.Disabled => UiText.Get("Desativado · suas preferências estão preservadas."),
+                QuickAccentRuntimeState.Ready => UiText.Format($"Pronto para usar · segure a letra e toque em {activation}."),
+                QuickAccentRuntimeState.Paused => UiText.Get("Pausado neste aplicativo · está na lista de exclusões."),
+                _ => UiText.Get("Indisponível · não foi possível ativar o recurso.")
             };
         QuickAccentStateText.SetResourceReference(TextBlock.ForegroundProperty,
             state == QuickAccentRuntimeState.Ready ? "Lab.accent-text" : state == QuickAccentRuntimeState.Unavailable && _quickAccentStartupCompleted ? "Lab.error" : "Lab.muted");

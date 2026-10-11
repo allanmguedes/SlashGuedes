@@ -77,7 +77,7 @@ public sealed partial class CaptureEditorDocument : IDisposable
 
     public void Resize(int width, int height)
     {
-        if (!ValidSize(width, height)) throw new ArgumentOutOfRangeException(nameof(width), "Use 8–32.000 px por lado, até 64 megapixels.");
+        if (!ValidSize(width, height)) throw new ArgumentOutOfRangeException(nameof(width), UiText.Get("Use 8–32.000 px por lado, até 64 megapixels."));
         Add(new ResizeStep(++_nextId, width, height));
     }
 
@@ -140,7 +140,7 @@ public sealed partial class CaptureEditorDocument : IDisposable
                     graphics.DrawImage(_rendered, new Rectangle(0, 0, next.Width, next.Height),
                         0, 0, _rendered.Width, _rendered.Height, GraphicsUnit.Pixel, attributes);
                 }
-                else throw new InvalidOperationException("Comando de edição desconhecido.");
+                else throw new InvalidOperationException(UiText.Get("Comando de edição desconhecido."));
                 _rendered.Dispose(); _rendered = next;
             }
             _renderedSteps = [.. _steps];

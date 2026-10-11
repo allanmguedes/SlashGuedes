@@ -49,24 +49,24 @@ public sealed class ScreenHelpWindow : Window
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var header = new DockPanel { Margin = new Thickness(24, 22, 24, 14) };
-        var close = ActionButton("Fechar ajuda", "X", Close); close.Width = 38; close.Height = 38;
+        var close = ActionButton(UiText.Get("Fechar ajuda"), "X", Close); close.Width = 38; close.Height = 38;
         close.Padding = new Thickness(8); close.VerticalAlignment = VerticalAlignment.Top;
         var closeGlyph = HelpGlyph("X", 18); closeGlyph.Margin = new Thickness(0); close.Content = closeGlyph;
         DockPanel.SetDock(close, Dock.Right); header.Children.Add(close);
         var title = new StackPanel(); title.Children.Add(Text(definition.Title, 23, true));
         title.Children.Add(Text(definition.Subtitle, 12, muted: true)); header.Children.Add(title); root.Children.Add(header);
         var searchRow = new DockPanel { Margin = new Thickness(24, 0, 24, 16) };
-        _clearSearch = ActionButton("Limpar busca", "X", () => { _search.Clear(); _search.Focus(); });
+        _clearSearch = ActionButton(UiText.Get("Limpar busca"), "X", () => { _search.Clear(); _search.Focus(); });
         _clearSearch.Content = HelpGlyph("X", 16); _clearSearch.Width = 32; _clearSearch.Height = 30; _clearSearch.Padding = new Thickness(6);
         _clearSearch.SetResourceReference(StyleProperty, "Lab.Shortcuts.Ghost");
         _clearSearch.VerticalAlignment = VerticalAlignment.Center; _clearSearch.HorizontalAlignment = HorizontalAlignment.Right;
         _clearSearch.Margin = new Thickness(0, 0, 5, 0); _clearSearch.Visibility = Visibility.Collapsed;
         _search.SetResourceReference(StyleProperty, "Lab.Field"); _search.Padding = new Thickness(36, 9, 42, 9);
-        AutomationProperties.SetName(_search, "O que você quer fazer? Buscar na ajuda"); _search.Height = 38;
+        AutomationProperties.SetName(_search, UiText.Get("O que você quer fazer? Buscar na ajuda")); _search.Height = 38;
         var input = new Grid(); input.Children.Add(_search);
         var searchIcon = HelpGlyph("Search", 16); searchIcon.Margin = new Thickness(12, 0, 0, 0); searchIcon.HorizontalAlignment = HorizontalAlignment.Left;
         searchIcon.VerticalAlignment = VerticalAlignment.Center; searchIcon.IsHitTestVisible = false; searchIcon.SetResourceReference(LabIcon.ForegroundProperty, "Lab.muted"); input.Children.Add(searchIcon);
-        var hint = Text("O que você quer fazer?", 12, muted: true); hint.Margin = new Thickness(37, 0, 0, 0); hint.IsHitTestVisible = false; input.Children.Add(hint);
+        var hint = Text(UiText.Get("O que você quer fazer?"), 12, muted: true); hint.Margin = new Thickness(37, 0, 0, 0); hint.IsHitTestVisible = false; input.Children.Add(hint);
         input.Children.Add(_clearSearch);
         _search.TextChanged += (_, _) => { hint.Visibility = _search.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed; _clearSearch.Visibility = _search.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible; };
         searchRow.Children.Add(input); Grid.SetRow(searchRow, 1); root.Children.Add(searchRow);
@@ -85,14 +85,14 @@ public sealed class ScreenHelpWindow : Window
         footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var actions = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right }; footer.Children.Add(actions);
-        _showTarget = ActionButton("Mostrar na tela", "ArrowUpRight", () =>
+        _showTarget = ActionButton(UiText.Get("Mostrar na tela"), "ArrowUpRight", () =>
         {
             RequestedTarget = _definition.Topics.FirstOrDefault(t => t.Id == _selectedId)?.Target;
             Close();
         });
         _showTarget.Margin = new Thickness(0, 0, 8, 0); actions.Children.Add(_showTarget);
-        var done = ActionButton("Entendi", "Check", Close, primary: true); actions.Children.Add(done);
-        var footerText = Text("Guia offline · Esc ou clique no fundo para fechar", 11, muted: true);
+        var done = ActionButton(UiText.Get("Entendi"), "Check", Close, primary: true); actions.Children.Add(done);
+        var footerText = Text(UiText.Get("Guia offline · Esc ou clique no fundo para fechar"), 11, muted: true);
         footerText.Margin = new Thickness(0, 8, 0, 0); Grid.SetRow(footerText, 1); footer.Children.Add(footerText);
         var footerBorder = new Border { Child = footer, BorderThickness = new Thickness(0, 1, 0, 0) }; footerBorder.SetResourceReference(Border.BorderBrushProperty, "Lab.line");
         Grid.SetRow(footerBorder, 3); root.Children.Add(footerBorder);
@@ -128,7 +128,7 @@ public sealed class ScreenHelpWindow : Window
     private void RebuildNavigation()
     {
         var topics = Matches(); ResultCount = topics.Length;
-        _navigation.Children.Clear(); _count.Text = $"{topics.Length} tópicos · escolha um recurso";
+        _navigation.Children.Clear(); _count.Text = UiText.Format($"{topics.Length} tópicos · escolha um recurso");
         _count.FontSize = 11; _count.TextWrapping = TextWrapping.Wrap; _count.Margin = new Thickness(8, 0, 0, 10);
         _count.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
         foreach (var group in topics.GroupBy(t => t.Group))
@@ -148,8 +148,8 @@ public sealed class ScreenHelpWindow : Window
         {
             _selectedId = ""; _detail.Children.Clear();
             _showTarget.Visibility = Visibility.Collapsed;
-            _detail.Children.Add(Text("Nenhum recurso encontrado", 22, true));
-            _detail.Children.Add(Text("Tente o nome de uma ferramenta ou uma ação, como salvar.", 13, muted: true)); return;
+            _detail.Children.Add(Text(UiText.Get("Nenhum recurso encontrado"), 22, true));
+            _detail.Children.Add(Text(UiText.Get("Tente o nome de uma ferramenta ou uma ação, como salvar."), 13, muted: true)); return;
         }
         if (!topics.Any(t => t.Id == _selectedId)) SelectTopic(topics[0]);
     }
@@ -166,13 +166,13 @@ public sealed class ScreenHelpWindow : Window
         _detail.Children.Add(Text(topic.Title, 25, true)); _detail.Children.Add(Text(topic.Description, 13));
         if (topic.Shortcut is { Length: > 0 })
         {
-            var shortcut = Card(Text("Seu atalho: " + topic.Shortcut, 12, true)); shortcut.Margin = new Thickness(0, 10, 0, 0); _detail.Children.Add(shortcut);
+            var shortcut = Card(Text(UiText.Get("Seu atalho: ") + topic.Shortcut, 12, true)); shortcut.Margin = new Thickness(0, 10, 0, 0); _detail.Children.Add(shortcut);
         }
         var demo = new HelpIllustration(topic.Demo, topic.Icon);
         var visual = new StackPanel(); visual.Children.Add(demo);
-        var replay = ActionButton("Repetir exemplo", "Play", demo.Replay); replay.HorizontalAlignment = HorizontalAlignment.Right;
+        var replay = ActionButton(UiText.Get("Repetir exemplo"), "Play", demo.Replay); replay.HorizontalAlignment = HorizontalAlignment.Right;
         visual.Children.Add(replay); var example = Card(visual); example.Margin = new Thickness(0, 16, 0, 16); _detail.Children.Add(example);
-        _detail.Children.Add(Text("Como usar", 14, true));
+        _detail.Children.Add(Text(UiText.Get("Como usar"), 14, true));
         for (var i = 0; i < topic.Steps.Length; i++)
         {
             var row = new Grid { Margin = new Thickness(0, 0, 0, 9) }; row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(40) }); row.ColumnDefinitions.Add(new ColumnDefinition());
@@ -181,7 +181,7 @@ public sealed class ScreenHelpWindow : Window
             badge.SetResourceReference(BackgroundProperty, "Lab.tint"); row.Children.Add(badge);
             var instruction = Text(topic.Steps[i], 13); Grid.SetColumn(instruction, 1); row.Children.Add(instruction); _detail.Children.Add(row);
         }
-        var tipContent = new StackPanel(); tipContent.Children.Add(Text("Dica e detalhes", 12, true));
+        var tipContent = new StackPanel(); tipContent.Children.Add(Text(UiText.Get("Dica e detalhes"), 12, true));
         tipContent.Children.Add(Text(topic.Tip, 12, muted: true));
         var tip = Card(tipContent); tip.Margin = new Thickness(0, 10, 0, 0);
         tip.SetResourceReference(BackgroundProperty, "Lab.raised"); _detail.Children.Add(tip);
@@ -221,13 +221,13 @@ public sealed class ScreenHelpWindow : Window
             var canvas = new Canvas { Width = 330, Height = 130, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false };
             var desktop = new Border { Width = 330, Height = 118, CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1) };
             desktop.SetResourceReference(BackgroundProperty, "Lab.canvas"); desktop.SetResourceReference(BorderBrushProperty, "Lab.line"); canvas.Children.Add(desktop);
-            var caption = Text("SLASHDESK · EXEMPLO ILUSTRADO", 9, muted: true); Canvas.SetLeft(caption, 14); Canvas.SetTop(caption, 6); canvas.Children.Add(caption);
+            var caption = Text(UiText.Get("SLASHDESK · EXEMPLO ILUSTRADO"), 9, muted: true); Canvas.SetLeft(caption, 14); Canvas.SetTop(caption, 6); canvas.Children.Add(caption);
             if (kind == "region")
             {
                 var selection = new Border { Width = 196, Height = 70, BorderThickness = new Thickness(2), CornerRadius = new CornerRadius(3) };
                 selection.SetResourceReference(BorderBrushProperty, "Lab.accent");
                 var content = new Grid();
-                var idea = Text("Uma área para suas ideias", 11, true); idea.HorizontalAlignment = HorizontalAlignment.Center; idea.Margin = new Thickness(10, 0, 10, 0);
+                var idea = Text(UiText.Get("Uma área para suas ideias"), 11, true); idea.HorizontalAlignment = HorizontalAlignment.Center; idea.Margin = new Thickness(10, 0, 10, 0);
                 content.Children.Add(idea);
                 foreach (var (x, y) in new[] { (0,0), (1,0), (2,0), (0,1), (2,1), (0,2), (1,2), (2,2) })
                 {
@@ -241,32 +241,32 @@ public sealed class ScreenHelpWindow : Window
             else
             {
                 var row = new StackPanel { Orientation = Orientation.Horizontal };
-                var labels = kind switch { "outputs" => new[] { "Copiar", "Salvar", "Concluir" }, "media" => new[] { "Imagem", "Vídeo", "GIF" },
-                    "toolbar" => new[] { "Área", "Anotar", "Finalizar" }, "recents" => new[] { "Recente 1", "Recente 2", "Recente 3" },
-                    "time" => new[] { "Preparar", "Aguardar", "Capturar" }, "emoji" => new[] { "Catálogo", "Meus emojis", "Inserir" },
-                    "privacy" => new[] { "Selecionar", "Intensidade", "Conferir" }, "text" => new[] { "Fonte", "Seu texto", "Inserir" },
-                    "shape" => new[] { "Forma", "Contorno", "Preencher" },
-                    "objects" => new[] { "Selecionar", "Editar", "Aplicar" },
-                    "snippet" => new[] { "/comando", "Seu conteúdo", "Salvar" },
-                    "workspace" => new[] { "Lista", "Editor", "Variáveis" },
-                    "variable" => new[] { "Cursor", "{{nome}}", "Prévia" },
-                    "format" => new[] { "Selecionar", "Formatar", "Conferir" },
-                    "accent" => new[] { "A + Espaço", "á à â ã", "Soltar → á" },
-                    "accent-preview" => new[] { "Letra A", "á à â ã", "Campo de teste" },
-                    "accent-preferences" => new[] { "Atraso", "Posição", "Unicode" },
-                    "accent-sets" => new[] { "PT-BR", "Conjuntos", "Caracteres" },
-                    "accent-exclude" => new[] { "Processos", "Separar por ;", "Salvar" },
-                    "settings-preferences" => new[] { "Escolher", "Salvar", "Reabrir" },
-                    "settings-import" => new[] { "Arquivo", "Revisar", "Importar" },
-                    "settings-backup" => new[] { "ZIP", "Verificar", "Restaurar" },
-                    "settings-assets" => new[] { "Analisar", "Revisar", "Confirmar" },
-                    "settings-updates" => new[] { "Consultar", "Conferir", "Decidir" },
-                    "statistics-shortcuts" => new[] { "Uso real", "Contagens", "Ranking" },
-                    "statistics-captures" => new[] { "Histórico", "Área / mídia", "Contagens" },
-                    "statistics-time" => new[] { "Caracteres", "÷ 200", "Minutos" },
-                    "statistics-accents" => new[] { "Inserir", "Contagem", "Favoritos" },
-                    "statistics-privacy" => new[] { "Local", "Sem conteúdo", "Sem envio" },
-                    _ => new[] { "Ferramenta", "Cor", "Desenhar" } };
+                var labels = kind switch { "outputs" => new[] { UiText.Get("Copiar"), UiText.Get("Salvar"), UiText.Get("Concluir") }, "media" => new[] { UiText.Get("Imagem"), UiText.Get("Vídeo"), "GIF" },
+                    "toolbar" => new[] { UiText.Get("Área"), UiText.Get("Anotar"), UiText.Get("Finalizar") }, "recents" => new[] { UiText.Get("Recente 1"), UiText.Get("Recente 2"), UiText.Get("Recente 3") },
+                    "time" => new[] { UiText.Get("Preparar"), UiText.Get("Aguardar"), UiText.Get("Capturar") }, "emoji" => new[] { UiText.Get("Catálogo"), UiText.Get("Meus emojis"), UiText.Get("Inserir") },
+                    "privacy" => new[] { UiText.Get("Selecionar"), UiText.Get("Intensidade"), UiText.Get("Conferir") }, "text" => new[] { UiText.Get("Fonte"), UiText.Get("Seu texto"), UiText.Get("Inserir") },
+                    "shape" => new[] { UiText.Get("Forma"), UiText.Get("Contorno"), UiText.Get("Preencher") },
+                    "objects" => new[] { UiText.Get("Selecionar"), UiText.Get("Editar"), UiText.Get("Aplicar") },
+                    "snippet" => new[] { "/comando", UiText.Get("Seu conteúdo"), UiText.Get("Salvar") },
+                    "workspace" => new[] { UiText.Get("Lista"), "Editor", UiText.Get("Variáveis") },
+                    "variable" => new[] { "Cursor", "{{nome}}", UiText.Get("Prévia") },
+                    "format" => new[] { UiText.Get("Selecionar"), UiText.Get("Formatar"), UiText.Get("Conferir") },
+                    "accent" => new[] { UiText.Get("A + Espaço"), "á à â ã", UiText.Get("Soltar → á") },
+                    "accent-preview" => new[] { UiText.Get("Letra A"), "á à â ã", UiText.Get("Campo de teste") },
+                    "accent-preferences" => new[] { UiText.Get("Atraso"), UiText.Get("Posição"), "Unicode" },
+                    "accent-sets" => new[] { "PT-BR", UiText.Get("Conjuntos"), UiText.Get("Caracteres") },
+                    "accent-exclude" => new[] { UiText.Get("Processos"), UiText.Get("Separar por ;"), UiText.Get("Salvar") },
+                    "settings-preferences" => new[] { UiText.Get("Escolher"), UiText.Get("Salvar"), UiText.Get("Reabrir") },
+                    "settings-import" => new[] { UiText.Get("Arquivo"), UiText.Get("Revisar"), UiText.Get("Importar") },
+                    "settings-backup" => new[] { "ZIP", UiText.Get("Verificar"), UiText.Get("Restaurar") },
+                    "settings-assets" => new[] { UiText.Get("Analisar"), UiText.Get("Revisar"), UiText.Get("Confirmar") },
+                    "settings-updates" => new[] { UiText.Get("Consultar"), UiText.Get("Conferir"), UiText.Get("Decidir") },
+                    "statistics-shortcuts" => new[] { UiText.Get("Uso real"), UiText.Get("Contagens"), "Ranking" },
+                    "statistics-captures" => new[] { UiText.Get("Histórico"), UiText.Get("Área / mídia"), UiText.Get("Contagens") },
+                    "statistics-time" => new[] { UiText.Get("Caracteres"), "÷ 200", UiText.Get("Minutos") },
+                    "statistics-accents" => new[] { UiText.Get("Inserir"), UiText.Get("Contagem"), UiText.Get("Favoritos") },
+                    "statistics-privacy" => new[] { "Local", UiText.Get("Sem conteúdo"), UiText.Get("Sem envio") },
+                    _ => new[] { UiText.Get("Ferramenta"), UiText.Get("Cor"), UiText.Get("Desenhar") } };
                 for (var i = 0; i < 3; i++)
                 {
                     var cell = new StackPanel(); cell.Children.Add(HelpGlyph(i == 0 ? icon : i == 1 ? "SlidersHorizontal" : "Check", 23)); cell.Children.Add(Text(labels[i], 10, true));

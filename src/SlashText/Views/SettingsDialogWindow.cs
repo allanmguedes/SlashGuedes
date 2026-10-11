@@ -25,7 +25,7 @@ public sealed class SettingsDialogWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var panel = new StackPanel { Margin = new Thickness(24) };
         var header = new DockPanel { LastChildFill = true };
-        var close = Action("Fechar", MessageBoxResult.Cancel); close.Content = new LabIcon { Kind = "X", Width = 18, Height = 18 };
+        var close = Action(UiText.Get("Fechar"), MessageBoxResult.Cancel); close.Content = new LabIcon { Kind = "X", Width = 18, Height = 18 };
         close.Width = 34; close.Height = 34; close.Padding = new Thickness(7); DockPanel.SetDock(close, Dock.Right); header.Children.Add(close);
         var glyph = new LabIcon { Kind = image == MessageBoxImage.Question ? "CircleHelp" : "Info", Width = 22, Height = 22, Margin = new Thickness(0, 0, 12, 0) };
         glyph.SetResourceReference(LabIcon.ForegroundProperty, image == MessageBoxImage.Warning ? "Lab.error" : "Lab.accent-text"); DockPanel.SetDock(glyph, Dock.Left); header.Children.Add(glyph);
@@ -34,10 +34,10 @@ public sealed class SettingsDialogWindow : Window
         panel.Children.Add(new ScrollViewer { Content = text, MaxHeight = 360, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
         var divider = new Border { Height = 1, Margin = new Thickness(0, 0, 0, 18) }; divider.SetResourceReference(Border.BackgroundProperty, "Lab.line"); panel.Children.Add(divider);
         var actions = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right };
-        if (buttons == MessageBoxButton.OK) Add("Entendi", MessageBoxResult.OK, true);
+        if (buttons == MessageBoxButton.OK) Add(UiText.Get("Entendi"), MessageBoxResult.OK, true);
         else
         {
-            Add("Cancelar", MessageBoxResult.Cancel, true);
+            Add(UiText.Get("Cancelar"), MessageBoxResult.Cancel, true);
             if (buttons == MessageBoxButton.YesNoCancel) Add(noLabel, MessageBoxResult.No, false);
             Add(yesLabel, MessageBoxResult.Yes, false);
         }
@@ -60,6 +60,7 @@ public sealed class SettingsDialogWindow : Window
     internal void EnableBackdrop() => ModalBackdrop.Attach(this, Surface, Close);
     private Button Action(string label, MessageBoxResult result)
     {
+        label = UiText.Get(label);
         var button = new Button { Content = label, MinHeight = 36 };
         button.SetResourceReference(StyleProperty, result == MessageBoxResult.Yes ? "Lab.PrimaryButton" : "Lab.Button"); AutomationProperties.SetName(button, label);
         button.Click += (_, _) => { Choice = result; DialogResult = result is MessageBoxResult.Yes or MessageBoxResult.No or MessageBoxResult.OK; };

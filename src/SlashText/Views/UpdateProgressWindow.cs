@@ -13,7 +13,7 @@ internal sealed class UpdateProgressWindow : Window, IProgress<UpdateProgress>
 
     public UpdateProgressWindow()
     {
-        Title = "Atualizando o SlashDesk";
+        Title = UiText.Get("Atualizando o SlashDesk");
         Width = 500;
         Height = 310;
         ResizeMode = ResizeMode.NoResize;
@@ -29,13 +29,13 @@ internal sealed class UpdateProgressWindow : Window, IProgress<UpdateProgress>
         var panel = new StackPanel();
         panel.Children.Add(new TextBlock
         {
-            Text = "Preparando atualização segura",
+            Text = UiText.Get("Preparando atualização segura"),
             FontSize = 20,
             FontWeight = FontWeights.SemiBold
         });
         _status = new TextBlock
         {
-            Text = "Conectando ao GitHub...", TextWrapping = TextWrapping.Wrap,
+            Text = UiText.Get("Conectando ao GitHub..."), TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 12, 0, 8)
         };
         panel.Children.Add(_status);
@@ -48,7 +48,7 @@ internal sealed class UpdateProgressWindow : Window, IProgress<UpdateProgress>
         panel.Children.Add(_progress);
         _cancel = new Button
         {
-            Content = "Cancelar",
+            Content = UiText.Get("Cancelar"),
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 16, 0, 0)
         };

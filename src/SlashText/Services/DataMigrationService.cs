@@ -75,7 +75,7 @@ public sealed class DataMigrationService
         }
 
         var parent = Path.GetDirectoryName(target)
-            ?? throw new InvalidOperationException("O diretório de dados não possui pasta pai.");
+            ?? throw new InvalidOperationException(UiText.Get("O diretório de dados não possui pasta pai."));
         Directory.CreateDirectory(parent);
         var staging = Path.Combine(parent, $".{Path.GetFileName(target)}-migration-{Guid.NewGuid():N}");
         try
@@ -88,7 +88,7 @@ public sealed class DataMigrationService
             {
                 if (Directory.EnumerateFileSystemEntries(target).Any())
                 {
-                    throw new IOException("A origem de dados foi criada por outro processo durante a migração.");
+                    throw new IOException(UiText.Get("A origem de dados foi criada por outro processo durante a migração."));
                 }
                 Directory.Delete(target);
             }

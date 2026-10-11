@@ -96,7 +96,7 @@ public sealed partial class AssetMaintenanceService
         if (!report.CanDelete)
         {
             throw new InvalidOperationException(
-                "A limpeza foi bloqueada porque existem referências locais de imagem inválidas.");
+                UiText.Get("A limpeza foi bloqueada porque existem referências locais de imagem inválidas."));
         }
 
         var backupPath = createBackup();
@@ -108,7 +108,7 @@ public sealed partial class AssetMaintenanceService
         if (!report.CanDelete)
         {
             throw new InvalidOperationException(
-                "A limpeza foi bloqueada porque existem referências locais de imagem inválidas.");
+                UiText.Get("A limpeza foi bloqueada porque existem referências locais de imagem inválidas."));
         }
 
         var deleted = 0;

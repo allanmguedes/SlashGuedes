@@ -34,7 +34,7 @@ public sealed class RecordingControlWindow : Window
         var targetScreen = FloatingWindowPlacement.ForegroundScreen();
         _service = service; _mediaName = mediaName; _settings = settings;
         _preparing = settings is not null;
-        Title = "Controle de gravação";
+        Title = UiText.Get("Controle de gravação");
         Width = settings is null ? 310 : 430;
         Height = 84;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.NoResize;
@@ -76,10 +76,10 @@ public sealed class RecordingControlWindow : Window
         {
             _audioPanel = new RecordingAudioPanel(settings.Audio ?? new()) { Width = 310 };
             _audioPanel.Changed += (_, _) => UpdateAudioButtons();
-            _microphone = IconButton("MicOff", "Microfone", async (_, _) => await ToggleAudioAsync(true));
-            _computer = IconButton("Volume2", "Áudio do computador", async (_, _) => await ToggleAudioAsync(false));
+            _microphone = IconButton("MicOff", UiText.Get("Microfone"), async (_, _) => await ToggleAudioAsync(true));
+            _computer = IconButton("Volume2", UiText.Get("Áudio do computador"), async (_, _) => await ToggleAudioAsync(false));
             row.Children.Add(_microphone); row.Children.Add(_computer);
-            _audioMenu = IconButton("ChevronDown", "Escolher dispositivos e volumes", (_, _) => OpenAudioMenu());
+            _audioMenu = IconButton("ChevronDown", UiText.Get("Escolher dispositivos e volumes"), (_, _) => OpenAudioMenu());
             _audioMenu.Width = 28;
             row.Children.Add(_audioMenu);
             _audioPopup = new Popup
@@ -93,22 +93,22 @@ public sealed class RecordingControlWindow : Window
             };
             row.Children.Add(new Border { Width = 1, Height = 26, Background = Brush("DividerBrush"), Margin = new Thickness(8, 0, 8, 0) });
         }
-        _pause = IconButton("Pause", "Pausar · Espaço", (_, _) => TogglePause());
+        _pause = IconButton("Pause", UiText.Get("Pausar · Espaço"), (_, _) => TogglePause());
         _pause.Visibility = _preparing ? Visibility.Collapsed : Visibility.Visible;
         actions.Children.Add(_pause);
         _finish = new Button
         {
-            Content = _preparing ? "Iniciar" : "Finalizar", Width = 94, Height = 36,
+            Content = _preparing ? UiText.Get("Iniciar") : UiText.Get("Finalizar"), Width = 94, Height = 36,
             Margin = new Thickness(6, 0, 0, 0), Style = (Style)Application.Current.FindResource("Lab.Pilot.PrimaryButton")
         };
         _finish.Click += async (_, _) => { if (_preparing) await RequestStartAsync(); else StopOnce(); };
         actions.Children.Add(_finish);
-        _close = IconButton("X", "Cancelar preparação · Esc", (_, _) => CancelPreparation());
+        _close = IconButton("X", UiText.Get("Cancelar preparação · Esc"), (_, _) => CancelPreparation());
         _close.Visibility = _preparing ? Visibility.Visible : Visibility.Collapsed;
         actions.Children.Add(_close);
         _status = new TextBlock
         {
-            Text = _preparing ? "Escolha o áudio e clique em Iniciar." : $"Gravando {_mediaName}",
+            Text = _preparing ? UiText.Get("Escolha o áudio e clique em Iniciar.") : UiText.Format($"Gravando {_mediaName}"),
             FontSize = 11, Foreground = Brush("MutedBrush"), Margin = new Thickness(0, 5, 0, 0), TextWrapping = TextWrapping.Wrap
         };
         layout.Children.Add(bar); layout.Children.Add(_status); root.Child = layout; Content = root;
@@ -163,9 +163,9 @@ public sealed class RecordingControlWindow : Window
         _preparing = false;
         if (_audioPopup is not null) _audioPopup.IsOpen = false;
         if (_audioMenu is not null) _audioMenu.IsEnabled = false;
-        _finish.Content = "Finalizar"; _pause.Visibility = Visibility.Visible; _close.Visibility = Visibility.Collapsed;
+        _finish.Content = UiText.Get("Finalizar"); _pause.Visibility = Visibility.Visible; _close.Visibility = Visibility.Collapsed;
         _pause.IsEnabled = _finish.IsEnabled = false;
-        _status.Text = "Inicializando MP4…";
+        _status.Text = UiText.Get("Inicializando MP4…");
         UpdateAudioButtons();
     }
 
@@ -205,9 +205,9 @@ public sealed class RecordingControlWindow : Window
             if (!await recorder.SetAudioMutedAsync(
                 microphone ? !recorder.IsMicrophoneMuted : recorder.IsMicrophoneMuted,
                 microphone ? recorder.IsComputerMuted : !recorder.IsComputerMuted))
-                _status.Text = "Não foi possível alterar o áudio. O vídeo continua gravando.";
+                _status.Text = UiText.Get("Não foi possível alterar o áudio. O vídeo continua gravando.");
         }
-        catch { _status.Text = "Não foi possível alterar o áudio. O vídeo continua gravando."; }
+        catch { _status.Text = UiText.Get("Não foi possível alterar o áudio. O vídeo continua gravando."); }
         finally { _changingAudio = false; UpdateAudioButtons(); }
     }
     private void UpdateAudioButtons()
@@ -217,8 +217,8 @@ public sealed class RecordingControlWindow : Window
         var recorder = _service as ScreenRecordingService;
         var microphoneOn = _preparing ? audio.CaptureMicrophone : recorder?.IsMicrophoneMuted == false;
         var computerOn = _preparing ? audio.CaptureComputer : recorder?.IsComputerMuted == false;
-        SetSource(_microphone, microphoneOn, "Microfone", microphoneOn ? "Mic" : "MicOff", audio.CaptureMicrophone);
-        SetSource(_computer, computerOn, "Áudio do PC", computerOn ? "Volume2" : "VolumeX", audio.CaptureComputer);
+        SetSource(_microphone, microphoneOn, UiText.Get("Microfone"), microphoneOn ? "Mic" : "MicOff", audio.CaptureMicrophone);
+        SetSource(_computer, computerOn, UiText.Get("Áudio do PC"), computerOn ? "Volume2" : "VolumeX", audio.CaptureComputer);
     }
     private void SetSource(Button button, bool on, string name, string icon, bool configured)
     {
@@ -227,10 +227,10 @@ public sealed class RecordingControlWindow : Window
         if (on) button.SetResourceReference(Button.BackgroundProperty, "Lab.tint"); else button.Background = Brushes.Transparent;
         var ready = _preparing || _service is ScreenRecordingService { State: ScreenRecordingState.Recording };
         button.IsEnabled = !_checkingAudio && !_changingAudio && ready && (!(_preparing && _start.Task.IsCompleted)) && (_preparing || configured) && Volatile.Read(ref _stopRequested) == 0;
-        var label = name + (_preparing ? (on ? " ligado" : " desligado") : (on ? " gravando" : " silenciado"));
-        button.ToolTip = !_preparing && !configured ? name + ": selecione esta fonte antes da próxima gravação." :
-            label + ". Clique para " + (on ? "silenciar." : "ativar.");
-        if (!_preparing && _service.IsPaused && configured) button.ToolTip = name + ": continue a gravação para alterar o áudio.";
+        var label = name + (_preparing ? (on ? UiText.Get(" ligado") : UiText.Get(" desligado")) : (on ? UiText.Get(" gravando") : UiText.Get(" silenciado")));
+        button.ToolTip = !_preparing && !configured ? name + UiText.Get(": selecione esta fonte antes da próxima gravação.") :
+            label + UiText.Get(". Clique para ") + (on ? "silenciar." : "ativar.");
+        if (!_preparing && _service.IsPaused && configured) button.ToolTip = name + UiText.Get(": continue a gravação para alterar o áudio.");
         ToolTipService.SetShowOnDisabled(button, true); AutomationProperties.SetName(button, label);
     }
     private static Brush Brush(string name) => (Brush)Application.Current.FindResource(name);
@@ -256,8 +256,8 @@ public sealed class RecordingControlWindow : Window
             UpdateElapsed(progress.Elapsed); _status.Text = progress.Status;
             _indicator.SetResourceReference(Border.BackgroundProperty, progress.IsPaused ? "Lab.muted" : "Lab.error");
             _pause.Content = new LabIcon { Kind = progress.IsPaused ? "Play" : "Pause", Width = 20, Height = 20 };
-            _pause.ToolTip = progress.IsPaused ? "Continuar · Espaço" : "Pausar · Espaço";
-            AutomationProperties.SetName(_pause, progress.IsPaused ? "Continuar" : "Pausar");
+            _pause.ToolTip = progress.IsPaused ? UiText.Get("Continuar · Espaço") : UiText.Get("Pausar · Espaço");
+            AutomationProperties.SetName(_pause, progress.IsPaused ? UiText.Get("Continuar") : UiText.Get("Pausar"));
             var ready = _service is not ScreenRecordingService recorder || recorder.State is ScreenRecordingState.Recording or ScreenRecordingState.Paused;
             _pause.IsEnabled = _finish.IsEnabled = ready && Volatile.Read(ref _stopRequested) == 0;
             UpdateAudioButtons();
@@ -271,7 +271,7 @@ public sealed class RecordingControlWindow : Window
         AppDiagnosticLog.Write("recording.overlay-finish-clicked", ("recordingId", _service.RecordingId.ToString("N")),
             ("media", _mediaName), ("elapsedMs", _service.Elapsed.TotalMilliseconds));
         _service.Stop(); _pause.IsEnabled = _finish.IsEnabled = false;
-        _status.Text = $"Finalizando {_mediaName}…"; UpdateAudioButtons();
+        _status.Text = UiText.Format($"Finalizando {_mediaName}…"); UpdateAudioButtons();
     }
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

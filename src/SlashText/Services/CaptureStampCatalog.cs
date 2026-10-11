@@ -50,18 +50,18 @@ public sealed class CaptureStampCatalog
     internal static void ValidateDirectory(string directory)
     {
         if (!Directory.Exists(directory)) return;
-        if (File.GetAttributes(directory).HasFlag(FileAttributes.ReparsePoint)) throw new InvalidDataException("Pasta de emojis inválida.");
+        if (File.GetAttributes(directory).HasFlag(FileAttributes.ReparsePoint)) throw new InvalidDataException(UiText.Get("Pasta de emojis inválida."));
         var catalog = new CaptureStampCatalog(directory);
         if (File.Exists(catalog.Manifest) && File.GetAttributes(catalog.Manifest).HasFlag(FileAttributes.ReparsePoint))
-            throw new InvalidDataException("Catálogo de emojis inválido.");
+            throw new InvalidDataException(UiText.Get("Catálogo de emojis inválido."));
         var entries = catalog.Read();
         if (entries.Count == 0 && !File.Exists(catalog.Manifest) && Directory.EnumerateFiles(directory, "*.png").Any())
-            throw new InvalidDataException("A coleção de emojis está sem catálogo.");
+            throw new InvalidDataException(UiText.Get("A coleção de emojis está sem catálogo."));
         foreach (var entry in entries)
         {
             var image = Path.Combine(directory, entry.Id + ".png");
             if (!File.Exists(image) || File.GetAttributes(image).HasFlag(FileAttributes.ReparsePoint))
-                throw new InvalidDataException("A coleção de emojis contém uma imagem ausente ou inválida.");
+                throw new InvalidDataException(UiText.Get("A coleção de emojis contém uma imagem ausente ou inválida."));
             catalog.GetImage("custom:" + entry.Id);
         }
     }
@@ -69,16 +69,16 @@ public sealed class CaptureStampCatalog
     private static string Id(string value)
     {
         if (!IsCustom(value) || !Guid.TryParseExact(value[7..], "N", out var guid))
-            throw new ArgumentException("Emote personalizado inválido.", nameof(value));
+            throw new ArgumentException(UiText.Get("Emote personalizado inválido."), nameof(value));
         return guid.ToString("N");
     }
     private List<Entry> Read()
     {
         if (!File.Exists(Manifest)) return [];
-        if (new FileInfo(Manifest).Length > 1024 * 1024) throw new InvalidDataException("Catálogo de emotes inválido.");
+        if (new FileInfo(Manifest).Length > 1024 * 1024) throw new InvalidDataException(UiText.Get("Catálogo de emotes inválido."));
         var entries = JsonSerializer.Deserialize<List<Entry>>(File.ReadAllText(Manifest)) ?? [];
         if (entries.Count > 1000 || entries.Any(e => e is null || !Guid.TryParseExact(e.Id, "N", out _) || string.IsNullOrWhiteSpace(e.Name)))
-            throw new InvalidDataException("Catálogo de emotes inválido.");
+            throw new InvalidDataException(UiText.Get("Catálogo de emotes inválido."));
         return entries.DistinctBy(e => e.Id).ToList();
     }
     private void Write(List<Entry> entries)
@@ -100,13 +100,13 @@ public sealed class CaptureStampCatalog
     {
         var info = new FileInfo(path);
         if (!info.Exists || info.Length == 0 || info.Length > 16 * 1024 * 1024)
-            throw new InvalidDataException("Escolha um PNG ou JPEG de até 16 MB.");
+            throw new InvalidDataException(UiText.Get("Escolha um PNG ou JPEG de até 16 MB."));
         using var stream = File.OpenRead(path);
         using var original = Image.FromStream(stream, useEmbeddedColorManagement: true, validateImageData: true);
         if (original.RawFormat.Guid != ImageFormat.Png.Guid && original.RawFormat.Guid != ImageFormat.Jpeg.Guid)
-            throw new InvalidDataException("Use uma imagem PNG ou JPEG estática.");
+            throw new InvalidDataException(UiText.Get("Use uma imagem PNG ou JPEG estática."));
         if ((long)original.Width * original.Height > 16_000_000 || original.Width <= 0 || original.Height <= 0)
-            throw new InvalidDataException("Use uma imagem de até 16 megapixels.");
+            throw new InvalidDataException(UiText.Get("Use uma imagem de até 16 megapixels."));
         var scale = Math.Min(1d, 512d / Math.Max(original.Width, original.Height));
         using var normalized = new Bitmap(Math.Max(1, (int)Math.Round(original.Width * scale)),
             Math.Max(1, (int)Math.Round(original.Height * scale)), PixelFormat.Format32bppArgb);
@@ -119,7 +119,7 @@ public sealed class CaptureStampCatalog
                 0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attributes);
         }
         var entries = Read();
-        if (entries.Count >= 1000) throw new InvalidDataException("A coleção aceita até 1.000 imagens. Remova uma antes de adicionar outra.");
+        if (entries.Count >= 1000) throw new InvalidDataException(UiText.Get("A coleção aceita até 1.000 imagens. Remova uma antes de adicionar outra."));
         var id = Guid.NewGuid().ToString("N");
         var label = (string.IsNullOrWhiteSpace(name) ? Path.GetFileNameWithoutExtension(path) : name).Trim();
         if (label.Length > 60) label = label[..60];
@@ -143,12 +143,12 @@ public sealed class CaptureStampCatalog
         if (!IsCustom(value)) return null;
         if (_cache.TryGetValue(value, out var cached)) return cached;
         var id = Id(value);
-        if (!Read().Any(e => e.Id == id)) throw new ArgumentException("Emote não está mais na coleção.", nameof(value));
+        if (!Read().Any(e => e.Id == id)) throw new ArgumentException(UiText.Get("Emote não está mais na coleção."), nameof(value));
         var path = Path.Combine(_directory, id + ".png");
-        if (new FileInfo(path).Length > 2 * 1024 * 1024) throw new InvalidDataException("Imagem local inválida.");
+        if (new FileInfo(path).Length > 2 * 1024 * 1024) throw new InvalidDataException(UiText.Get("Imagem local inválida."));
         var asset = new CaptureStampImage(File.ReadAllBytes(path));
         using var check = asset.CreateBitmap();
-        if (check.Width > 512 || check.Height > 512) throw new InvalidDataException("Imagem local inválida.");
+        if (check.Width > 512 || check.Height > 512) throw new InvalidDataException(UiText.Get("Imagem local inválida."));
         if (_cache.Count >= 96) _cache.Clear();
         _cache[value] = asset; return asset;
     }

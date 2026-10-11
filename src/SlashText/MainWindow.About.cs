@@ -14,13 +14,13 @@ public partial class MainWindow
 
     private void RefreshAboutPresentation()
     {
-        AboutVersionText.Text = $"Versão {ProductVersion()}";
+        AboutVersionText.Text = UiText.Format($"Versão {ProductVersion()}");
         AboutDistributionText.Text = AppPaths.IsPortable
-            ? "Distribuição portátil. Leve o aplicativo e seus dados com você, sem criar uma conta."
-            : "Distribuição instalada. Ferramentas integradas ao seu dia a dia no Windows, sem criar uma conta.";
+            ? UiText.Get("Distribuição portátil. Leve o aplicativo e seus dados com você, sem criar uma conta.")
+            : UiText.Get("Distribuição instalada. Ferramentas integradas ao seu dia a dia no Windows, sem criar uma conta.");
         AboutPilotNoteText.Text = AppPaths.IsCapturePilot
-            ? "Neste piloto, a consulta de atualizações e a inicialização com o Windows ficam desativadas. Suas preferências são preservadas."
-            : "A verificação automática segue a preferência definida em Configurações.";
+            ? UiText.Get("Neste piloto, a consulta de atualizações e a inicialização com o Windows ficam desativadas. Suas preferências são preservadas.")
+            : UiText.Get("A verificação automática segue a preferência definida em Configurações.");
         CheckUpdatesButton.IsEnabled = !AppPaths.IsCapturePilot && !_manualUpdateCheckInProgress;
     }
 
@@ -48,14 +48,14 @@ public partial class MainWindow
             if (uri.Scheme != Uri.UriSchemeHttps || uri.Host != "github.com" ||
                 !uri.AbsolutePath.StartsWith($"/{UpdateService.Repository}/", StringComparison.OrdinalIgnoreCase) &&
                 !uri.AbsolutePath.Equals($"/{UpdateService.Repository}", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Destino do projeto inválido.");
+                throw new InvalidOperationException(UiText.Get("Destino do projeto inválido."));
             if (_aboutEvidenceLinkLauncher is not null) _aboutEvidenceLinkLauncher(uri);
             else Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
             AboutLinkStatusText.Visibility = Visibility.Collapsed;
         }
         catch (Exception)
         {
-            AboutLinkStatusText.Text = "Não foi possível abrir o navegador. Tente novamente ou acesse github.com/" + UpdateService.Repository + ".";
+            AboutLinkStatusText.Text = UiText.Get("Não foi possível abrir o navegador. Tente novamente ou acesse github.com/") + UpdateService.Repository + ".";
             AboutLinkStatusText.Visibility = Visibility.Visible;
         }
     }
@@ -66,7 +66,7 @@ public partial class MainWindow
 
     private async Task<UpdateCheckResult> CheckUpdatesAndRefreshAsync()
     {
-        LastUpdateResultText.Text = SettingsLastUpdateResultText.Text = "Consultando o GitHub…";
+        LastUpdateResultText.Text = SettingsLastUpdateResultText.Text = UiText.Get("Consultando o GitHub…");
         var result = await _updateService.CheckAsync(force: true);
         UpdateUpdateDisplay(await _updateService.LoadStateAsync());
         return result;

@@ -91,18 +91,18 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (IsRecording)
             {
-                throw new InvalidOperationException("Já existe uma gravação em andamento.");
+                throw new InvalidOperationException(UiText.Get("Já existe uma gravação em andamento."));
             }
             if (!Environment.Is64BitProcess)
             {
                 throw new PlatformNotSupportedException(
-                    "A gravação MP4 do SlashDesk requer o processo x64.");
+                    UiText.Get("A gravação MP4 do SlashDesk requer o processo x64."));
             }
             if (Volatile.Read(ref _unresolvedNativeStops) != 0)
             {
                 throw new InvalidOperationException(
-                    "Uma finalização MP4 anterior ainda está presa no encoder nativo. " +
-                    "Reinicie o SlashDesk antes de iniciar outra gravação e envie os logs.");
+                    UiText.Get("Uma finalização MP4 anterior ainda está presa no encoder nativo. ") +
+                    UiText.Get("Reinicie o SlashDesk antes de iniciar outra gravação e envie os logs."));
             }
 
             RecordingPresetCatalog.Normalize(settings);
@@ -301,7 +301,7 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
         if (backend is null)
         {
             QueueFinalization(FinalizationRequest.Failed(
-                "O gravador não foi inicializado."));
+                UiText.Get("O gravador não foi inicializado.")));
             return;
         }
         var started = Stopwatch.StartNew();
@@ -325,9 +325,9 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
             return;
         }
 
-        const string error =
-            "O encoder nativo não confirmou a finalização dentro do prazo. " +
-            "O SlashDesk foi liberado, mas reinicie-o antes de outra gravação e envie os logs.";
+        var error =
+            UiText.Get("O encoder nativo não confirmou a finalização dentro do prazo. ") +
+            UiText.Get("O SlashDesk foi liberado, mas reinicie-o antes de outra gravação e envie os logs.");
         lock (_gate)
         {
             _state = ScreenRecordingState.Failed;
@@ -351,7 +351,7 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
     private void OnRecordingFailed(object? sender, RecordingFailedEventArgs e)
     {
         var error = string.IsNullOrWhiteSpace(e.Error)
-            ? "O encoder de vídeo do Windows não conseguiu concluir a gravação."
+            ? UiText.Get("O encoder de vídeo do Windows não conseguiu concluir a gravação.")
             : e.Error;
         Log("recording.callback-failed", ("error", error));
         QueueFinalization(FinalizationRequest.Failed(error));
@@ -629,12 +629,12 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
     {
         if (!File.Exists(path))
         {
-            throw new InvalidDataException("O encoder não criou o arquivo MP4.");
+            throw new InvalidDataException(UiText.Get("O encoder não criou o arquivo MP4."));
         }
         using var stream = File.OpenRead(path);
         if (stream.Length < 32)
         {
-            throw new InvalidDataException("O encoder criou um arquivo MP4 vazio ou incompleto.");
+            throw new InvalidDataException(UiText.Get("O encoder criou um arquivo MP4 vazio ou incompleto."));
         }
 
         var foundFtyp = false;
@@ -666,7 +666,7 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
             var headerSize = size == 1 ? 16 : 8;
             if (boxSize < headerSize || stream.Position + boxSize - headerSize > stream.Length)
             {
-                throw new InvalidDataException("O encoder criou uma estrutura MP4 truncada.");
+                throw new InvalidDataException(UiText.Get("O encoder criou uma estrutura MP4 truncada."));
             }
             foundFtyp |= type == "ftyp";
             foundMoov |= type == "moov";
@@ -676,7 +676,7 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
         if (!foundFtyp || !foundMoov || !foundMdat)
         {
             throw new InvalidDataException(
-                "O encoder não concluiu a estrutura MP4 (ftyp/moov/mdat).");
+                UiText.Get("O encoder não concluiu a estrutura MP4 (ftyp/moov/mdat)."));
         }
     }
 

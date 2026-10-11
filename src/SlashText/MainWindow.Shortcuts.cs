@@ -48,7 +48,7 @@ public partial class MainWindow
     {
         if (_loadingShortcutDraft || ContentEditor is null || ShortcutSaveStateText is null || FormatBox is null || ShortcutSaveButton is null || ShortcutDeleteButton is null || ShortcutImportButton is null) return;
         var dirty = HasUnsavedShortcutDraft;
-        ShortcutSaveStateText.Text = !_snippetStorageAvailable ? "Atalhos em modo protegido" : dirty ? "Alterações não salvas" : "Tudo salvo";
+        ShortcutSaveStateText.Text = !_snippetStorageAvailable ? UiText.Get("Atalhos em modo protegido") : dirty ? UiText.Get("Alterações não salvas") : UiText.Get("Tudo salvo");
         var color = !_snippetStorageAvailable ? "Lab.error" : dirty ? "Lab.muted" : "Lab.green";
         ShortcutSaveStateText.SetResourceReference(TextBlock.ForegroundProperty, color);
         ShortcutSaveStateIcon.Kind = dirty || !_snippetStorageAvailable ? "CircleHelp" : "Check";
@@ -58,7 +58,7 @@ public partial class MainWindow
         ShortcutImportButton.IsEnabled = _snippetStorageAvailable && !_shortcutOperationInProgress;
         if (SettingsImportButton is not null) SettingsImportButton.IsEnabled = _snippetStorageAvailable && !_shortcutOperationInProgress;
         if (CategoryBox is not null) CategoryBox.IsEnabled = _snippetStorageAvailable && !_shortcutOperationInProgress;
-        if (dirty && StatusText is not null) StatusText.Text = "Alterações não salvas";
+        if (dirty && StatusText is not null) StatusText.Text = UiText.Get("Alterações não salvas");
     }
 
     private bool CanDiscardShortcutDraft()
@@ -66,8 +66,8 @@ public partial class MainWindow
         if (_shortcutOperationInProgress) return false;
         if (!HasUnsavedShortcutDraft) return true;
         if (_shortcutDiscardDecisionForEvidence is bool decision) return decision;
-        var dialog = new ShortcutConfirmationWindow("Descartar alterações?", "Este atalho tem alterações que ainda não foram salvas.",
-            "Para continuar editando, escolha Cancelar e depois use Salvar.", "Descartar alterações") { Owner = this };
+        var dialog = new ShortcutConfirmationWindow(UiText.Get("Descartar alterações?"), UiText.Get("Este atalho tem alterações que ainda não foram salvas."),
+            UiText.Get("Para continuar editando, escolha Cancelar e depois use Salvar."), UiText.Get("Descartar alterações")) { Owner = this };
         LabMotion.SetReduced(dialog, LabMotion.GetReduced(this)); dialog.EnableBackdrop();
         return ShowCaptureDialog(dialog);
     }
@@ -85,11 +85,11 @@ public partial class MainWindow
         Grid.SetColumn(name, 1); row.Children.Add(name);
         var number = new TextBlock { Text = count.ToString(), FontSize = 11, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         number.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); Grid.SetColumn(number, 2); row.Children.Add(number);
-        var button = new Button { Content = row, Padding = new Thickness(10, 8, 10, 8), Margin = new Thickness(0, 0, 0, 3), ToolTip = $"{label} · {count} atalhos" };
+        var button = new Button { Content = row, Padding = new Thickness(10, 8, 10, 8), Margin = new Thickness(0, 0, 0, 3), ToolTip = UiText.Format($"{label} · {count} atalhos") };
         button.SetResourceReference(StyleProperty, "Lab.Shortcuts.Item");
         button.SetResourceReference(BackgroundProperty, selected ? "Lab.tint" : "Lab.shell");
         button.SetResourceReference(ForegroundProperty, selected ? "Lab.accent-text" : "Lab.text");
-        AutomationProperties.SetName(button, $"Categoria {label}, {count} atalhos" + (selected ? ", selecionada" : ""));
+        AutomationProperties.SetName(button, UiText.Format($"Categoria {label}, {count} atalhos") + (selected ? UiText.Get(", selecionada") : ""));
         button.Click += (_, _) => { _selectedCategory = category; RefreshNavigation(); };
         return button;
     }
@@ -114,12 +114,12 @@ public partial class MainWindow
         preview.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); content.Children.Add(preview);
         if (!snippet.Enabled || snippet.HasLegacyIncompatibleTrigger)
         {
-            var state = new TextBlock { Text = snippet.HasLegacyIncompatibleTrigger ? "Comando legado · revise para ativar" : "Pausado", FontSize = 11, Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap };
+            var state = new TextBlock { Text = snippet.HasLegacyIncompatibleTrigger ? UiText.Get("Comando legado · revise para ativar") : UiText.Get("Pausado"), FontSize = 11, Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap };
             state.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); content.Children.Add(state);
         }
-        var button = new Button { Content = content, Tag = selected ? "Selected" : null, ToolTip = $"{snippet.Name}\n{snippet.Trigger}\nCategoria: {snippet.Category}" };
+        var button = new Button { Content = content, Tag = selected ? "Selected" : null, ToolTip = UiText.Format($"{snippet.Name}\n{snippet.Trigger}\nCategoria: {snippet.Category}") };
         button.SetResourceReference(StyleProperty, "Lab.Shortcuts.Item");
-        AutomationProperties.SetName(button, $"{snippet.Name}, comando {snippet.Trigger}, categoria {snippet.Category}" + (selected ? ", selecionado" : ""));
+        AutomationProperties.SetName(button, UiText.Format($"{snippet.Name}, comando {snippet.Trigger}, categoria {snippet.Category}") + (selected ? UiText.Get(", selecionado") : ""));
         button.Click += (_, _) => SelectSnippet(snippet);
         button.PreviewMouseRightButtonUp += (_, e) => { e.Handled = true; ShowShortcutActions(button, snippet); };
         return button;
@@ -141,7 +141,7 @@ public partial class MainWindow
     {
         CategoryBox.SelectedItem = ShortcutCategories.Resolve(category);
         var legacy = !ShortcutCategories.IsKnown(category);
-        ShortcutLegacyCategoryHint.Text = legacy ? $"Categoria anterior: {category}. Ao salvar, será organizada em Outros." : "";
+        ShortcutLegacyCategoryHint.Text = legacy ? UiText.Format($"Categoria anterior: {category}. Ao salvar, será organizada em Outros.") : "";
         ShortcutLegacyCategoryHint.Visibility = legacy ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -195,7 +195,7 @@ public partial class MainWindow
                         Content = (fontSize * .75).ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("pt-BR")),
                         Tag = fontSize.ToString(System.Globalization.CultureInfo.InvariantCulture),
                         Uid = CurrentTextSizeItem, IsEnabled = false,
-                        ToolTip = "Tamanho existente no texto. Escolha um tamanho da lista para alterar."
+                        ToolTip = UiText.Get("Tamanho existente no texto. Escolha um tamanho da lista para alterar.")
                     };
                     var index = FontSizeBox.Items.OfType<ComboBoxItem>().Count(item =>
                         double.TryParse(item.Tag as string, System.Globalization.NumberStyles.Float,
@@ -241,7 +241,7 @@ public partial class MainWindow
             current = argb;
             var color = System.Drawing.Color.FromArgb(argb);
             ApplyShortcutFormatting(property, new SolidColorBrush(Color.FromRgb(color.R, color.G, color.B)), start, end);
-        }, property == TextElement.BackgroundProperty ? "Marca-texto" : "Cor do texto");
+        }, property == TextElement.BackgroundProperty ? UiText.Get("Marca-texto") : UiText.Get("Cor do texto"));
     }
 
     private void ShowShortcutColorPicker(Button anchor, DependencyProperty property)
@@ -274,7 +274,7 @@ public partial class MainWindow
         ShortcutRightDivider.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         if (visible) { ShortcutRightColumn.MinWidth = ShortcutRightMinimum; ShortcutRightColumn.Width = new GridLength(Math.Max(ShortcutRightMinimum, _shortcutVariablesWidth)); }
         NormalizeShortcutColumns(ActualWidth > 0 ? ActualWidth : Width);
-        ShortcutVariablesToggleButton.ToolTip = visible ? "Ocultar variáveis" : "Mostrar variáveis";
+        ShortcutVariablesToggleButton.ToolTip = visible ? UiText.Get("Ocultar variáveis") : UiText.Get("Mostrar variáveis");
         if (visible) LabMotion.PlayEntrance(ShortcutVariablesPanel);
     }
 

@@ -10,6 +10,8 @@ public sealed class AppSettings
     public bool StartWithWindows { get; set; }
     public bool ShowSuggestions { get; set; } = true;
     public string Theme { get; set; } = "System";
+    // UI copy only; absent/unsupported values keep the existing Portuguese interface.
+    public string Language { get; set; } = "pt-BR";
     // Optional visual preference; snippets.md and category names remain unchanged.
     public Dictionary<string, string> ShortcutCategoryIcons { get; set; } = new();
     public bool QuickAccentEnabled { get; set; }

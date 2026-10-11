@@ -18,7 +18,7 @@ public sealed class ShortcutRecorderBox : TextBox
         Cursor = Cursors.Hand;
         MinHeight = 42;
         VerticalContentAlignment = System.Windows.VerticalAlignment.Center;
-        ToolTip = "Clique e pressione a tecla, roda ou botão do mouse desejado";
+        ToolTip = UiText.Get("Clique e pressione a tecla, roda ou botão do mouse desejado");
         GotKeyboardFocus += (_, _) =>
         {
             _committedValue = Text;
@@ -138,7 +138,7 @@ public sealed class ShortcutRecorderBox : TextBox
         }
         else
         {
-            Text = "A roda exige Ctrl, Alt, Shift ou Win";
+            Text = UiText.Get("A roda exige Ctrl, Alt, Shift ou Win");
         }
     }
 

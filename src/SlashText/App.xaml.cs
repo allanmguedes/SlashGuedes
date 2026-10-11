@@ -15,6 +15,19 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        UiText.Apply(UiText.DefaultLanguage);
+        if (e.Args.Length > 0 && e.Args[0] == "--languages-smoke")
+        {
+            _helperMode = true; ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var output = Path.GetFullPath(e.Args.Length > 1 ? e.Args[1] : "languages-evidence");
+            base.OnStartup(e);
+            Dispatcher.BeginInvoke(new Action(async () =>
+            {
+                try { await Design.LanguagesSmoke.RunAsync(output); Shutdown(0); }
+                catch (Exception exception) { Directory.CreateDirectory(output); File.WriteAllText(Path.Combine(output, "failure.txt"), exception.ToString()); Shutdown(1); }
+            }));
+            return;
+        }
         if (e.Args.Length > 0 && e.Args[0] == "--auxiliary-smoke")
         {
             _helperMode = true; ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -142,7 +155,7 @@ public partial class App : System.Windows.Application
                 DispatcherUnhandledException += (_, args) =>
                 {
                     MessageBox.Show(
-                        "A galeria encontrou um erro e precisa ser fechada.\n\n" + args.Exception,
+                        UiText.Get("A galeria encontrou um erro e precisa ser fechada.\n\n") + args.Exception,
                         "Galeria de desenvolvimento",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
@@ -211,8 +224,8 @@ public partial class App : System.Windows.Application
         catch (Exception exception)
         {
             MessageBox.Show(
-                "Não foi possível preparar os dados do SlashDesk. A origem anterior " +
-                "foi preservada e nenhum dado foi ativado parcialmente.\n\n" + exception.Message,
+                UiText.Get("Não foi possível preparar os dados do SlashDesk. A origem anterior ") +
+                UiText.Get("foi preservada e nenhum dado foi ativado parcialmente.\n\n") + exception.Message,
                 "SlashDesk",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
@@ -254,6 +267,7 @@ public partial class App : System.Windows.Application
             return;
         }
 
+        UiText.LoadPreference(AppPaths.SettingsFile);
         // Mantém o identificador legado para impedir que SlashText e SlashDesk
         // monitorem o teclado ao mesmo tempo durante uma atualização.
         _singleInstance = new Mutex(true, "SlashText.SingleInstance", out var created);
@@ -261,7 +275,7 @@ public partial class App : System.Windows.Application
         if (!created)
         {
             MessageBox.Show(
-                "O SlashDesk já está em execução na bandeja do Windows.",
+                UiText.Get("O SlashDesk já está em execução na bandeja do Windows."),
                 "SlashDesk",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -297,9 +311,9 @@ public partial class App : System.Windows.Application
         }
 
         var choice = MessageBox.Show(
-            "A versão portátil precisa estar em uma pasta gravável para preservar " +
+            UiText.Get("A versão portátil precisa estar em uma pasta gravável para preservar ") +
             "SlashDeskData. Deseja escolher outra pasta?\n\n" + error,
-            "Pasta portátil sem permissão",
+            UiText.Get("Pasta portátil sem permissão"),
             MessageBoxButton.YesNo,
             MessageBoxImage.Warning);
         if (choice != MessageBoxResult.Yes)
@@ -309,7 +323,7 @@ public partial class App : System.Windows.Application
 
         using var picker = new System.Windows.Forms.FolderBrowserDialog
         {
-            Description = "Escolha uma pasta gravável para o SlashDesk portátil",
+            Description = UiText.Get("Escolha uma pasta gravável para o SlashDesk portátil"),
             UseDescriptionForTitle = true,
             ShowNewFolderButton = true
         };
@@ -322,8 +336,8 @@ public partial class App : System.Windows.Application
         if (File.Exists(destination))
         {
             MessageBox.Show(
-                "A pasta escolhida já contém SlashDesk.exe. Escolha uma pasta vazia " +
-                "para evitar substituir outra instalação.",
+                UiText.Get("A pasta escolhida já contém SlashDesk.exe. Escolha uma pasta vazia ") +
+                UiText.Get("para evitar substituir outra instalação."),
                 "SlashDesk",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -333,7 +347,7 @@ public partial class App : System.Windows.Application
         try
         {
             var current = Environment.ProcessPath
-                ?? throw new InvalidOperationException("Não foi possível localizar SlashDesk.exe.");
+                ?? throw new InvalidOperationException(UiText.Get("Não foi possível localizar SlashDesk.exe."));
             File.Copy(current, destination, overwrite: false);
             Process.Start(new ProcessStartInfo(destination) { UseShellExecute = true });
             return false;
@@ -341,7 +355,7 @@ public partial class App : System.Windows.Application
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             MessageBox.Show(
-                "Não foi possível preparar a nova pasta. Nenhum dado foi movido.\n\n" +
+                UiText.Get("Não foi possível preparar a nova pasta. Nenhum dado foi movido.\n\n") +
                 exception.Message,
                 "SlashDesk",
                 MessageBoxButton.OK,

@@ -40,7 +40,7 @@ public sealed partial class SnippetMarkdownRepository
         if (markdown.Contains("<!-- slashtext:", StringComparison.OrdinalIgnoreCase) &&
             snippets.Count == 0)
         {
-            throw new InvalidDataException("O arquivo contém atalhos, mas nenhum pôde ser interpretado.");
+            throw new InvalidDataException(UiText.Get("O arquivo contém atalhos, mas nenhum pôde ser interpretado."));
         }
 
         return snippets;
@@ -101,7 +101,7 @@ public sealed partial class SnippetMarkdownRepository
                 !TryReadMetadata(lines[metadataIndex], out var metadataJson))
             {
                 throw new InvalidDataException(
-                    $"Metadados do atalho '{trigger}' não encontrados após a linha {index + 1}.");
+                    UiText.Format($"Metadados do atalho '{trigger}' não encontrados após a linha {index + 1}."));
             }
 
             var fenceIndex = NextNonEmptyLine(lines, metadataIndex + 1);
@@ -109,7 +109,7 @@ public sealed partial class SnippetMarkdownRepository
                 !TryReadFence(lines[fenceIndex], out var fence, out var format))
             {
                 throw new InvalidDataException(
-                    $"Bloco de conteúdo do atalho '{trigger}' não encontrado.");
+                    UiText.Format($"Bloco de conteúdo do atalho '{trigger}' não encontrado."));
             }
 
             var closingFenceIndex = fenceIndex + 1;
@@ -121,7 +121,7 @@ public sealed partial class SnippetMarkdownRepository
 
             if (closingFenceIndex >= lines.Length)
             {
-                throw new InvalidDataException($"Bloco de conteúdo do atalho '{trigger}' não foi fechado.");
+                throw new InvalidDataException(UiText.Format($"Bloco de conteúdo do atalho '{trigger}' não foi fechado."));
             }
 
             SnippetMetadata metadata;
@@ -133,7 +133,7 @@ public sealed partial class SnippetMarkdownRepository
             catch (JsonException exception)
             {
                 throw new InvalidDataException(
-                    $"Metadados inválidos no atalho '{trigger}', linha {metadataIndex + 1}.",
+                    UiText.Format($"Metadados inválidos no atalho '{trigger}', linha {metadataIndex + 1}."),
                     exception);
             }
 
@@ -142,7 +142,7 @@ public sealed partial class SnippetMarkdownRepository
                 Id = metadata.Id == Guid.Empty ? Guid.NewGuid() : metadata.Id,
                 Name = metadata.Name,
                 Trigger = trigger,
-                Category = string.IsNullOrWhiteSpace(metadata.Category) ? "Geral" : metadata.Category,
+                Category = string.IsNullOrWhiteSpace(metadata.Category) ? UiText.Get("Geral") : metadata.Category,
                 Format = format,
                 Enabled = metadata.Enabled,
                 IsFavorite = metadata.IsFavorite, IsPinned = metadata.IsPinned,
@@ -198,12 +198,12 @@ public sealed partial class SnippetMarkdownRepository
 
         if (string.IsNullOrWhiteSpace(snippet.Name))
         {
-            throw new InvalidDataException($"O atalho '{snippet.Trigger}' precisa de um nome.");
+            throw new InvalidDataException(UiText.Format($"O atalho '{snippet.Trigger}' precisa de um nome."));
         }
 
         if (TriggerRule.ConflictsWith(snippet.Trigger, existing.Select(item => item.Trigger)))
         {
-            throw new InvalidDataException($"O atalho '{snippet.Trigger}' está duplicado.");
+            throw new InvalidDataException(UiText.Format($"O atalho '{snippet.Trigger}' está duplicado."));
         }
     }
 

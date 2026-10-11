@@ -36,7 +36,7 @@ internal sealed class PortableUpdateService
     {
         _client = client;
         _currentExecutable = Path.GetFullPath(currentExecutable
-            ?? throw new InvalidOperationException("Não foi possível localizar SlashDesk.exe."));
+            ?? throw new InvalidOperationException(UiText.Get("Não foi possível localizar SlashDesk.exe.")));
         _currentProcessId = currentProcessId;
     }
 
@@ -48,11 +48,11 @@ internal sealed class PortableUpdateService
         if (!AppPaths.IsPortable)
         {
             throw new InvalidOperationException(
-                "A atualização automática desta compilação está disponível somente no modo portátil.");
+                UiText.Get("A atualização automática desta compilação está disponível somente no modo portátil."));
         }
         if (!await _gate.WaitAsync(0, cancellationToken))
         {
-            throw new InvalidOperationException("Já existe uma atualização em andamento.");
+            throw new InvalidOperationException(UiText.Get("Já existe uma atualização em andamento."));
         }
 
         string? operationDirectory = null;
@@ -73,7 +73,7 @@ internal sealed class PortableUpdateService
             if (!CryptographicOperations.FixedTimeEquals(
                     Convert.FromHexString(expectedHash), Convert.FromHexString(actualHash)))
             {
-                throw new InvalidDataException("O SHA-256 do pacote baixado não corresponde à Release.");
+                throw new InvalidDataException(UiText.Get("O SHA-256 do pacote baixado não corresponde à Release."));
             }
 
             var stagedExecutable = Path.Combine(operationDirectory, "SlashDesk.new.exe");
@@ -145,7 +145,7 @@ internal sealed class PortableUpdateService
         });
         if (process is null)
         {
-            throw new InvalidOperationException("Não foi possível iniciar o processo auxiliar de atualização.");
+            throw new InvalidOperationException(UiText.Get("Não foi possível iniciar o processo auxiliar de atualização."));
         }
     }
 
@@ -191,7 +191,7 @@ internal sealed class PortableUpdateService
                     manifestPath,
                     Environment.ProcessId.ToString()
                 }
-            }) ?? throw new InvalidOperationException("A nova versão não pôde ser iniciada.");
+            }) ?? throw new InvalidOperationException(UiText.Get("A nova versão não pôde ser iniciada."));
 
             if (!WaitForConfirmation(manifest.ConfirmationFile, updated, ConfirmationTimeout))
             {
@@ -274,7 +274,7 @@ internal sealed class PortableUpdateService
         if (!string.Equals(currentVersion, manifest.ExpectedVersion, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                $"A atualização iniciou a versão {currentVersion}, mas esperava {manifest.ExpectedVersion}.");
+                UiText.Format($"A atualização iniciou a versão {currentVersion}, mas esperava {manifest.ExpectedVersion}."));
         }
         File.WriteAllText(
             manifest.ConfirmationFile,
@@ -317,7 +317,7 @@ internal sealed class PortableUpdateService
                     if (read == 0) break;
                     await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
                     received += read;
-                    progress?.Report(new UpdateProgress("Baixando atualização", received, total));
+                    progress?.Report(new UpdateProgress(UiText.Get("Baixando atualização"), received, total));
                 }
                 await output.FlushAsync(cancellationToken);
             }
@@ -341,7 +341,7 @@ internal sealed class PortableUpdateService
         if (files.Count != 1 ||
             !files[0].FullName.Replace('\\', '/').Equals("SlashDesk.exe", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidDataException("O pacote portátil deve conter somente SlashDesk.exe na raiz.");
+            throw new InvalidDataException(UiText.Get("O pacote portátil deve conter somente SlashDesk.exe na raiz."));
         }
         files[0].ExtractToFile(destination, overwrite: false);
     }
@@ -352,18 +352,18 @@ internal sealed class PortableUpdateService
         using var reader = new BinaryReader(stream);
         if (stream.Length < 256 || reader.ReadUInt16() != 0x5A4D)
         {
-            throw new InvalidDataException("O arquivo baixado não é um executável PE válido.");
+            throw new InvalidDataException(UiText.Get("O arquivo baixado não é um executável PE válido."));
         }
         stream.Position = 0x3C;
         var peOffset = reader.ReadInt32();
         if (peOffset < 0 || peOffset + 6 > stream.Length)
         {
-            throw new InvalidDataException("O cabeçalho PE do arquivo está inválido.");
+            throw new InvalidDataException(UiText.Get("O cabeçalho PE do arquivo está inválido."));
         }
         stream.Position = peOffset;
         if (reader.ReadUInt32() != 0x00004550 || reader.ReadUInt16() != 0x8664)
         {
-            throw new InvalidDataException("O pacote não contém um executável Windows x64.");
+            throw new InvalidDataException(UiText.Get("O pacote não contém um executável Windows x64."));
         }
     }
 
@@ -374,7 +374,7 @@ internal sealed class PortableUpdateService
             !fileVersion.StartsWith(expectedVersion, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                $"A versão do executável ({fileVersion ?? "desconhecida"}) não corresponde a {expectedVersion}.");
+                UiText.Format($"A versão do executável ({fileVersion ?? "desconhecida"}) não corresponde a {expectedVersion}."));
         }
     }
 
@@ -382,13 +382,13 @@ internal sealed class PortableUpdateService
     {
         if (!SemanticVersion.TryParse(release.Version, out var version) || version.IsPrerelease)
         {
-            throw new InvalidDataException("Somente uma Release estável SemVer pode ser aplicada automaticamente.");
+            throw new InvalidDataException(UiText.Get("Somente uma Release estável SemVer pode ser aplicada automaticamente."));
         }
         var expected = $"SlashDesk-{version}-portable-win-x64.zip";
         if (!release.PortableAsset.Name.Equals(expected, StringComparison.OrdinalIgnoreCase) ||
             !release.ChecksumAsset.Name.Equals(expected + ".sha256", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidDataException("Os artefatos da Release não correspondem ao portátil win-x64.");
+            throw new InvalidDataException(UiText.Get("Os artefatos da Release não correspondem ao portátil win-x64."));
         }
         ValidateAssetUrl(release.PortableAsset.DownloadUrl);
         ValidateAssetUrl(release.ChecksumAsset.DownloadUrl);
@@ -401,7 +401,7 @@ internal sealed class PortableUpdateService
             !(uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) ||
               uri.Host.EndsWith(".githubusercontent.com", StringComparison.OrdinalIgnoreCase)))
         {
-            throw new InvalidDataException("A URL do artefato não pertence ao GitHub via HTTPS.");
+            throw new InvalidDataException(UiText.Get("A URL do artefato não pertence ao GitHub via HTTPS."));
         }
     }
 
@@ -411,12 +411,12 @@ internal sealed class PortableUpdateService
         var updates = Path.GetFullPath(Path.Combine(data, "Updates"));
         var target = Path.GetFullPath(manifest.TargetExecutable);
         var executableDirectory = Path.GetDirectoryName(target)
-            ?? throw new InvalidDataException("Destino do executável inválido.");
+            ?? throw new InvalidDataException(UiText.Get("Destino do executável inválido."));
         if (!Path.GetFileName(target).Equals("SlashDesk.exe", StringComparison.OrdinalIgnoreCase) ||
             !Path.GetFullPath(Path.Combine(executableDirectory, "SlashDeskData"))
                 .Equals(data, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidDataException("O manifesto não aponta para SlashDesk.exe ao lado de SlashDeskData.");
+            throw new InvalidDataException(UiText.Get("O manifesto não aponta para SlashDesk.exe ao lado de SlashDeskData."));
         }
         foreach (var path in new[]
                  {
@@ -426,12 +426,12 @@ internal sealed class PortableUpdateService
         {
             if (!IsInside(Path.GetFullPath(path), updates))
             {
-                throw new InvalidDataException("O manifesto contém um caminho fora de SlashDeskData\\Updates.");
+                throw new InvalidDataException(UiText.Get("O manifesto contém um caminho fora de SlashDeskData\\Updates."));
             }
         }
         if (!SemanticVersion.TryParse(manifest.ExpectedVersion, out _))
         {
-            throw new InvalidDataException("Versão esperada inválida no manifesto.");
+            throw new InvalidDataException(UiText.Get("Versão esperada inválida no manifesto."));
         }
     }
 
@@ -444,14 +444,14 @@ internal sealed class PortableUpdateService
 
     private static PortableUpdateManifest ReadManifest(string manifestPath) =>
         JsonSerializer.Deserialize<PortableUpdateManifest>(File.ReadAllText(manifestPath), JsonOptions)
-        ?? throw new InvalidDataException("Manifesto de atualização inválido.");
+        ?? throw new InvalidDataException(UiText.Get("Manifesto de atualização inválido."));
 
     private static string ParseChecksum(string content)
     {
         var hash = content.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
         if (hash is null || hash.Length != 64 || hash.Any(character => !Uri.IsHexDigit(character)))
         {
-            throw new InvalidDataException("O arquivo SHA-256 publicado é inválido.");
+            throw new InvalidDataException(UiText.Get("O arquivo SHA-256 publicado é inválido."));
         }
         return hash.ToUpperInvariant();
     }
@@ -471,7 +471,7 @@ internal sealed class PortableUpdateService
             using var process = Process.GetProcessById(processId);
             if (!process.WaitForExit((int)timeout.TotalMilliseconds))
             {
-                throw new TimeoutException("O SlashDesk não encerrou no prazo da atualização.");
+                throw new TimeoutException(UiText.Get("O SlashDesk não encerrou no prazo da atualização."));
             }
         }
         catch (ArgumentException)

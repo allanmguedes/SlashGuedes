@@ -21,7 +21,8 @@ $gifPath = 'src/SlashText/Services/GifRecordingService.cs'
 $recordingBarPath = 'src/SlashText/Views/RecordingControlWindow.cs'
 $gifPreviewPath = 'src/SlashText/Views/GifPreviewWindow.cs'
 
-$xaml = Get-Content $xamlPath -Raw
+. (Join-Path $PSScriptRoot 'localization-source.ps1')
+$xaml = Resolve-InterfaceResourcesForInspection (Get-Content $xamlPath -Raw)
 $code = Get-Content $codePath -Raw
 Get-ChildItem (Join-Path $PSScriptRoot '../src/SlashText') -Filter 'MainWindow.*.cs' | ForEach-Object { $code += "`n" + (Get-Content $_.FullName -Raw) }
 $editor = Get-Content $editorPath -Raw
@@ -320,7 +321,7 @@ if (-not $xaml.Contains('IsEditable="False"') -or
     throw 'FPS do GIF deve permanecer em lista fechada de presets.'
 }
 
-$recordingInfrastructure = Get-Content 'src/SlashText/Services/RecordingInfrastructure.cs' -Raw
+$recordingInfrastructure = (Get-Content 'src/SlashText/Services/RecordingInfrastructure.cs' -Raw) -replace 'UiText.Get\(("(?:\\.|[^"\\])*")\)', '$1'
 foreach ($preset in @(
     'new("Recomendado", 10,',
     'new("Equilibrado", 20,',

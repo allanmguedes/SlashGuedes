@@ -19,7 +19,8 @@ public static class CaptureEmojiPicker
     private static string SearchKey(string text) => string.Concat(text.Normalize(NormalizationForm.FormD)
         .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)).Trim().ToLowerInvariant();
     private static readonly IReadOnlyDictionary<string, string> SearchKeys = NotoEmojiCatalog.Items.ToDictionary(
-        item => item.Value, item => SearchKey(item.Name + " " + item.Keywords + " " + item.Value), StringComparer.Ordinal);
+        item => item.Value, item => SearchKey(item.Name + " " + item.Keywords + " " + item.Value + " " +
+            NotoEmojiCatalog.SearchTerms(item, "en") + " " + NotoEmojiCatalog.SearchTerms(item, "es")), StringComparer.Ordinal);
 
     public static IReadOnlyList<NotoEmojiItem> Search(string query, string? category = null)
     {
@@ -35,23 +36,24 @@ public static class CaptureEmojiPicker
         var panel = new Grid { Margin = new Thickness(24) };
         foreach (var height in new[] { GridLength.Auto, GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })
             panel.RowDefinitions.Add(new RowDefinition { Height = height });
-        var title = new TextBlock { Text = "Escolher emote", Margin = new Thickness(0, 0, 0, 8) };
+        var title = new TextBlock { Text = UiText.Get("Escolher emote"), Margin = new Thickness(0, 0, 0, 8) };
         title.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Heading"); panel.Children.Add(title);
-        var caption = new TextBlock { Text = $"{NotoEmojiCatalog.Items.Count:N0} emotes Noto · catálogo local · inclui tons de pele",
+        var caption = new TextBlock { Text = UiText.Format($"{NotoEmojiCatalog.Items.Count:N0} emotes Noto · catálogo local · inclui tons de pele"),
             Margin = new Thickness(0, 0, 0, 16), TextWrapping = TextWrapping.Wrap };
         caption.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); Grid.SetRow(caption, 1); panel.Children.Add(caption);
         var filters = new Grid { Margin = new Thickness(0, 0, 0, 16) };
         filters.ColumnDefinitions.Add(new ColumnDefinition());
         filters.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(225) });
         var search = new TextBox { Name = "EmojiSearch", Margin = new Thickness(0, 0, 12, 0),
-            ToolTip = "Buscar nome, palavra-chave, emoji ou shortcode, ex.: coração, gato, :smile:" };
+            ToolTip = UiText.Get("Buscar nome, palavra-chave, emoji ou shortcode, ex.: coração, gato, :smile:") };
         search.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Field");
-        System.Windows.Automation.AutomationProperties.SetName(search, "Buscar emote por nome ou palavra-chave");
+        System.Windows.Automation.AutomationProperties.SetName(search, UiText.Get("Buscar emote por nome ou palavra-chave"));
         filters.Children.Add(search);
-        var category = new ComboBox { ItemsSource = new[] { "Todos", CaptureStampCatalog.CustomCategory }.Concat(NotoEmojiCatalog.Categories).ToArray(),
-            SelectedIndex = 0, ToolTip = "Categoria de emotes" };
+        var category = new ComboBox { ItemsSource = new[] { "Todos", CaptureStampCatalog.CustomCategory }.Concat(NotoEmojiCatalog.Categories)
+                .Select(code => new ComboBoxItem { Tag = code, Content = UiText.Get(code) }).ToArray(),
+            SelectedIndex = 0, ToolTip = UiText.Get("Categoria de emotes") };
         category.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Combo");
-        System.Windows.Automation.AutomationProperties.SetName(category, "Categoria de emotes");
+        System.Windows.Automation.AutomationProperties.SetName(category, UiText.Get("Categoria de emotes"));
         Grid.SetColumn(category, 1); filters.Children.Add(category); Grid.SetRow(filters, 2); panel.Children.Add(filters);
         var choices = new WrapPanel { Name = "EmojiChoices" };
         var scroll = new ScrollViewer { Content = choices, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
@@ -78,13 +80,13 @@ public static class CaptureEmojiPicker
             {
                 System.Windows.Media.Imaging.BitmapSource image;
                 try { image = catalog.CreateImageSource(item.Value); }
-                catch (Exception error) { ShowError("Imagem indisponível: " + item.Name + ". " + error.Message); continue; }
+                catch (Exception error) { ShowError(UiText.Get("Imagem indisponível: ") + item.Name + ". " + error.Message); continue; }
                 var button = new Button
                 {
                     Content = new Image { Source = image, Width = 30, Height = 30 },
-                    ToolTip = item.Name, Width = 46, Height = 46, Margin = new Thickness(0, 0, 4, 4), Padding = new Thickness(5)
+                    ToolTip = NotoEmojiCatalog.DisplayName(item), Width = 46, Height = 46, Margin = new Thickness(0, 0, 4, 4), Padding = new Thickness(5)
                 };
-                System.Windows.Automation.AutomationProperties.SetName(button, item.Name);
+                System.Windows.Automation.AutomationProperties.SetName(button, NotoEmojiCatalog.DisplayName(item));
                 button.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Button");
                 button.Click += (_, _) => select(item.Value);
                 if (CaptureStampCatalog.IsCustom(item.Value))
@@ -95,9 +97,9 @@ public static class CaptureEmojiPicker
                     tile.Children.Add(button);
                     var name = new TextBlock { Text = item.Name, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = item.Name, Margin = new Thickness(4, 2, 4, 2) };
                     name.SetResourceReference(TextBlock.ForegroundProperty, "Lab.text"); tile.Children.Add(name);
-                    var remove = new Button { Content = "Remover", Padding = new Thickness(4), ToolTip = "Remover da coleção; preserva as anotações já inseridas" };
+                    var remove = new Button { Content = UiText.Get("Remover"), Padding = new Thickness(4), ToolTip = UiText.Get("Remover da coleção; preserva as anotações já inseridas") };
                     remove.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Button");
-                    System.Windows.Automation.AutomationProperties.SetName(remove, "Remover " + item.Name);
+                    System.Windows.Automation.AutomationProperties.SetName(remove, UiText.Get("Remover ") + item.Name);
                     remove.Click += (_, _) =>
                     {
                         try { catalog.Remove(item.Value); Rebuild(); }
@@ -108,16 +110,16 @@ public static class CaptureEmojiPicker
                 else choices.Children.Add(button);
             }
             previous.IsEnabled = page > 0; next.IsEnabled = (page + 1) * PageSize < matches.Count;
-            status.Text = matches.Count == 0 ? "Nenhum emote encontrado." :
-                $"{page * PageSize + 1}–{Math.Min((page + 1) * PageSize, matches.Count)} de {matches.Count:N0} · página {page + 1}/{(matches.Count + PageSize - 1) / PageSize}";
+            status.Text = matches.Count == 0 ? UiText.Get("Nenhum emote encontrado.") :
+                UiText.Format($"{page * PageSize + 1}–{Math.Min((page + 1) * PageSize, matches.Count)} de {matches.Count:N0} · página {page + 1}/{(matches.Count + PageSize - 1) / PageSize}");
             scroll.ScrollToTop();
         }
         var message = new TextBlock { Name = "EmojiImportError", TextWrapping = TextWrapping.Wrap };
         message.SetResourceReference(TextBlock.ForegroundProperty, "Lab.error");
         var importRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-        var import = new Button { Content = "Adicionar imagem", Name = "ImportCustomEmoji", Padding = new Thickness(12, 7, 12, 7) };
+        var import = new Button { Content = UiText.Get("Adicionar imagem"), Name = "ImportCustomEmoji", Padding = new Thickness(12, 7, 12, 7) };
         import.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Button");
-        var help = new TextBlock { Text = "PNG/JPEG · cópia local · até 16 MB", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
+        var help = new TextBlock { Text = UiText.Get("PNG/JPEG · cópia local · até 16 MB"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
         help.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
         importRow.Children.Add(import); importRow.Children.Add(help);
         panel.Children.Remove(caption);
@@ -126,20 +128,20 @@ public static class CaptureEmojiPicker
         void ShowError(string text) { message.Text = text; }
         import.Click += async (_, _) =>
         {
-            var picker = new Microsoft.Win32.OpenFileDialog { Title = "Adicionar aos meus emojis", Filter = "Imagens PNG/JPEG|*.png;*.jpg;*.jpeg", Multiselect = false };
+            var picker = new Microsoft.Win32.OpenFileDialog { Title = UiText.Get("Adicionar aos meus emojis"), Filter = UiText.Get("Imagens PNG/JPEG|*.png;*.jpg;*.jpeg"), Multiselect = false };
             if (picker.ShowDialog(Window.GetWindow(panel)) != true) return;
             import.IsEnabled = false;
-            try { await Task.Run(() => catalog.Import(picker.FileName)); message.Text = ""; search.Text = ""; category.SelectedItem = CaptureStampCatalog.CustomCategory; Rebuild(); }
-            catch (Exception error) { ShowError("Não foi possível importar: " + error.Message); }
+            try { await Task.Run(() => catalog.Import(picker.FileName)); message.Text = ""; search.Text = ""; category.SelectedIndex = 1; Rebuild(); }
+            catch (Exception error) { ShowError(UiText.Get("Não foi possível importar: ") + error.Message); }
             finally { import.IsEnabled = true; }
         };
-        previous = ActionButton("Anterior", () => { if (page > 0) { page--; RenderPage(); } });
-        next = ActionButton("Próxima", () => { if ((page + 1) * PageSize < matches.Count) { page++; RenderPage(); } });
-        var close = ActionButton("Cancelar", cancel); close.IsCancel = true;
+        previous = ActionButton(UiText.Get("Anterior"), () => { if (page > 0) { page--; RenderPage(); } });
+        next = ActionButton(UiText.Get("Próxima"), () => { if ((page + 1) * PageSize < matches.Count) { page++; RenderPage(); } });
+        var close = ActionButton(UiText.Get("Cancelar"), cancel); close.IsCancel = true;
         footer.Children.Add(status); Grid.SetRow(footer, 4); panel.Children.Add(footer);
         void Rebuild()
         {
-            var selectedCategory = category.SelectedItem as string;
+            var selectedCategory = (category.SelectedItem as ComboBoxItem)?.Tag as string;
             var builtIn = selectedCategory == CaptureStampCatalog.CustomCategory ? Array.Empty<NotoEmojiItem>() : Search(search.Text, selectedCategory);
             try
             {
@@ -149,7 +151,7 @@ public static class CaptureEmojiPicker
                     : Enumerable.Empty<NotoEmojiItem>();
                 matches = builtIn.Concat(custom).ToArray();
             }
-            catch (Exception error) { matches = builtIn; ShowError("Não foi possível ler meus emojis: " + error.Message); }
+            catch (Exception error) { matches = builtIn; ShowError(UiText.Get("Não foi possível ler meus emojis: ") + error.Message); }
             page = 0; RenderPage();
         }
         var debounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
@@ -166,7 +168,7 @@ public static class CaptureEmojiPicker
         string? selected = null;
         var dialog = new Window
         {
-            Title = "Escolher emote", Owner = owner, Width = Math.Min(900, SystemParameters.WorkArea.Width - 32),
+            Title = UiText.Get("Escolher emote"), Owner = owner, Width = Math.Min(900, SystemParameters.WorkArea.Width - 32),
             Height = Math.Min(650, SystemParameters.WorkArea.Height - 48),
             ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterOwner
         };

@@ -59,17 +59,37 @@ public static class NotoEmojiCatalog
     private static Snapshot LoadSnapshot()
     {
         using var stream = typeof(NotoEmojiCatalog).Assembly.GetManifestResourceStream(ResourcePrefix + "catalog.json")
-            ?? throw new InvalidOperationException("Catálogo Noto incorporado ausente.");
+            ?? throw new InvalidOperationException(UiText.Get("Catálogo Noto incorporado ausente."));
         var snapshot = JsonSerializer.Deserialize<Snapshot>(stream)
-            ?? throw new InvalidOperationException("Catálogo Noto inválido.");
+            ?? throw new InvalidOperationException(UiText.Get("Catálogo Noto inválido."));
         if (snapshot.Items.Length != snapshot.Count || snapshot.Count < 3600)
-            throw new InvalidOperationException("Catálogo Noto incompleto.");
+            throw new InvalidOperationException(UiText.Get("Catálogo Noto incompleto."));
         return snapshot;
     }
     private static readonly Snapshot Catalog = LoadSnapshot();
     public static IReadOnlyList<NotoEmojiItem> Items { get; } = Array.AsReadOnly(Catalog.Items);
     public static string SourceCommit => Catalog.Commit;
     public static IReadOnlyList<string> Categories { get; } = Items.Select(i => i.Category).Distinct().ToArray();
+    private sealed record LocalizedSnapshot(Dictionary<string, string[]> Labels);
+    private static readonly Lazy<IReadOnlyDictionary<string, Dictionary<string, string[]>>> LocalizedLabels = new(() =>
+    {
+        var labels = new Dictionary<string, Dictionary<string, string[]>>();
+        foreach (var language in new[] { "en", "es" })
+        {
+            using var stream = typeof(NotoEmojiCatalog).Assembly.GetManifestResourceStream($"SlashText.Localization.emoji-{language}.json")
+                ?? throw new InvalidOperationException("Missing embedded emoji language catalog: " + language);
+            labels.Add(language, JsonSerializer.Deserialize<LocalizedSnapshot>(stream)?.Labels
+                ?? throw new InvalidOperationException("Invalid embedded emoji language catalog: " + language));
+        }
+        return labels;
+    });
+
+    // Custom image names and the canonical catalog metadata remain untouched.
+    public static string DisplayName(NotoEmojiItem item) => UiText.Language != "pt-BR" &&
+        LocalizedLabels.Value[UiText.Language].TryGetValue(NormalizeValue(item.Value), out var label) ? label[0] : item.Name;
+
+    public static string SearchTerms(NotoEmojiItem item, string language) => language != "pt-BR" &&
+        LocalizedLabels.Value[language].TryGetValue(NormalizeValue(item.Value), out var label) ? string.Join(" ", label) : item.Name + " " + item.Keywords;
     private static string NormalizeValue(string value) => value.Replace("\uFE0F", "", StringComparison.Ordinal);
     private static readonly IReadOnlyDictionary<string, NotoEmojiItem> Index =
         Items.ToDictionary(i => NormalizeValue(i.Value), StringComparer.Ordinal);
@@ -88,7 +108,7 @@ public static class NotoEmojiCatalog
     {
         if (!TryGet(value, out var item))
         {
-            throw new ArgumentException("Emoji não disponível no catálogo local.", nameof(value));
+            throw new ArgumentException(UiText.Get("Emoji não disponível no catálogo local."), nameof(value));
         }
         lock (PreviewCache)
         {
@@ -111,7 +131,7 @@ public static class NotoEmojiCatalog
     {
         if (!TryGet(value, out var item))
         {
-            throw new ArgumentException("Emoji não disponível no catálogo local.", nameof(value));
+            throw new ArgumentException(UiText.Get("Emoji não disponível no catálogo local."), nameof(value));
         }
         using var stream = Open(item);
         using var source = new System.Drawing.Bitmap(stream);

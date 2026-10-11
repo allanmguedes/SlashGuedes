@@ -50,7 +50,7 @@ public sealed class CaptureEditorWindow : Window
     {
         _source = source;
         _tool = initialTool;
-        Title = "Editar captura";
+        Title = UiText.Get("Editar captura");
         Width = 1220;
         Height = 860;
         MinWidth = 900;
@@ -74,10 +74,10 @@ public sealed class CaptureEditorWindow : Window
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var heading = new StackPanel { Margin = new Thickness(0, 0, 0, 18) };
-        var title = new TextBlock { Text = "Editor de captura", FontSize = 24, FontWeight = FontWeights.SemiBold };
+        var title = new TextBlock { Text = UiText.Get("Editor de captura"), FontSize = 24, FontWeight = FontWeights.SemiBold };
         title.SetResourceReference(TextBlock.ForegroundProperty, "Lab.text");
         heading.Children.Add(title);
-        var description = new TextBlock { Text = "Mais espaço para sua edição · Recorte, redimensione e proteja informações.",
+        var description = new TextBlock { Text = UiText.Get("Mais espaço para sua edição · Recorte, redimensione e proteja informações."),
             Margin = new Thickness(0, 6, 0, 0) };
         description.SetResourceReference(StyleProperty, "Lab.Metadata");
         heading.Children.Add(description);
@@ -132,17 +132,17 @@ public sealed class CaptureEditorWindow : Window
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var hint = new TextBlock
         {
-            Text = "Arraste para desenhar · Ctrl+Z desfaz · Esc cancela",
+            Text = UiText.Get("Arraste para desenhar · Ctrl+Z desfaz · Esc cancela"),
             VerticalAlignment = VerticalAlignment.Center,
             TextWrapping = TextWrapping.Wrap
         };
         hint.SetResourceReference(StyleProperty, "Lab.Metadata");
         footer.Children.Add(hint);
         var actions = new StackPanel { Orientation = Orientation.Horizontal };
-        actions.Children.Add(ActionButton("Cancelar", (_, _) => DialogResult = false));
-        actions.Children.Add(ActionButton("Copiar", (_, _) => Complete(CaptureEditorOutput.Clipboard)));
-        actions.Children.Add(ActionButton("Salvar", (_, _) => Complete(CaptureEditorOutput.File)));
-        var finish = ActionButton("Concluir", (_, _) => Complete(CaptureEditorOutput.Default));
+        actions.Children.Add(ActionButton(UiText.Get("Cancelar"), (_, _) => DialogResult = false));
+        actions.Children.Add(ActionButton(UiText.Get("Copiar"), (_, _) => Complete(CaptureEditorOutput.Clipboard)));
+        actions.Children.Add(ActionButton(UiText.Get("Salvar"), (_, _) => Complete(CaptureEditorOutput.File)));
+        var finish = ActionButton(UiText.Get("Concluir"), (_, _) => Complete(CaptureEditorOutput.Default));
         finish.SetResourceReference(StyleProperty, "Lab.Pilot.PrimaryButton");
         actions.Children.Add(finish);
         Grid.SetColumn(actions, 1);
@@ -157,32 +157,32 @@ public sealed class CaptureEditorWindow : Window
     private FrameworkElement BuildToolbar()
     {
         var panel = new WrapPanel();
-        panel.Children.Add(ToolButton("Seta", CaptureAnnotationKind.Arrow));
-        panel.Children.Add(ToolButton("Marca-texto", CaptureAnnotationKind.Highlighter));
-        panel.Children.Add(ToolButton("Retângulo", CaptureAnnotationKind.Rectangle));
-        panel.Children.Add(ToolButton("Elipse", CaptureAnnotationKind.Ellipse));
-        panel.Children.Add(ToolButton("Lápis", CaptureAnnotationKind.Pencil));
-        panel.Children.Add(ToolButton("Texto", CaptureAnnotationKind.Text));
-        panel.Children.Add(ToolButton("Número", CaptureAnnotationKind.Number));
+        panel.Children.Add(ToolButton(UiText.Get("Seta"), CaptureAnnotationKind.Arrow));
+        panel.Children.Add(ToolButton(UiText.Get("Marca-texto"), CaptureAnnotationKind.Highlighter));
+        panel.Children.Add(ToolButton(UiText.Get("Retângulo"), CaptureAnnotationKind.Rectangle));
+        panel.Children.Add(ToolButton(UiText.Get("Elipse"), CaptureAnnotationKind.Ellipse));
+        panel.Children.Add(ToolButton(UiText.Get("Lápis"), CaptureAnnotationKind.Pencil));
+        panel.Children.Add(ToolButton(UiText.Get("Texto"), CaptureAnnotationKind.Text));
+        panel.Children.Add(ToolButton(UiText.Get("Número"), CaptureAnnotationKind.Number));
         panel.Children.Add(ToolButton("Emoji", CaptureAnnotationKind.Stamp));
-        panel.Children.Add(ToolButton("Desfocar", CaptureAnnotationKind.Blur));
-        panel.Children.Add(ToolButton("Pixelizar", CaptureAnnotationKind.Pixelate));
-        panel.Children.Add(ActionButton("Recortar", (_, _) =>
+        panel.Children.Add(ToolButton(UiText.Get("Desfocar"), CaptureAnnotationKind.Blur));
+        panel.Children.Add(ToolButton(UiText.Get("Pixelizar"), CaptureAnnotationKind.Pixelate));
+        panel.Children.Add(ActionButton(UiText.Get("Recortar"), (_, _) =>
         {
             _cropRect = null;
             _cropSelecting = true;
             _tool = CaptureAnnotationKind.Rectangle;
             _overlay.Cursor = Cursors.Cross;
             UpdateToolSelection();
-            _overlay.ToolTip = "Arraste para selecionar o recorte; Concluir aplica a seleção";
+            _overlay.ToolTip = UiText.Get("Arraste para selecionar o recorte; Concluir aplica a seleção");
         }));
-        panel.Children.Add(ActionButton("Redimensionar", (_, _) => ConfigureResize()));
-        panel.Children.Add(ActionButton("Desfazer", (_, _) => Undo()));
-        panel.Children.Add(ActionButton("Refazer", (_, _) => Redo()));
+        panel.Children.Add(ActionButton(UiText.Get("Redimensionar"), (_, _) => ConfigureResize()));
+        panel.Children.Add(ActionButton(UiText.Get("Desfazer"), (_, _) => Undo()));
+        panel.Children.Add(ActionButton(UiText.Get("Refazer"), (_, _) => Redo()));
 
         panel.Children.Add(new TextBlock
         {
-            Text = "  Cor",
+            Text = UiText.Get("  Cor"),
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(4, 0, 6, 6),
             Foreground = (Brush)Application.Current.FindResource("Lab.muted")
@@ -220,7 +220,7 @@ public sealed class CaptureEditorWindow : Window
         {
             Width = 86,
             Margin = new Thickness(6, 0, 0, 6),
-            ToolTip = "Espessura",
+            ToolTip = UiText.Get("Espessura"),
             SelectedIndex = 1
         };
         foreach (var value in new[] { 2f, 4f, 8f, 12f })
@@ -259,7 +259,7 @@ public sealed class CaptureEditorWindow : Window
                 : Cursors.Cross;
             UpdateToolSelection();
         });
-        button.ToolTip = $"Ferramenta {text}";
+        button.ToolTip = UiText.Format($"Ferramenta {text}");
         button.SetResourceReference(StyleProperty, "Lab.Pilot.EditorTool");
         _toolButtons[tool] = button;
         return button;
@@ -559,8 +559,8 @@ public sealed class CaptureEditorWindow : Window
                     Child = new TextBlock
                     {
                         Text = annotation.Kind == CaptureAnnotationKind.Blur
-                            ? "Desfoque"
-                            : "Pixelização",
+                            ? UiText.Get("Desfoque")
+                            : UiText.Get("Pixelização"),
                         HorizontalAlignment = HorizontalAlignment.Center,
                         VerticalAlignment = VerticalAlignment.Center,
                         Foreground = (Brush)Application.Current.FindResource("Lab.accent-text"),
@@ -599,7 +599,7 @@ public sealed class CaptureEditorWindow : Window
         input.SetResourceReference(StyleProperty, "Lab.Field");
         var dialog = new Window
         {
-            Title = "Inserir texto",
+            Title = UiText.Get("Inserir texto"),
             Owner = this,
             Width = 390,
             SizeToContent = SizeToContent.Height,
@@ -609,9 +609,9 @@ public sealed class CaptureEditorWindow : Window
             Foreground = (Brush)Application.Current.FindResource("Lab.text")
         };
         var panel = new StackPanel { Margin = new Thickness(20) };
-        panel.Children.Add(new TextBlock { Text = "Texto da marcação" });
+        panel.Children.Add(new TextBlock { Text = UiText.Get("Texto da marcação") });
         panel.Children.Add(input);
-        var ok = ActionButton("Inserir", (_, _) => dialog.DialogResult = true);
+        var ok = ActionButton(UiText.Get("Inserir"), (_, _) => dialog.DialogResult = true);
         ok.SetResourceReference(StyleProperty, "Lab.Pilot.PrimaryButton");
         ok.HorizontalAlignment = HorizontalAlignment.Right;
         panel.Children.Add(ok);
@@ -662,7 +662,7 @@ public sealed class CaptureEditorWindow : Window
         };
         var dialog = new Window
         {
-            Title = "Redimensionar",
+            Title = UiText.Get("Redimensionar"),
             Owner = this,
             Width = 340,
             SizeToContent = SizeToContent.Height,
@@ -672,9 +672,9 @@ public sealed class CaptureEditorWindow : Window
             Foreground = (Brush)Application.Current.FindResource("Lab.text")
         };
         var panel = new StackPanel { Margin = new Thickness(20) };
-        panel.Children.Add(new TextBlock { Text = "Nova largura em pixels" });
+        panel.Children.Add(new TextBlock { Text = UiText.Get("Nova largura em pixels") });
         panel.Children.Add(input);
-        var apply = ActionButton("Aplicar", (_, _) => dialog.DialogResult = true);
+        var apply = ActionButton(UiText.Get("Aplicar"), (_, _) => dialog.DialogResult = true);
         input.SetResourceReference(StyleProperty, "Lab.Field");
         apply.SetResourceReference(StyleProperty, "Lab.Pilot.PrimaryButton");
         apply.HorizontalAlignment = HorizontalAlignment.Right;

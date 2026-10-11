@@ -31,30 +31,30 @@ public partial class MainWindow
             // Invalid totals in an edited file must not interrupt the other modules.
             available = false;
         }
-        SetStatisticsValue(TotalExpansionsText, "Expansões de texto", available ? total.ToString("N0") : "—");
-        SetStatisticsValue(CharactersSavedText, "Caracteres poupados", available ? characters.ToString("N0") : "—");
-        SetStatisticsValue(UsedSnippetsText, "Atalhos com uso registrado", available ? records.Count(item => item.Count > 0).ToString("N0") : "—", metric: false);
-        SetStatisticsValue(TimeSavedText, "Tempo economizado estimado", available ? $"{Math.Ceiling(characters / 200d):N0} min" : "—");
-        SetStatisticsValue(AverageCharactersText, "Média de caracteres por expansão", available ? total == 0 ? "0" : $"{characters / (double)total:N0}" : "—", metric: false);
-        SetStatisticsValue(QuickAccentTotalText, "Acentos inseridos", available ? _usageService.QuickAccent.Count.ToString("N0") : "—");
+        SetStatisticsValue(TotalExpansionsText, UiText.Get("Expansões de texto"), available ? total.ToString("N0") : "—");
+        SetStatisticsValue(CharactersSavedText, UiText.Get("Caracteres poupados"), available ? characters.ToString("N0") : "—");
+        SetStatisticsValue(UsedSnippetsText, UiText.Get("Atalhos com uso registrado"), available ? records.Count(item => item.Count > 0).ToString("N0") : "—", metric: false);
+        SetStatisticsValue(TimeSavedText, UiText.Get("Tempo economizado estimado"), available ? $"{Math.Ceiling(characters / 200d):N0} min" : "—");
+        SetStatisticsValue(AverageCharactersText, UiText.Get("Média de caracteres por expansão"), available ? total == 0 ? "0" : $"{characters / (double)total:N0}" : "—", metric: false);
+        SetStatisticsValue(QuickAccentTotalText, UiText.Get("Acentos inseridos"), available ? _usageService.QuickAccent.Count.ToString("N0") : "—");
         StatisticsErrorPanel.Visibility = available ? Visibility.Collapsed : Visibility.Visible;
-        StatisticsStatusText.Text = available ? "Contagens locais, atualizadas com o uso." : "Contagens de atalhos e acentos indisponíveis.";
+        StatisticsStatusText.Text = available ? UiText.Get("Contagens locais, atualizadas com o uso.") : UiText.Get("Contagens de atalhos e acentos indisponíveis.");
         StatisticsStatusText.SetResourceReference(TextBlock.ForegroundProperty, available ? "Lab.muted" : "Lab.error");
 
         var captures = _captureService.History;
-        SetStatisticsValue(CaptureTotalText, "Capturas no histórico local", captures.Count.ToString("N0"));
-        SetCaptureStatistic(CaptureRegionTotalText, StatisticsRegionBar, "Região", captures.Count(item => string.Equals(item.Type, "regiao", StringComparison.OrdinalIgnoreCase)), captures.Count);
+        SetStatisticsValue(CaptureTotalText, UiText.Get("Capturas no histórico local"), captures.Count.ToString("N0"));
+        SetCaptureStatistic(CaptureRegionTotalText, StatisticsRegionBar, UiText.Get("Região"), captures.Count(item => string.Equals(item.Type, "regiao", StringComparison.OrdinalIgnoreCase)), captures.Count);
         SetCaptureStatistic(CaptureMonitorTotalText, StatisticsMonitorBar, "Monitor", captures.Count(item => string.Equals(item.Type, "monitor", StringComparison.OrdinalIgnoreCase)), captures.Count);
-        SetCaptureStatistic(CaptureWindowTotalText, StatisticsWindowBar, "Janela", captures.Count(item => string.Equals(item.Type, "janela", StringComparison.OrdinalIgnoreCase)), captures.Count);
+        SetCaptureStatistic(CaptureWindowTotalText, StatisticsWindowBar, UiText.Get("Janela"), captures.Count(item => string.Equals(item.Type, "janela", StringComparison.OrdinalIgnoreCase)), captures.Count);
         SetCaptureStatistic(CaptureGifTotalText, StatisticsGifBar, "GIF", captures.Count(item => string.Equals(item.MediaKind, "gif", StringComparison.OrdinalIgnoreCase)), captures.Count);
         SetCaptureStatistic(CaptureMp4TotalText, StatisticsMp4Bar, "MP4", captures.Count(item => string.Equals(item.MediaKind, "video", StringComparison.OrdinalIgnoreCase)), captures.Count);
-        StatisticsCaptureHintText.Text = captures.Count == 0 ? "Nenhuma captura no histórico local." : "Base: capturas que permanecem no histórico local.";
+        StatisticsCaptureHintText.Text = captures.Count == 0 ? UiText.Get("Nenhuma captura no histórico local.") : UiText.Get("Base: capturas que permanecem no histórico local.");
 
         StatisticsRankingPanel.Children.Clear();
         var ranking = _snippets.Select(item => new { Snippet = item, Usage = _usageService.For(item.Id) })
             .Where(item => item.Usage?.Count > 0).OrderByDescending(item => item.Usage!.Count).Take(8).ToList();
         if (!available || ranking.Count == 0)
-            StatisticsRankingPanel.Children.Add(StatisticsEmpty(available ? "Use um atalho para iniciar o ranking." : "Ranking indisponível: não foi possível ler as contagens."));
+            StatisticsRankingPanel.Children.Add(StatisticsEmpty(available ? UiText.Get("Use um atalho para iniciar o ranking.") : UiText.Get("Ranking indisponível: não foi possível ler as contagens.")));
         else
             for (var index = 0; index < ranking.Count; index++)
                 StatisticsRankingPanel.Children.Add(CreateStatisticsRankRow(index + 1, ranking[index].Snippet,
@@ -65,11 +65,11 @@ public partial class MainWindow
         QuickAccentCharactersPanel.Children.Clear();
         QuickAccentFavoriteText.Text = available && accents.Count > 0 ? accents[0].Key : "—";
         QuickAccentFavoriteText.ToolTip = QuickAccentFavoriteText.Text;
-        AutomationProperties.SetName(QuickAccentFavoriteText, "Acento favorito: " + QuickAccentFavoriteText.Text);
+        AutomationProperties.SetName(QuickAccentFavoriteText, UiText.Get("Acento favorito: ") + QuickAccentFavoriteText.Text);
         QuickAccentFavoriteCountText.Text = available && accents.Count > 0
-            ? $"{accents[0].Value:N0} {(accents[0].Value == 1 ? "inserção" : "inserções")}" : "";
+            ? $"{accents[0].Value:N0} {(accents[0].Value == 1 ? UiText.Get("inserção") : UiText.Get("inserções"))}" : "";
         if (!available || accents.Count == 0)
-            QuickAccentCharactersPanel.Children.Add(StatisticsEmpty(available ? "Os caracteres usados aparecerão aqui." : "Contagens de acentos indisponíveis."));
+            QuickAccentCharactersPanel.Children.Add(StatisticsEmpty(available ? UiText.Get("Os caracteres usados aparecerão aqui.") : UiText.Get("Contagens de acentos indisponíveis.")));
         else
             foreach (var item in accents.Skip(1))
             {
@@ -96,7 +96,7 @@ public partial class MainWindow
     {
         SetStatisticsValue(text, label, count.ToString("N0"), metric: false);
         bar.Value = total == 0 ? 0 : count * 100d / total;
-        AutomationProperties.SetName(bar, $"{label}: {count:N0} de {total:N0} capturas no histórico");
+        AutomationProperties.SetName(bar, UiText.Format($"{label}: {count:N0} de {total:N0} capturas no histórico"));
     }
 
     private TextBlock StatisticsEmpty(string text)
@@ -126,11 +126,11 @@ public partial class MainWindow
         heading.Children.Add(trigger);
         var value = new TextBlock { FontWeight = FontWeights.SemiBold };
         value.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Text");
-        SetStatisticsValue(value, $"Usos de {snippet.Trigger}", count.ToString("N0"), metric: false);
+        SetStatisticsValue(value, UiText.Format($"Usos de {snippet.Trigger}"), count.ToString("N0"), metric: false);
         Grid.SetColumn(value, 1); heading.Children.Add(value); body.Children.Add(heading);
         var bar = new ProgressBar { Value = Math.Clamp(count * 100d / maximum, 0, 100) };
         bar.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Stats.Bar");
-        AutomationProperties.SetName(bar, $"{snippet.Trigger}: {count:N0} expansões; posição {position}");
+        AutomationProperties.SetName(bar, UiText.Format($"{snippet.Trigger}: {count:N0} expansões; posição {position}"));
         body.Children.Add(bar);
         return row;
     }

@@ -26,15 +26,15 @@ public sealed class ShortcutConfirmationWindow : Window
         var header = new Grid();
         header.ColumnDefinitions.Add(new ColumnDefinition()); header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var heading = Text(title, 20, true); header.Children.Add(heading);
-        var close = Button("Fechar", "X", false); close.Content = Glyph("X", 16); close.Width = 32; close.Height = 32; close.Padding = new Thickness(6);
+        var close = Button(UiText.Get("Fechar"), "X", false); close.Content = Glyph("X", 16); close.Width = 32; close.Height = 32; close.Padding = new Thickness(6);
         close.Click += (_, _) => Cancel(); Grid.SetColumn(close, 1); header.Children.Add(close); panel.Children.Add(header);
         var message = Text(description, 14); message.Margin = new Thickness(0, 18, 0, 12); panel.Children.Add(message);
         var card = new Border { CornerRadius = new CornerRadius(7), Padding = new Thickness(14), BorderThickness = new Thickness(1), Child = Text(detail, 13) };
         card.SetResourceReference(Border.BackgroundProperty, "Lab.input"); card.SetResourceReference(Border.BorderBrushProperty, "Lab.line"); panel.Children.Add(card);
-        var tip = Text("Cancelar mantém o atalho e as alterações em edição.", 12); tip.Margin = new Thickness(0, 12, 0, 20); tip.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); panel.Children.Add(tip);
+        var tip = Text(UiText.Get("Cancelar mantém o atalho e as alterações em edição."), 12); tip.Margin = new Thickness(0, 12, 0, 20); tip.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); panel.Children.Add(tip);
         var line = new Border { Height = 1, Margin = new Thickness(0, 0, 0, 18) }; line.SetResourceReference(Border.BackgroundProperty, "Lab.line"); panel.Children.Add(line);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        CancelButton = Button("Cancelar", "X", false); CancelButton.IsDefault = true; CancelButton.Margin = new Thickness(0, 0, 8, 0);
+        CancelButton = Button(UiText.Get("Cancelar"), "X", false); CancelButton.IsDefault = true; CancelButton.Margin = new Thickness(0, 0, 8, 0);
         CancelButton.Click += (_, _) => Cancel(); actions.Children.Add(CancelButton);
         AcceptButton = Button(acceptLabel, destructive ? "Trash2" : "Check", false);
         if (destructive) AcceptButton.SetResourceReference(ForegroundProperty, "Lab.error");

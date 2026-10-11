@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:SlashText.Views"
         xmlns:lab="clr-namespace:SlashText.Design"
-        Title="Atalhos de captura" Width="520" SizeToContent="Height"
+        Title="{DynamicResource Ui.084E99AD5179F1EC}" Width="520" SizeToContent="Height"
         ResizeMode="NoResize" WindowStyle="None" ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner" Background="Transparent" AllowsTransparency="True">
     <Border Margin="18" Padding="24" Background="{DynamicResource Lab.raised}"
@@ -14,35 +14,35 @@
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Text="Personalizar atalhos" FontSize="19" FontWeight="SemiBold"
+                    <TextBlock Text="{DynamicResource Ui.3F646D032F5913D1}" FontSize="19" FontWeight="SemiBold"
                                Foreground="{DynamicResource Lab.text}"/>
-                    <TextBlock Text="Clique em um campo e pressione a combinação desejada."
+                    <TextBlock Text="{DynamicResource Ui.9DB88DA47EBB035A}"
                                Style="{StaticResource Lab.Metadata}" Margin="0,5,0,0"/>
                 </StackPanel>
                 <Button Grid.Column="1" Width="38" Height="38" Padding="8" Style="{StaticResource Lab.Button}"
-                        ToolTip="Fechar" Click="Cancel_OnClick">
+                        ToolTip="{DynamicResource Ui.0F2BD88EF0ACBDA9}" Click="Cancel_OnClick">
                     <lab:LabIcon Kind="X" Width="17" Height="17"
                                  Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                 </Button>
             </Grid>
-            <TextBlock Text="Monitor" Style="{StaticResource Lab.Metadata}" Margin="0,22,0,6"/>
+            <TextBlock Text="{DynamicResource Ui.4C2E1DF4570BEBD6}" Style="{StaticResource Lab.Metadata}" Margin="0,22,0,6"/>
             <views:ShortcutRecorderBox x:Name="MonitorBox" Style="{StaticResource Lab.Field}"/>
-            <TextBlock Text="Região" Style="{StaticResource Lab.Metadata}" Margin="0,14,0,6"/>
+            <TextBlock Text="{DynamicResource Ui.1433152B0C58A9B9}" Style="{StaticResource Lab.Metadata}" Margin="0,14,0,6"/>
             <views:ShortcutRecorderBox x:Name="RegionBox" Style="{StaticResource Lab.Field}"/>
-            <TextBlock Text="Janela" Style="{StaticResource Lab.Metadata}" Margin="0,14,0,6"/>
+            <TextBlock Text="{DynamicResource Ui.28014EF3525228E8}" Style="{StaticResource Lab.Metadata}" Margin="0,14,0,6"/>
             <views:ShortcutRecorderBox x:Name="WindowBox" Style="{StaticResource Lab.Field}"/>
-            <TextBlock Text="Captura longa" Style="{StaticResource Lab.Metadata}" Margin="0,14,0,6"/>
+            <TextBlock Text="{DynamicResource Ui.B8A9923CBF3F1345}" Style="{StaticResource Lab.Metadata}" Margin="0,14,0,6"/>
             <views:ShortcutRecorderBox x:Name="ScrollingBox" Style="{StaticResource Lab.Field}"/>
-            <TextBlock Text="A roda exige Ctrl, Alt, Shift ou Win. Cada ação precisa de uma combinação diferente."
+            <TextBlock Text="{DynamicResource Ui.3E9AC6ABCE93F48C}"
                        Style="{StaticResource Lab.Metadata}" Margin="0,12,0,0" TextWrapping="Wrap"/>
             <Border Height="1" Background="{DynamicResource Lab.line}" Margin="0,22,0,18"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Cancelar" Style="{StaticResource Lab.Button}" Margin="0,0,10,0" Click="Cancel_OnClick"/>
+                <Button Content="{DynamicResource Ui.BB9DBB406DCBD524}" Style="{StaticResource Lab.Button}" Margin="0,0,10,0" Click="Cancel_OnClick"/>
                 <Button Style="{StaticResource Lab.Pilot.PrimaryButton}" Click="Save_OnClick">
                     <StackPanel Orientation="Horizontal">
                         <lab:LabIcon Kind="Check" Width="16" Height="16" Margin="0,0,8,0"
                                      Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
-                        <TextBlock Text="Salvar atalhos"
+                        <TextBlock Text="{DynamicResource Ui.D32B31757B8B9B28}"
                                    Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
                     </StackPanel>
                 </Button>

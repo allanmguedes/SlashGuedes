@@ -73,7 +73,7 @@ public sealed class GlobalCaptureShortcutService : IDisposable
         {
             if (!TryParse(text, out var parsed))
             {
-                errors.Add($"Atalho inválido: {text}");
+                errors.Add(UiText.Format($"Atalho inválido: {text}"));
                 continue;
             }
 
@@ -84,7 +84,7 @@ public sealed class GlobalCaptureShortcutService : IDisposable
             }
             if (!RegisterHotKey(_window, id, ApplyNoRepeat(parsed.Modifiers), parsed.Key))
             {
-                errors.Add($"Atalho em uso: {text}");
+                errors.Add(UiText.Format($"Atalho em uso: {text}"));
                 continue;
             }
             _actions[id++] = action;
@@ -100,7 +100,7 @@ public sealed class GlobalCaptureShortcutService : IDisposable
                 0);
             if (_mouseHook == IntPtr.Zero)
             {
-                errors.Add("Não foi possível ativar atalhos com o mouse.");
+                errors.Add(UiText.Get("Não foi possível ativar atalhos com o mouse."));
             }
         }
         return errors;

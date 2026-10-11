@@ -181,14 +181,14 @@ public partial class MainWindow : Window
             _settings.Capture.Recording ??= new RecordingSettings();
             if (AppPaths.IsCapturePilot)
             {
-                Title = AppPaths.IsAuxiliaryPilot ? "SlashDesk — Piloto Interfaces auxiliares 3.3.0 · #69" : AppPaths.IsAboutPilot ? "SlashDesk — Piloto Sobre 3.3.0 · #68" : AppPaths.IsSettingsPilot ? "SlashDesk — Piloto Configurações 3.3.0 · #67" : AppPaths.IsStatisticsPilot ? "SlashDesk — Piloto Estatísticas 3.3.0 · #66" : AppPaths.IsQuickAccentPilot ? "SlashDesk — Piloto Acento Rápido 3.3.0 · #65" : AppPaths.IsCaptureOcrPilot ? "SlashDesk — Piloto Captura + OCR 3.3.0" : AppPaths.IsCaptureComplementsPilot ? "SlashDesk — Piloto Complementos da Captura 3.3.0 · #74" : AppPaths.IsShortcutsPilot ? "SlashDesk — Piloto Atalhos 3.3.0 · #64" : "SlashDesk — Piloto Captura 3.3.0 · #63";
-                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot)
+                Title = AppPaths.IsLanguagesPilot ? UiText.Get("SlashDesk — Piloto Idiomas 3.3.0 · #82") : AppPaths.IsAuxiliaryPilot ? UiText.Get("SlashDesk — Piloto Interfaces auxiliares 3.3.0 · #69") : AppPaths.IsAboutPilot ? UiText.Get("SlashDesk — Piloto Sobre 3.3.0 · #68") : AppPaths.IsSettingsPilot ? UiText.Get("SlashDesk — Piloto Configurações 3.3.0 · #67") : AppPaths.IsStatisticsPilot ? UiText.Get("SlashDesk — Piloto Estatísticas 3.3.0 · #66") : AppPaths.IsQuickAccentPilot ? UiText.Get("SlashDesk — Piloto Acento Rápido 3.3.0 · #65") : AppPaths.IsCaptureOcrPilot ? UiText.Get("SlashDesk — Piloto Captura + OCR 3.3.0") : AppPaths.IsCaptureComplementsPilot ? UiText.Get("SlashDesk — Piloto Complementos da Captura 3.3.0 · #74") : AppPaths.IsShortcutsPilot ? UiText.Get("SlashDesk — Piloto Atalhos 3.3.0 · #64") : UiText.Get("SlashDesk — Piloto Captura 3.3.0 · #63");
+                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot && !AppPaths.IsLanguagesPilot)
                 {
                     _settings.CheckUpdatesOnStartup = false;
                     _settings.StartWithWindows = false;
                 }
                 _settings.OnboardingCompleted = true;
-                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot) _settings.CloseToTray = false;
+                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot && !AppPaths.IsLanguagesPilot) _settings.CloseToTray = false;
                 if (!File.Exists(AppPaths.SettingsFile))
                     _settings.Capture.OutputDirectoryTemplate = Path.Combine(AppPaths.DataDirectory, "Capturas", "{year}", "{month}");
                 StartWithWindowsCheckBox.IsEnabled = false;
@@ -213,17 +213,18 @@ public partial class MainWindow : Window
             CheckUpdatesCheckBox.IsChecked = _settings.CheckUpdatesOnStartup;
             RefreshAboutPresentation();
             SettingsVersionText.Text =
-                $"Versão atual: {ProductVersion()}";
+                UiText.Format($"Versão atual: {ProductVersion()}");
             UpdateChannelText.Text =
-                $"Canal: estável · modo {AppPaths.Mode.ToString().ToLowerInvariant()}";
+                UiText.Format($"Canal: estável · modo {AppPaths.Mode.ToString().ToLowerInvariant()}");
             BackupLocationText.Text =
-                $"Backups em {AppPaths.BackupsDirectory}. Nenhum arquivo é enviado para a nuvem.";
+                UiText.Format($"Backups em {AppPaths.BackupsDirectory}. Nenhum arquivo é enviado para a nuvem.");
 
             await startup.RunAsync(
                 "Estado de atualização",
                 RefreshUpdateStatusAsync);
 
             SelectComboByTag(ThemeBox, _settings.Theme);
+            SelectComboByTag(LanguageBox, UiText.Normalize(_settings.Language));
             LoadQuickAccentControls();
 
             await startup.RunAsync(
@@ -269,12 +270,13 @@ public partial class MainWindow : Window
             RefreshStatistics();
             ShowView(ShortcutsView, ShortcutsTabButton);
             StatusText.Text =
-                $"{_snippets.Count} atalho(s) carregado(s)";
+                UiText.Format($"{_snippets.Count} atalho(s) carregado(s)");
             startup.Run(
                 "Atalhos globais de captura",
                 ConfigureCaptureShortcuts);
             RefreshCaptureHistory();
-            if (AppPaths.IsAuxiliaryPilot) ShowView(SettingsView, SettingsTabButton);
+            if (AppPaths.IsLanguagesPilot) ShowView(SettingsView, SettingsTabButton);
+            else if (AppPaths.IsAuxiliaryPilot) ShowView(SettingsView, SettingsTabButton);
             else if (AppPaths.IsAboutPilot) ShowView(AboutView, AboutTabButton);
             else if (AppPaths.IsSettingsPilot) ShowView(SettingsView, SettingsTabButton);
             else if (AppPaths.IsStatisticsPilot) ShowView(StatisticsView, StatisticsTabButton);
@@ -305,8 +307,8 @@ public partial class MainWindow : Window
                 ("exceptionType", exception.GetType().FullName),
                 ("hresult", $"0x{exception.HResult:X8}"));
             MessageBox.Show(
-                "O SlashDesk encontrou uma falha inesperada ao preparar a interface. " +
-                "Nenhum dado foi apagado. Consulte a pasta Logs para o diagnóstico.",
+                UiText.Get("O SlashDesk encontrou uma falha inesperada ao preparar a interface. ") +
+                UiText.Get("Nenhum dado foi apagado. Consulte a pasta Logs para o diagnóstico."),
                 "SlashDesk",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
@@ -325,24 +327,24 @@ public partial class MainWindow : Window
         var modules = string.Join(
             Environment.NewLine,
             startup.Failures
-                .Select(failure => $"• {failure.Module}")
+                .Select(failure => $"• {UiText.Get(failure.Module)}")
                 .Distinct(StringComparer.CurrentCultureIgnoreCase));
         var protectedStorage = _snippetStorageAvailable
             ? string.Empty
             : Environment.NewLine + Environment.NewLine +
-              "O arquivo snippets.md não será alterado enquanto estiver indisponível. " +
-              "Use Restaurar ZIP na área de backups para recuperar os atalhos.";
+              UiText.Get("O arquivo snippets.md não será alterado enquanto estiver indisponível. ") +
+              UiText.Get("Use Restaurar ZIP na área de backups para recuperar os atalhos.");
 
         StatusText.Text =
-            $"SlashDesk iniciado em modo reduzido · {startup.Failures.Count} módulo(s) indisponível(is)";
+            UiText.Format($"SlashDesk iniciado em modo reduzido · {startup.Failures.Count} módulo(s) indisponível(is)");
         ShowAppDialog(
-            "O SlashDesk iniciou, mas alguns módulos não puderam ser carregados:" +
+            UiText.Get("O SlashDesk iniciou, mas alguns módulos não puderam ser carregados:") +
             Environment.NewLine + Environment.NewLine +
             modules +
             protectedStorage +
             Environment.NewLine + Environment.NewLine +
-            "Os demais recursos continuam disponíveis. Consulte a pasta Logs para detalhes técnicos.",
-            "SlashDesk iniciado em modo reduzido",
+            UiText.Get("Os demais recursos continuam disponíveis. Consulte a pasta Logs para detalhes técnicos."),
+            UiText.Get("SlashDesk iniciado em modo reduzido"),
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
     }
@@ -355,9 +357,9 @@ public partial class MainWindow : Window
         }
 
         ShowAppDialog(
-            "O arquivo snippets.md não pôde ser carregado e está protegido contra alterações. " +
-            "Restaure um backup válido antes de salvar, excluir ou importar atalhos.",
-            "Atalhos em modo protegido",
+            UiText.Get("O arquivo snippets.md não pôde ser carregado e está protegido contra alterações. ") +
+            UiText.Get("Restaure um backup válido antes de salvar, excluir ou importar atalhos."),
+            UiText.Get("Atalhos em modo protegido"),
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
         return false;
@@ -382,7 +384,7 @@ public partial class MainWindow : Window
 
         _trayIcon = new Forms.NotifyIcon
         {
-            Text = "SlashDesk · Monitoramento ativo",
+            Text = UiText.Get("SlashDesk · Monitoramento ativo"),
             Icon = icon ?? DrawingSystemIcons.Application,
             ContextMenuStrip = menu,
             Visible = true
@@ -422,7 +424,7 @@ public partial class MainWindow : Window
         {
             ShowAppDialog(
                 exception.Message,
-                "Não foi possível abrir a captura",
+                UiText.Get("Não foi possível abrir a captura"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -438,8 +440,8 @@ public partial class MainWindow : Window
             _keyboardHook.Start();
         }
 
-        MonitorStatusText.Text = "Monitoramento ativo";
-        ShellStatusText.Text = "Monitoramento ativo";
+        MonitorStatusText.Text = UiText.Get("Monitoramento ativo");
+        ShellStatusText.Text = UiText.Get("Monitoramento ativo");
     }
 
     private void QuickAccentService_OnChanged(object? sender, QuickAccentChangedEventArgs e)
@@ -503,7 +505,7 @@ public partial class MainWindow : Window
             if (expansionLease is null)
             {
                 SafeDiagnosticLog.Write("expansion.ignored_busy");
-                StatusText.Text = "Outra expansão ainda está em andamento";
+                StatusText.Text = UiText.Get("Outra expansão ainda está em andamento");
                 return;
             }
             try
@@ -526,7 +528,7 @@ public partial class MainWindow : Window
                     if (form.DialogResult != true)
                     {
                         _keyboardHook.ResetBuffer(BufferResetReason.SuggestionCancelled);
-                        StatusText.Text = "Expansão cancelada";
+                        StatusText.Text = UiText.Get("Expansão cancelada");
                         return;
                     }
 
@@ -541,7 +543,7 @@ public partial class MainWindow : Window
                     CancellationToken.None);
                 await _usageService.RecordAsync(e.Snippet, inserted);
                 RefreshStatistics();
-                StatusText.Text = $"{e.Snippet.Trigger} inserido";
+                StatusText.Text = UiText.Format($"{e.Snippet.Trigger} inserido");
                 SafeDiagnosticLog.Write("expansion.completed", new Dictionary<string, object?>
                 {
                     ["insertedCharacterCount"] = inserted
@@ -549,7 +551,7 @@ public partial class MainWindow : Window
             }
             catch (ExpansionBusyException)
             {
-                StatusText.Text = "Outra expansão ainda está em andamento";
+                StatusText.Text = UiText.Get("Outra expansão ainda está em andamento");
             }
             catch (Exception exception)
             {
@@ -558,10 +560,10 @@ public partial class MainWindow : Window
                     ["exceptionType"] = exception.GetType().Name,
                     ["reason"] = exception is OperationCanceledException ? "target_changed" : "operation_failed"
                 });
-                StatusText.Text = $"Falha ao inserir {e.Snippet.Trigger}";
+                StatusText.Text = UiText.Format($"Falha ao inserir {e.Snippet.Trigger}");
                 ShowAppDialog(
                     exception.Message,
-                    "Não foi possível inserir o texto",
+                    UiText.Get("Não foi possível inserir o texto"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
@@ -621,20 +623,20 @@ public partial class MainWindow : Window
         var visible = filtered.OrderByDescending(item => item.IsPinned).ToList();
 
         CategoriesPanel.Children.Clear();
-        CategoriesPanel.Children.Add(CreateCategoryButton(null, "Todos", _snippets.Count));
+        CategoriesPanel.Children.Add(CreateCategoryButton(null, UiText.Get("Todos"), _snippets.Count));
         foreach (var category in ShortcutCategories.All)
         {
             var count = _snippets.Count(item => ShortcutCategories.Resolve(item.Category).Name == category.Name);
-            CategoriesPanel.Children.Add(CreateCategoryButton(category.Name, category.Name, count));
+            CategoriesPanel.Children.Add(CreateCategoryButton(category.Name, category.DisplayName, count));
         }
 
         SnippetListPanel.Children.Clear();
         if (visible.Count == 0)
         {
             var empty = new StackPanel { Margin = new Thickness(4, 12, 4, 0) };
-            var hint = new TextBlock { Text = _snippets.Count == 0 ? "Seu primeiro texto começa aqui." : "Nenhum atalho corresponde aos filtros.", TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 0, 0, 12) };
+            var hint = new TextBlock { Text = _snippets.Count == 0 ? UiText.Get("Seu primeiro texto começa aqui.") : UiText.Get("Nenhum atalho corresponde aos filtros."), TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 0, 0, 12) };
             hint.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); empty.Children.Add(hint);
-            var action = new Button { Content = _snippets.Count == 0 ? "Criar atalho" : "Limpar filtros" };
+            var action = new Button { Content = _snippets.Count == 0 ? UiText.Get("Criar atalho") : UiText.Get("Limpar filtros") };
             action.SetResourceReference(StyleProperty, "Lab.Button");
             action.Click += (_, _) => { if (_snippets.Count == 0) BeginNewSnippet(); else { _selectedCategory = null; _showMostUsed = false; _showShortcutFavorites = false; _showShortcutPinned = false; SearchBox.Clear(); RefreshNavigation(); } };
             empty.Children.Add(action); SnippetListPanel.Children.Add(empty);
@@ -648,7 +650,7 @@ public partial class MainWindow : Window
         }
 
         SnippetCountText.Text = $"{visible.Count}/{_snippets.Count}";
-        ShellCollectionStatusText.Text = $"{_snippets.Count} atalhos · {CategoriesPanel.Children.Count - 1} categorias";
+        ShellCollectionStatusText.Text = UiText.Format($"{_snippets.Count} atalhos · {CategoriesPanel.Children.Count - 1} categorias");
         RefreshMostUsed();
     }
 
@@ -692,8 +694,8 @@ public partial class MainWindow : Window
         FormatBox.SelectedIndex = snippet.Format == SnippetFormat.Markdown ? 1 : 0;
         RichTextMarkdownConverter.Load(ContentEditor, snippet.Content, snippet.Format);
         StatusText.Text = snippet.HasLegacyIncompatibleTrigger
-            ? "Atalho legado preservado, mas incompatível com o monitor atual; corrija o gatilho para reativá-lo"
-            : snippet.Enabled ? "Atalho ativo" : "Atalho pausado";
+            ? UiText.Get("Atalho legado preservado, mas incompatível com o monitor atual; corrija o gatilho para reativá-lo")
+            : snippet.Enabled ? UiText.Get("Atalho ativo") : UiText.Get("Atalho pausado");
         _loadingShortcutDraft = false;
         ResetShortcutDraftBaseline();
         RefreshNavigation();
@@ -715,7 +717,7 @@ public partial class MainWindow : Window
         SelectShortcutCategory("Geral");
         FormatBox.SelectedIndex = 0;
         RichTextMarkdownConverter.Load(ContentEditor, string.Empty, SnippetFormat.Plain);
-        StatusText.Text = "Novo atalho";
+        StatusText.Text = UiText.Get("Novo atalho");
         _loadingShortcutDraft = false;
         ResetShortcutDraftBaseline();
         RefreshNavigation();
@@ -752,7 +754,7 @@ public partial class MainWindow : Window
         {
             ShowAppDialog(
                 triggerError,
-                "Atalho incompatível",
+                UiText.Get("Atalho incompatível"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             TriggerBox.Focus();
@@ -784,14 +786,14 @@ public partial class MainWindow : Window
             RefreshStatistics();
             ResetShortcutDraftBaseline();
             ShortcutLegacyCategoryHint.Visibility = Visibility.Collapsed;
-            StatusText.Text = $"Salvo em {AppPaths.SnippetsFile}";
+            StatusText.Text = UiText.Format($"Salvo em {AppPaths.SnippetsFile}");
             return true;
         }
         catch (Exception exception)
         {
             ShowAppDialog(
                 exception.Message,
-                "Não foi possível salvar",
+                UiText.Get("Não foi possível salvar"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             return false;
@@ -816,8 +818,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        var confirmation = new ShortcutConfirmationWindow("Excluir atalho?", "Este atalho será removido da sua lista.",
-            $"{_selected.Name}\n{_selected.Trigger} · {_selected.Category}", "Excluir atalho") { Owner = this };
+        var confirmation = new ShortcutConfirmationWindow(UiText.Get("Excluir atalho?"), UiText.Get("Este atalho será removido da sua lista."),
+            $"{_selected.Name}\n{_selected.Trigger} · {_selected.Category}", UiText.Get("Excluir atalho")) { Owner = this };
         LabMotion.SetReduced(confirmation, LabMotion.GetReduced(this)); confirmation.EnableBackdrop();
         if (!ShowCaptureDialog(confirmation))
         {
@@ -835,14 +837,14 @@ public partial class MainWindow : Window
             _shortcutDraftBaseline = null;
             BeginNewSnippet();
             RefreshStatistics();
-            StatusText.Text = "Atalho excluído";
+            StatusText.Text = UiText.Get("Atalho excluído");
         }
         catch (Exception exception)
         {
             RefreshNavigation();
             ShowAppDialog(
                 exception.Message,
-                "Não foi possível excluir",
+                UiText.Get("Não foi possível excluir"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -920,21 +922,21 @@ public partial class MainWindow : Window
 
     private void Table_OnClick(object sender, RoutedEventArgs e)
     {
-        var rowsText = PromptDialog.Show(this, "Inserir tabela", "Quantidade de linhas", "2");
+        var rowsText = PromptDialog.Show(this, UiText.Get("Inserir tabela"), UiText.Get("Quantidade de linhas"), "2");
         if (rowsText is null)
         {
             return;
         }
 
-        var columnsText = PromptDialog.Show(this, "Inserir tabela", "Quantidade de colunas", "2");
+        var columnsText = PromptDialog.Show(this, UiText.Get("Inserir tabela"), UiText.Get("Quantidade de colunas"), "2");
         if (!int.TryParse(rowsText, out var rows) ||
             !int.TryParse(columnsText, out var columns) ||
             rows is < 1 or > 10 ||
             columns is < 1 or > 8)
         {
             ShowAppDialog(
-                "Use de 1 a 10 linhas e de 1 a 8 colunas.",
-                "Tabela",
+                UiText.Get("Use de 1 a 10 linhas e de 1 a 8 colunas."),
+                UiText.Get("Tabela"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
             return;
@@ -960,7 +962,7 @@ public partial class MainWindow : Window
             for (var columnIndex = 0; columnIndex < columns; columnIndex++)
             {
                 var cell = new TableCell(new Paragraph(new Run(
-                    rowIndex == 0 ? $"Título {columnIndex + 1}" : "Texto")))
+                    rowIndex == 0 ? UiText.Format($"Título {columnIndex + 1}") : UiText.Get("Texto"))))
                 {
                     BorderBrush = (Brush)FindResource("DividerBrush"),
                     BorderThickness = new Thickness(1),
@@ -991,19 +993,19 @@ public partial class MainWindow : Window
 
     private void Link_OnClick(object sender, RoutedEventArgs e)
     {
-        var urlText = PromptDialog.Show(this, "Inserir hiperlink", "Endereço (https://...)");
+        var urlText = PromptDialog.Show(this, UiText.Get("Inserir hiperlink"), UiText.Get("Endereço (https://...)"));
         if (!Uri.TryCreate(urlText, UriKind.Absolute, out var uri))
         {
             if (urlText is not null)
             {
-                ShowAppDialog("Informe um endereço completo iniciado por http:// ou https://.");
+                ShowAppDialog(UiText.Get("Informe um endereço completo iniciado por http:// ou https://."));
             }
             return;
         }
 
         if (ContentEditor.Selection.IsEmpty)
         {
-            var label = PromptDialog.Show(this, "Texto do link", "Texto exibido", urlText);
+            var label = PromptDialog.Show(this, UiText.Get("Texto do link"), UiText.Get("Texto exibido"), urlText);
             if (label is null)
             {
                 return;
@@ -1035,7 +1037,7 @@ public partial class MainWindow : Window
     {
         var picker = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Adicionar imagem ao atalho",
+            Title = UiText.Get("Adicionar imagem ao atalho"),
             Filter = "Imagens|*.png;*.jpg;*.jpeg;*.gif;*.webp",
             Multiselect = false
         };
@@ -1048,8 +1050,8 @@ public partial class MainWindow : Window
         if (info.Length > 5 * 1024 * 1024)
         {
             ShowAppDialog(
-                "Escolha uma imagem com até 5 MB.",
-                "Imagem muito grande",
+                UiText.Get("Escolha uma imagem com até 5 MB."),
+                UiText.Get("Imagem muito grande"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
             return;
@@ -1168,16 +1170,16 @@ public partial class MainWindow : Window
         }
 
         (ShellPageTitle.Text, ShellPageDescription.Text) = ReferenceEquals(view, ShortcutsView)
-            ? ("Atalhos", "Crie, organize e edite seus textos prontos.")
+            ? (UiText.Get("Atalhos"), UiText.Get("Crie, organize e edite seus textos prontos."))
             : ReferenceEquals(view, QuickAccentView)
-                ? ("Acento Rápido", "Digite caracteres especiais sem interromper seu fluxo.")
+                ? (UiText.Get("Acento Rápido"), UiText.Get("Digite caracteres especiais sem interromper seu fluxo."))
                 : ReferenceEquals(view, CaptureView)
-                    ? ("Captura", "Capture, edite e grave sua tela localmente.")
+                    ? (UiText.Get("Captura"), UiText.Get("Capture, edite e grave sua tela localmente."))
                     : ReferenceEquals(view, StatisticsView)
-                        ? ("Estatísticas", "Acompanhe o uso real dos recursos do SlashDesk.")
+                        ? (UiText.Get("Estatísticas"), UiText.Get("Acompanhe o uso real dos recursos do SlashDesk."))
                         : ReferenceEquals(view, SettingsView)
-                            ? ("Configurações", "Personalize o comportamento do SlashDesk.")
-                            : ("Sobre", "Versão, privacidade, suporte e atualizações.");
+                            ? (UiText.Get("Configurações"), UiText.Get("Personalize o comportamento do SlashDesk."))
+                            : (UiText.Get("Sobre"), UiText.Get("Versão, privacidade, suporte e atualizações."));
         ShortcutHeaderActions.Visibility = ReferenceEquals(view, ShortcutsView)
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -1187,8 +1189,8 @@ public partial class MainWindow : Window
 
         var monitorReady = _keyboardHook.IsRunning;
         MonitorStatusText.Text = monitorReady
-            ? ReferenceEquals(view, QuickAccentView) ? "Monitor de atalhos ativo" : "Monitoramento ativo"
-            : "Monitor de atalhos indisponível";
+            ? ReferenceEquals(view, QuickAccentView) ? UiText.Get("Monitor de atalhos ativo") : UiText.Get("Monitoramento ativo")
+            : UiText.Get("Monitor de atalhos indisponível");
         ShellStatusText.Text = MonitorStatusText.Text;
         MonitorStatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, monitorReady ? "SuccessBrush" : "MutedBrush");
         ShellMonitorStatusDot.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, monitorReady ? "SuccessBrush" : "MutedBrush");
@@ -1283,7 +1285,7 @@ public partial class MainWindow : Window
             {
                 _suggestionWindow.Hide();
             }
-            SettingsOperationText.Text = "Preferência salva.";
+            SettingsOperationText.Text = UiText.Get("Preferência salva.");
         }
         catch (Exception exception)
         {
@@ -1298,12 +1300,12 @@ public partial class MainWindow : Window
             if (!AppPaths.IsCapturePilot && previousStart != requestedStart)
             {
                 try { StartupService.SetEnabled(previousStart); }
-                catch (Exception rollback) { SettingsOperationText.Text = "Não foi possível reverter a inicialização: " + rollback.Message; }
+                catch (Exception rollback) { SettingsOperationText.Text = UiText.Get("Não foi possível reverter a inicialização: ") + rollback.Message; }
             }
-            SettingsOperationText.Text = "Não foi possível salvar a preferência.";
+            SettingsOperationText.Text = UiText.Get("Não foi possível salvar a preferência.");
             ShowSettingsDialog(
                 exception.Message,
-                "Não foi possível salvar a configuração",
+                UiText.Get("Não foi possível salvar a configuração"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -1325,13 +1327,13 @@ public partial class MainWindow : Window
             : SnippetImportSource.SlashDesk;
         var picker = new Microsoft.Win32.OpenFileDialog
         {
-            Title = $"Importar atalhos do {ImportSourceName(source)}",
+            Title = UiText.Format($"Importar atalhos do {ImportSourceName(source)}"),
             Filter = source switch
             {
-                SnippetImportSource.SlashDesk => "Atalhos do SlashDesk|*.md",
-                SnippetImportSource.TextBlaze => "Exportação do Text Blaze|*.json",
-                SnippetImportSource.Espanso => "Configuração do Espanso|*.yml;*.yaml",
-                _ => "Todos os arquivos|*.*"
+                SnippetImportSource.SlashDesk => UiText.Get("Atalhos do SlashDesk|*.md"),
+                SnippetImportSource.TextBlaze => UiText.Get("Exportação do Text Blaze|*.json"),
+                SnippetImportSource.Espanso => UiText.Get("Configuração do Espanso|*.yml;*.yaml"),
+                _ => UiText.Get("Todos os arquivos|*.*")
             },
             Multiselect = false
         };
@@ -1342,7 +1344,7 @@ public partial class MainWindow : Window
 
         try
         {
-            await RunSettingsMaintenanceAsync("Importando e protegendo os atalhos…", async () =>
+            await RunSettingsMaintenanceAsync(UiText.Get("Importando e protegendo os atalhos…"), async () =>
             {
             _shortcutOperationInProgress = true; ShortcutEditorPanel.IsEnabled = false;
             RefreshShortcutDraftState();
@@ -1350,11 +1352,11 @@ public partial class MainWindow : Window
             if (result.Snippets.Count == 0)
             {
                 ShowSettingsDialog(
-                    "Nenhum atalho compatível foi encontrado no arquivo.",
-                    "Importação concluída",
+                    UiText.Get("Nenhum atalho compatível foi encontrado no arquivo."),
+                    UiText.Get("Importação concluída"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
-                StatusText.Text = SettingsOperationText.Text = "Nenhum atalho compatível encontrado";
+                StatusText.Text = SettingsOperationText.Text = UiText.Get("Nenhum atalho compatível encontrado");
                 return;
             }
 
@@ -1362,17 +1364,17 @@ public partial class MainWindow : Window
                 _snippets.Any(current =>
                     current.Trigger.Equals(incoming.Trigger, StringComparison.OrdinalIgnoreCase)));
             var mode = ShowSettingsDialog(
-                $"{result.Snippets.Count} atalho(s) compatível(is) encontrado(s)." +
+                UiText.Format($"{result.Snippets.Count} atalho(s) compatível(is) encontrado(s).") +
                 (conflicts == 0
-                    ? "\n\nDeseja adicionar esses atalhos aos atuais?"
-                    : $"\n\n{conflicts} conflito(s) de comando. Escolha substituir os conflitos ou manter os atuais e importar somente os demais."),
-                $"Importar do {ImportSourceName(source)}",
+                    ? UiText.Get("\n\nDeseja adicionar esses atalhos aos atuais?")
+                    : UiText.Format($"\n\n{conflicts} conflito(s) de comando. Escolha substituir os conflitos ou manter os atuais e importar somente os demais.")),
+                UiText.Format($"Importar do {ImportSourceName(source)}"),
                 conflicts == 0 ? MessageBoxButton.YesNo : MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Question, conflicts == 0 ? "Importar atalhos" : "Substituir conflitos", "Manter atuais");
+                MessageBoxImage.Question, conflicts == 0 ? UiText.Get("Importar atalhos") : UiText.Get("Substituir conflitos"), UiText.Get("Manter atuais"));
             if (mode is MessageBoxResult.Cancel or MessageBoxResult.None ||
                 (conflicts == 0 && mode == MessageBoxResult.No))
             {
-                StatusText.Text = SettingsOperationText.Text = "Importação cancelada. Os atalhos atuais foram preservados.";
+                StatusText.Text = SettingsOperationText.Text = UiText.Get("Importação cancelada. Os atalhos atuais foram preservados.");
                 return;
             }
 
@@ -1405,24 +1407,24 @@ public partial class MainWindow : Window
             RefreshStatistics();
             var warningSummary = result.Warnings.Count == 0
                 ? string.Empty
-                : $"\n\n{result.Warnings.Count} aviso(s) de compatibilidade. Os primeiros:\n• " +
+                : UiText.Format($"\n\n{result.Warnings.Count} aviso(s) de compatibilidade. Os primeiros:\n• ") +
                   string.Join("\n• ", result.Warnings.Take(4));
             ShowSettingsDialog(
-                $"{result.Snippets.Count} atalho(s) processado(s). O snippets.md foi atualizado e o estado anterior foi salvo em backup.{warningSummary}",
-                "Importação concluída",
+                UiText.Format($"{result.Snippets.Count} atalho(s) processado(s). O snippets.md foi atualizado e o estado anterior foi salvo em backup.{warningSummary}"),
+                UiText.Get("Importação concluída"),
                 MessageBoxButton.OK,
                 result.Warnings.Count == 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
-            StatusText.Text = $"Importação do {ImportSourceName(source)} concluída";
+            StatusText.Text = UiText.Format($"Importação do {ImportSourceName(source)} concluída");
             SettingsOperationText.Text = StatusText.Text;
             RefreshBackupSummary();
             });
         }
         catch (Exception exception)
         {
-            SettingsOperationText.Text = "Não foi possível importar: " + exception.Message;
+            SettingsOperationText.Text = UiText.Get("Não foi possível importar: ") + exception.Message;
             ShowSettingsDialog(
                 exception.Message,
-                "Não foi possível importar",
+                UiText.Get("Não foi possível importar"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -1439,18 +1441,18 @@ public partial class MainWindow : Window
         try
         {
             string? path = null;
-            await RunSettingsMaintenanceAsync("Criando e verificando o backup…", () =>
+            await RunSettingsMaintenanceAsync(UiText.Get("Criando e verificando o backup…"), () =>
                 _usageService.RunMaintenanceAsync(() => path = _backupService.CreateManualSnapshot()));
             RefreshBackupSummary();
-            StatusText.Text = $"Backup criado: {Path.GetFileName(path)}";
+            StatusText.Text = UiText.Format($"Backup criado: {Path.GetFileName(path)}");
             SettingsOperationText.Text = StatusText.Text;
         }
         catch (Exception exception)
         {
-            SettingsOperationText.Text = "Não foi possível criar o backup: " + exception.Message;
+            SettingsOperationText.Text = UiText.Get("Não foi possível criar o backup: ") + exception.Message;
             ShowSettingsDialog(
                 exception.Message,
-                "Não foi possível criar o backup",
+                UiText.Get("Não foi possível criar o backup"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -1465,30 +1467,30 @@ public partial class MainWindow : Window
 
         try
         {
-            await RunSettingsMaintenanceAsync("Analisando imagens dos atalhos…", async () =>
+            await RunSettingsMaintenanceAsync(UiText.Get("Analisando imagens dos atalhos…"), async () =>
             {
             var snippets = _snippets.ToList();
             var report = await Task.Run(() => _assetMaintenanceService.Analyze(snippets));
             if (report.UnsafeReferenceCount > 0)
             {
                 ShowSettingsDialog(
-                    $"A análise encontrou {report.UnsafeReferenceCount} referência(s) local(is) inválida(s). " +
-                    "Por segurança, nenhuma imagem pode ser removida até que esses atalhos sejam corrigidos.",
-                    "Limpeza de imagens bloqueada",
+                    UiText.Format($"A análise encontrou {report.UnsafeReferenceCount} referência(s) local(is) inválida(s). ") +
+                    UiText.Get("Por segurança, nenhuma imagem pode ser removida até que esses atalhos sejam corrigidos."),
+                    UiText.Get("Limpeza de imagens bloqueada"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
-                StatusText.Text = SettingsOperationText.Text = "Limpeza bloqueada por referências inválidas";
+                StatusText.Text = SettingsOperationText.Text = UiText.Get("Limpeza bloqueada por referências inválidas");
                 return;
             }
 
             if (report.Orphans.Count == 0)
             {
                 ShowSettingsDialog(
-                    "Nenhuma imagem órfã foi encontrada. Os arquivos em uso foram preservados.",
-                    "Análise concluída",
+                    UiText.Get("Nenhuma imagem órfã foi encontrada. Os arquivos em uso foram preservados."),
+                    UiText.Get("Análise concluída"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
-                StatusText.Text = SettingsOperationText.Text = "Nenhuma imagem órfã encontrada";
+                StatusText.Text = SettingsOperationText.Text = UiText.Get("Nenhuma imagem órfã encontrada");
                 return;
             }
 
@@ -1499,39 +1501,39 @@ public partial class MainWindow : Window
                 "\n• ",
                 report.Orphans.Take(10).Select(item => item.RelativePath));
             var remaining = report.Orphans.Count > 10
-                ? $"\n• ... e mais {report.Orphans.Count - 10}"
+                ? UiText.Format($"\n• ... e mais {report.Orphans.Count - 10}")
                 : string.Empty;
             var confirmation = ShowSettingsDialog(
-                $"{report.Orphans.Count} imagem(ns) sem referência ({size}):\n\n• {preview}{remaining}\n\n" +
-                "Deseja criar um backup completo e remover somente esses arquivos?",
-                "Revisar imagens órfãs",
+                UiText.Format($"{report.Orphans.Count} imagem(ns) sem referência ({size}):\n\n• {preview}{remaining}\n\n") +
+                UiText.Get("Deseja criar um backup completo e remover somente esses arquivos?"),
+                UiText.Get("Revisar imagens órfãs"),
                 MessageBoxButton.YesNo,
-                MessageBoxImage.Warning, "Criar backup e remover");
+                MessageBoxImage.Warning, UiText.Get("Criar backup e remover"));
             if (confirmation != MessageBoxResult.Yes)
             {
-                StatusText.Text = SettingsOperationText.Text = "Limpeza de imagens cancelada";
+                StatusText.Text = SettingsOperationText.Text = UiText.Get("Limpeza de imagens cancelada");
                 return;
             }
 
             AssetCleanupResult? result = null;
             await _usageService.RunMaintenanceAsync(() => result = _assetMaintenanceService.DeleteOrphansAfterBackup(report, _backupService.CreateManualSnapshot));
             RefreshBackupSummary();
-            StatusText.Text = $"{result!.DeletedCount} imagem(ns) órfã(s) removida(s)";
+            StatusText.Text = UiText.Format($"{result!.DeletedCount} imagem(ns) órfã(s) removida(s)");
             SettingsOperationText.Text = StatusText.Text;
             ShowSettingsDialog(
-                $"{result.DeletedCount} imagem(ns) removida(s).\n\n" +
-                $"Backup criado antes da limpeza: {Path.GetFileName(result.BackupPath)}",
-                "Limpeza concluída",
+                UiText.Format($"{result.DeletedCount} imagem(ns) removida(s).\n\n") +
+                UiText.Format($"Backup criado antes da limpeza: {Path.GetFileName(result.BackupPath)}"),
+                UiText.Get("Limpeza concluída"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
             });
         }
         catch (Exception exception)
         {
-            SettingsOperationText.Text = "Não foi possível analisar imagens: " + exception.Message;
+            SettingsOperationText.Text = UiText.Get("Não foi possível analisar imagens: ") + exception.Message;
             ShowSettingsDialog(
                 exception.Message,
-                "Não foi possível analisar as imagens",
+                UiText.Get("Não foi possível analisar as imagens"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -1543,24 +1545,24 @@ public partial class MainWindow : Window
         if (!CanDiscardShortcutDraft()) return;
         var picker = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Restaurar backup do SlashDesk",
+            Title = UiText.Get("Restaurar backup do SlashDesk"),
             InitialDirectory = AppPaths.BackupsDirectory,
-            Filter = "Backup do SlashDesk|SlashDesk-backup-*.zip|Arquivo ZIP|*.zip",
+            Filter = UiText.Get("Backup do SlashDesk|SlashDesk-backup-*.zip|Arquivo ZIP|*.zip"),
             Multiselect = false
         };
         if (picker.ShowDialog(this) != true ||
             ShowSettingsDialog(
-                "Restaurar este backup substituirá os dados incluídos nele, inclusive Meus emojis quando presentes. Um backup de segurança será criado antes de continuar.",
-                "Restaurar backup",
+                UiText.Get("Restaurar este backup substituirá os dados incluídos nele, inclusive Meus emojis quando presentes. Um backup de segurança será criado antes de continuar."),
+                UiText.Get("Restaurar backup"),
                 MessageBoxButton.YesNo,
-                MessageBoxImage.Warning, "Restaurar backup") != MessageBoxResult.Yes)
+                MessageBoxImage.Warning, UiText.Get("Restaurar backup")) != MessageBoxResult.Yes)
         {
             return;
         }
 
         try
         {
-            await RunSettingsMaintenanceAsync("Verificando e restaurando o backup…", async () =>
+            await RunSettingsMaintenanceAsync(UiText.Get("Verificando e restaurando o backup…"), async () =>
             {
             _shortcutOperationInProgress = true; ShortcutEditorPanel.IsEnabled = false;
             await _usageService.RunMaintenanceAsync(() => _backupService.RestoreSnapshot(picker.FileName));
@@ -1581,19 +1583,19 @@ public partial class MainWindow : Window
             RefreshStatistics();
             RefreshBackupSummary();
             ShowSettingsDialog(
-                "Backup restaurado. As preferências completas serão aplicadas na próxima abertura do SlashDesk.",
-                "Restauração concluída",
+                UiText.Get("Backup restaurado. As preferências completas serão aplicadas na próxima abertura do SlashDesk."),
+                UiText.Get("Restauração concluída"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
-            SettingsOperationText.Text = "Backup restaurado. Reabra o app para aplicar todas as preferências.";
+            SettingsOperationText.Text = UiText.Get("Backup restaurado. Reabra o app para aplicar todas as preferências.");
             });
         }
         catch (Exception exception)
         {
-            SettingsOperationText.Text = "Não foi possível restaurar: " + exception.Message;
+            SettingsOperationText.Text = UiText.Get("Não foi possível restaurar: ") + exception.Message;
             ShowSettingsDialog(
                 exception.Message,
-                "Não foi possível restaurar",
+                UiText.Get("Não foi possível restaurar"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -1619,8 +1621,8 @@ public partial class MainWindow : Window
 
         var snapshots = _backupService.ListSnapshots();
         BackupSummaryText.Text = snapshots.Count == 0
-            ? "Nenhum backup criado ainda."
-            : $"{snapshots.Count} backup(s) · último em {snapshots[0].LastWriteTime:g}";
+            ? UiText.Get("Nenhum backup criado ainda.")
+            : UiText.Format($"{snapshots.Count} backup(s) · último em {snapshots[0].LastWriteTime:g}");
     }
 
     private static string ImportSourceName(SnippetImportSource source) => source switch
@@ -1650,12 +1652,12 @@ public partial class MainWindow : Window
         }
         await _settingsStore.SaveAsync(_settings);
         ShowView(SettingsView, SettingsTabButton);
-        SettingsOperationText.Text = "Tema salvo.";
+        SettingsOperationText.Text = UiText.Get("Tema salvo.");
         }
         catch (Exception exception)
         {
             _settings.Theme = previous; ThemeService.Apply(previous); SyncSettingsControls();
-            SettingsOperationText.Text = "Não foi possível salvar o tema: " + exception.Message;
+            SettingsOperationText.Text = UiText.Get("Não foi possível salvar o tema: ") + exception.Message;
         }
         finally { _settingsOperationInProgress = false; SettingsCardsGrid.IsEnabled = true; }
     }
@@ -1781,8 +1783,8 @@ public partial class MainWindow : Window
         var selected = SelectedQuickAccentCharacterSets();
         QuickAccentSetSummaryText.Text = selected.Count == 1 &&
                                          selected[0] == "PortugueseBrazil"
-            ? "Português (Brasil)"
-            : selected.Count == 9 ? "Todos os conjuntos" : $"{selected.Count} conjuntos";
+            ? UiText.Get("Português (Brasil)")
+            : selected.Count == 9 ? UiText.Get("Todos os conjuntos") : UiText.Format($"{selected.Count} conjuntos");
     }
 
     private static string SelectedTag(ComboBox box, string fallback) =>
@@ -1812,9 +1814,9 @@ public partial class MainWindow : Window
             CaptureCompactQualityBox.Items.Clear();
             if (_captureMediaMode == CaptureMediaMode.Gif)
             {
-                CaptureCompactHintText.Text = "Paleta adaptativa · prévia antes de salvar";
+                CaptureCompactHintText.Text = UiText.Get("Paleta adaptativa · prévia antes de salvar");
                 CaptureCompactTargetBox.Items.Clear();
-                CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = "Região", Tag = "Region" });
+                CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = UiText.Get("Região"), Tag = "Region" });
                 CaptureCompactTargetBox.SelectedIndex = 0;
                 CaptureCompactTargetBox.IsEnabled = false;
                 AddPresetItems(CaptureCompactFpsBox, RecordingPresetCatalog.GifFps,
@@ -1826,11 +1828,11 @@ public partial class MainWindow : Window
             }
             else
             {
-                CaptureCompactHintText.Text = "H.264 local · pausa e retomada";
+                CaptureCompactHintText.Text = UiText.Get("H.264 local · pausa e retomada");
                 CaptureCompactTargetBox.Items.Clear();
-                CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = "Monitor ativo", Tag = "Monitor" });
-                CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = "Região", Tag = "Region" });
-                CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = "Janela sob o cursor", Tag = "Window" });
+                CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = UiText.Get("Monitor ativo"), Tag = "Monitor" });
+                CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = UiText.Get("Região"), Tag = "Region" });
+                CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = UiText.Get("Janela sob o cursor"), Tag = "Window" });
                 CaptureCompactTargetBox.IsEnabled = true;
                 foreach (var fps in new[] { 24, 30, 60 })
                 {
@@ -1955,8 +1957,8 @@ public partial class MainWindow : Window
         CaptureQualityBox.IsEnabled =
             capture.ImageFormat.Equals("JPEG", StringComparison.OrdinalIgnoreCase);
         CapturePostModeText.Text = capture.OpenEditorForMonitorAndWindow
-            ? "Editor: revisar antes de concluir"
-            : "Direta: copiar e salvar";
+            ? UiText.Get("Editor: revisar antes de concluir")
+            : UiText.Get("Direta: copiar e salvar");
         PopulateCompactRecordingControls();
     }
 
@@ -1972,7 +1974,7 @@ public partial class MainWindow : Window
             DateTimeOffset.Now);
         using var dialog = new Forms.FolderBrowserDialog
         {
-            Description = "Selecione a pasta onde as capturas serão salvas.",
+            Description = UiText.Get("Selecione a pasta onde as capturas serão salvas."),
             UseDescriptionForTitle = true,
             ShowNewFolderButton = true,
             SelectedPath = Directory.Exists(currentDirectory)
@@ -1991,7 +1993,7 @@ public partial class MainWindow : Window
         {
             ShowAppDialog(
                 error,
-                "Configuração de captura",
+                UiText.Get("Configuração de captura"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             return;
@@ -2000,8 +2002,8 @@ public partial class MainWindow : Window
         await _settingsStore.SaveAsync(_settings);
         ConfigureCaptureShortcuts();
         StatusText.Text = CaptureShortcutStatusText.Text.StartsWith("●", StringComparison.Ordinal)
-            ? "Configurações de captura salvas"
-            : "Configurações salvas. " + CaptureShortcutStatusText.Text;
+            ? UiText.Get("Configurações de captura salvas")
+            : UiText.Get("Configurações salvas. ") + CaptureShortcutStatusText.Text;
     }
 
     private bool TryReadCaptureSettings(out string error)
@@ -2016,19 +2018,19 @@ public partial class MainWindow : Window
         };
         if (shortcuts.Any(item => !GlobalCaptureShortcutService.IsValid(item)))
         {
-            error = "Clique no campo e pressione uma tecla, roda ou botão do mouse. " +
-                    "A roda sempre exige Ctrl, Alt, Shift ou Win; cliques esquerdo e direito não são aceitos.";
+            error = UiText.Get("Clique no campo e pressione uma tecla, roda ou botão do mouse. ") +
+                    UiText.Get("A roda sempre exige Ctrl, Alt, Shift ou Win; cliques esquerdo e direito não são aceitos.");
             return false;
         }
         if (shortcuts.Distinct(StringComparer.OrdinalIgnoreCase).Count() != shortcuts.Length)
         {
-            error = "Cada ação precisa ter um atalho diferente.";
+            error = UiText.Get("Cada ação precisa ter um atalho diferente.");
             return false;
         }
         if (string.IsNullOrWhiteSpace(CaptureDirectoryBox.Text) ||
             string.IsNullOrWhiteSpace(CaptureFileNameBox.Text))
         {
-            error = "Informe a pasta e o modelo de nome do arquivo.";
+            error = UiText.Get("Informe a pasta e o modelo de nome do arquivo.");
             return false;
         }
         var openEditor = SelectedTag(CaptureEditorCheckBox, "Direct")
@@ -2037,8 +2039,8 @@ public partial class MainWindow : Window
         var saveAutomatically = CaptureAutoSaveCheckBox.IsChecked == true;
         if (!openEditor && !copyToClipboard && !saveAutomatically)
         {
-            error = "No modo Captura direta, ative Copiar após capturar, " +
-                    "Salvar automaticamente ou ambas as opções.";
+            error = UiText.Get("No modo Captura direta, ative Copiar após capturar, ") +
+                    UiText.Get("Salvar automaticamente ou ambas as opções.");
             return false;
         }
 
@@ -2047,7 +2049,7 @@ public partial class MainWindow : Window
         if (!RecordingPresetCatalog.GifFps.Any(item => item.Value == gifFps) ||
             !RecordingPresetCatalog.GifQuality.Any(item => item.Value == gifQuality))
         {
-            error = "Selecione um preset disponível de FPS e qualidade do GIF.";
+            error = UiText.Get("Selecione um preset disponível de FPS e qualidade do GIF.");
             return false;
         }
 
@@ -2101,7 +2103,7 @@ public partial class MainWindow : Window
             capture.WindowShortcut,
             capture.ScrollingShortcut);
         CaptureShortcutStatusText.Text = errors.Count == 0
-            ? "● Atalhos ativos"
+            ? UiText.Get("● Atalhos ativos")
             : string.Join(Environment.NewLine, errors);
         CaptureShortcutStatusText.Foreground = errors.Count == 0
             ? (Brush)FindResource("SuccessBrush")
@@ -2183,7 +2185,7 @@ public partial class MainWindow : Window
         {
             ShowAppDialog(
                 error,
-                "Regra de captura",
+                UiText.Get("Regra de captura"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             return;
@@ -2228,18 +2230,18 @@ public partial class MainWindow : Window
         }
         var selection = _captureMediaMode switch
         {
-            CaptureMediaMode.Video => "Vídeo MP4",
-            CaptureMediaMode.Gif => "GIF · região",
+            CaptureMediaMode.Video => UiText.Get("Vídeo MP4"),
+            CaptureMediaMode.Gif => UiText.Get("GIF · região"),
             _ => _captureLauncherMode switch
             {
                 CaptureLauncherMode.ActiveMonitor => "Monitor",
-                CaptureLauncherMode.Window => "Janela",
-                CaptureLauncherMode.Scrolling => "Captura longa",
-                _ => "Região"
+                CaptureLauncherMode.Window => UiText.Get("Janela"),
+                CaptureLauncherMode.Scrolling => UiText.Get("Captura longa"),
+                _ => UiText.Get("Região")
             }
         };
-        CaptureNewButtonText.Text = "Novo";
-        CaptureSelectionSummaryText.Text = $"{selection} · pronta";
+        CaptureNewButtonText.Text = UiText.Get("Novo");
+        CaptureSelectionSummaryText.Text = UiText.Format($"{selection} · pronta");
         CaptureRecordingCard.Visibility = Visibility.Collapsed;
         CaptureRecordingCompactCard.Visibility = _captureMediaMode == CaptureMediaMode.Image
             ? Visibility.Collapsed
@@ -2275,10 +2277,10 @@ public partial class MainWindow : Window
         // Do not switch media, select tools or discard a session just to reveal help.
         if (!target.IsVisible)
         {
-            StatusText.Text = "Este recurso aparece no painel de imagem. Sua sessão foi preservada.";
+            StatusText.Text = UiText.Get("Este recurso aparece no painel de imagem. Sua sessão foi preservada.");
             target = _captureEditorExpanded ? CaptureExpandEditorButton : CaptureImageMediaButton;
         }
-        else StatusText.Text = "Recurso destacado: " + (System.Windows.Automation.AutomationProperties.GetName(target) is { Length: > 0 } label ? label : guide.Title);
+        else StatusText.Text = UiText.Get("Recurso destacado: ") + (System.Windows.Automation.AutomationProperties.GetName(target) is { Length: > 0 } label ? label : guide.Title);
         target.BringIntoView();
         Dispatcher.BeginInvoke(new Action(() =>
         {
@@ -2291,7 +2293,7 @@ public partial class MainWindow : Window
     {
         if (!TryReadCaptureSettings(out var currentError))
         {
-            ShowAppDialog(currentError, "Configurações de captura",
+            ShowAppDialog(currentError, UiText.Get("Configurações de captura"),
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -2312,8 +2314,8 @@ public partial class MainWindow : Window
         LoadCaptureSettings();
         ConfigureCaptureShortcuts();
         StatusText.Text = CaptureShortcutStatusText.Text.StartsWith("●", StringComparison.Ordinal)
-            ? "Configurações de captura salvas"
-            : "Configurações salvas. " + CaptureShortcutStatusText.Text;
+            ? UiText.Get("Configurações de captura salvas")
+            : UiText.Get("Configurações salvas. ") + CaptureShortcutStatusText.Text;
     }
 
     private bool ShowCaptureDialog(Window dialog)
@@ -2339,7 +2341,7 @@ public partial class MainWindow : Window
         if (captureLease is null)
         {
             SafeDiagnosticLog.Write("capture.ignored_busy");
-            StatusText.Text = "Já existe uma captura em andamento";
+            StatusText.Text = UiText.Get("Já existe uma captura em andamento");
             return;
         }
 
@@ -2373,8 +2375,8 @@ public partial class MainWindow : Window
                     _settings.Capture.DelaySeconds);
                 ShowTrayBalloon(
                     Math.Min(selectionDelaySeconds * 1000, 10000),
-                    $"Captura longa em {selectionDelaySeconds}s",
-                    "Posicione o cursor sobre a página que será capturada.",
+                    UiText.Format($"Captura longa em {selectionDelaySeconds}s"),
+                    UiText.Get("Posicione o cursor sobre a página que será capturada."),
                     Forms.ToolTipIcon.Info);
                 await Task.Delay(TimeSpan.FromSeconds(selectionDelaySeconds));
             }
@@ -2386,8 +2388,8 @@ public partial class MainWindow : Window
                 {
                     ShowFromTray();
                     ShowAppDialog(
-                        "Posicione o cursor sobre a janela que será capturada.",
-                        "Captura longa",
+                        UiText.Get("Posicione o cursor sobre a janela que será capturada."),
+                        UiText.Get("Captura longa"),
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
                 }
@@ -2395,8 +2397,8 @@ public partial class MainWindow : Window
                 {
                     ShowTrayBalloon(
                         2500,
-                        "Captura longa não iniciada",
-                        "Não foi possível identificar a janela sob o cursor.",
+                        UiText.Get("Captura longa não iniciada"),
+                        UiText.Get("Não foi possível identificar a janela sob o cursor."),
                         Forms.ToolTipIcon.Warning);
                 }
                 return;
@@ -2415,16 +2417,16 @@ public partial class MainWindow : Window
             if (result is not null)
             {
                 StatusText.Text = string.IsNullOrWhiteSpace(result.FilePath)
-                    ? "Captura longa copiada"
-                    : $"Captura longa salva: {Path.GetFileName(result.FilePath)}";
+                    ? UiText.Get("Captura longa copiada")
+                    : UiText.Format($"Captura longa salva: {Path.GetFileName(result.FilePath)}");
                 AcceptCompletedCapture(result);
                 RefreshCaptureHistory();
                 ShowTrayBalloon(
                     3500,
-                    "Captura longa concluída",
+                    UiText.Get("Captura longa concluída"),
                     string.IsNullOrWhiteSpace(result.FilePath)
-                        ? "Imagem copiada para o clipboard."
-                        : "Clique para abrir a imagem.",
+                        ? UiText.Get("Imagem copiada para o clipboard.")
+                        : UiText.Get("Clique para abrir a imagem."),
                     Forms.ToolTipIcon.Info,
                     result.FilePath);
             }
@@ -2447,7 +2449,7 @@ public partial class MainWindow : Window
                 ShowFromTray();
                 ShowAppDialog(
                     exception.Message,
-                    "Captura longa",
+                    UiText.Get("Captura longa"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
@@ -2455,7 +2457,7 @@ public partial class MainWindow : Window
             {
                 ShowTrayBalloon(
                     2500,
-                    "Não foi possível fazer a captura longa",
+                    UiText.Get("Não foi possível fazer a captura longa"),
                     exception.Message,
                     Forms.ToolTipIcon.Warning);
             }
@@ -2480,7 +2482,7 @@ public partial class MainWindow : Window
         using var captureLease = _captureGate.TryEnter();
         if (captureLease is null)
         {
-            StatusText.Text = "Já existe uma captura em andamento";
+            StatusText.Text = UiText.Get("Já existe uma captura em andamento");
             return;
         }
 
@@ -2555,17 +2557,17 @@ public partial class MainWindow : Window
             if (result is not null)
             {
                 StatusText.Text = string.IsNullOrWhiteSpace(result.FilePath)
-                    ? $"Captura de {type} copiada"
-                    : $"Captura salva: {Path.GetFileName(result.FilePath)}";
+                    ? UiText.Format($"Captura de {type} copiada")
+                    : UiText.Format($"Captura salva: {Path.GetFileName(result.FilePath)}");
                 if (regionSession is not null) LoadCompletedRegionSession(regionSession);
                 AcceptCompletedCapture(result);
                 RefreshCaptureHistory();
                 ShowTrayBalloon(
                     3500,
-                    "Captura concluída",
+                    UiText.Get("Captura concluída"),
                     string.IsNullOrWhiteSpace(result.FilePath)
-                        ? "Imagem copiada para o clipboard."
-                        : "Clique para abrir a imagem.",
+                        ? UiText.Get("Imagem copiada para o clipboard.")
+                        : UiText.Get("Clique para abrir a imagem."),
                     Forms.ToolTipIcon.Info,
                     result.FilePath);
             }
@@ -2592,7 +2594,7 @@ public partial class MainWindow : Window
                 ShowFromTray();
                 ShowAppDialog(
                     exception.Message,
-                    "Não foi possível capturar",
+                    UiText.Get("Não foi possível capturar"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
@@ -2600,7 +2602,7 @@ public partial class MainWindow : Window
             {
                 ShowTrayBalloon(
                     2500,
-                    "Não foi possível capturar",
+                    UiText.Get("Não foi possível capturar"),
                     exception.Message,
                     Forms.ToolTipIcon.Warning);
             }
@@ -2628,7 +2630,7 @@ public partial class MainWindow : Window
         }
         for (var remaining = seconds; remaining > 0; remaining--)
         {
-            StatusText.Text = $"Captura em {remaining}s…";
+            StatusText.Text = UiText.Format($"Captura em {remaining}s…");
             await Task.Delay(1000);
         }
     }
@@ -2643,7 +2645,7 @@ public partial class MainWindow : Window
         }
         if (!TryReadCaptureSettings(out var settingsError))
         {
-            ShowAppDialog(settingsError, "Gravação", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShowAppDialog(settingsError, UiText.Get("Gravação"), MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         await _settingsStore.SaveAsync(_settings);
@@ -2661,7 +2663,7 @@ public partial class MainWindow : Window
             }
             else
             {
-                target = ResolveRecordingTarget("Selecione a região do vídeo");
+                target = ResolveRecordingTarget(UiText.Get("Selecione a região do vídeo"));
             }
             if (target is null)
             {
@@ -2719,7 +2721,7 @@ public partial class MainWindow : Window
                 DurationSeconds = elapsed.TotalSeconds
             });
             ShowFromTray();
-            StatusText.Text = $"Vídeo salvo: {Path.GetFileName(path)}";
+            StatusText.Text = UiText.Format($"Vídeo salvo: {Path.GetFileName(path)}");
             RefreshCaptureHistory();
         }
         catch (Exception exception)
@@ -2734,9 +2736,9 @@ public partial class MainWindow : Window
                 ("recordingId", failedRecordingId), ("media", "MP4"), ("result", "failure"));
             ShowAppDialog(
                 exception.Message +
-                "\n\nO SlashDesk usa H.264/Media Foundation. Em edições N/KN, instale o Media Feature Pack do Windows." +
+                UiText.Get("\n\nO SlashDesk usa H.264/Media Foundation. Em edições N/KN, instale o Media Feature Pack do Windows.") +
                 $"\nLogs: {AppPaths.LogsDirectory}",
-                "Não foi possível gravar",
+                UiText.Get("Não foi possível gravar"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -2756,7 +2758,7 @@ public partial class MainWindow : Window
             return;
         }
         await _settingsStore.SaveAsync(_settings);
-        var target = _captureService.SelectRecordingRegion(this, "Selecione a região do GIF");
+        var target = _captureService.SelectRecordingRegion(this, UiText.Get("Selecione a região do GIF"));
         if (target is null)
         {
             return;
@@ -2783,16 +2785,16 @@ public partial class MainWindow : Window
             if (recording.Metrics?.DroppedFrames > 0)
             {
                 ShowAppDialog(
-                    $"O pipeline descartou {recording.Metrics.DroppedFrames:N0} quadro(s) por sobrecarga. " +
-                    "O tempo foi preservado no GIF e o evento foi registrado nos logs.",
-                    "GIF finalizado com sobrecarga",
+                    UiText.Format($"O pipeline descartou {recording.Metrics.DroppedFrames:N0} quadro(s) por sobrecarga. ") +
+                    UiText.Get("O tempo foi preservado no GIF e o evento foi registrado nos logs."),
+                    UiText.Get("GIF finalizado com sobrecarga"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
             var preview = new GifPreviewWindow(recording) { Owner = this };
             if (preview.ShowDialog() != true)
             {
-                StatusText.Text = "GIF descartado";
+                StatusText.Text = UiText.Get("GIF descartado");
                 return;
             }
             var path = await _gifRecordingService.SaveAsync(
@@ -2810,7 +2812,7 @@ public partial class MainWindow : Window
                 Height = recording.Height,
                 DurationSeconds = recording.Duration.TotalSeconds
             });
-            StatusText.Text = $"GIF salvo: {Path.GetFileName(path)}";
+            StatusText.Text = UiText.Format($"GIF salvo: {Path.GetFileName(path)}");
             RefreshCaptureHistory();
         }
         catch (OperationCanceledException)
@@ -2823,7 +2825,7 @@ public partial class MainWindow : Window
             ShowFromTray();
             AppDiagnosticLog.Write("recording.interface-restored",
                 ("recordingId", cancelledRecordingId), ("media", "GIF"), ("result", "cancelled"));
-            StatusText.Text = "Gravação de GIF cancelada";
+            StatusText.Text = UiText.Get("Gravação de GIF cancelada");
         }
         catch (Exception exception)
         {
@@ -2837,7 +2839,7 @@ public partial class MainWindow : Window
                 ("recordingId", failedRecordingId), ("media", "GIF"), ("result", "failure"));
             ShowAppDialog(
                 exception.Message,
-                "Não foi possível criar o GIF",
+                UiText.Get("Não foi possível criar o GIF"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -2862,8 +2864,8 @@ public partial class MainWindow : Window
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Abrir imagem no editor",
-            Filter = "Imagens|*.png;*.jpg;*.jpeg;*.bmp;*.gif|Todos os arquivos|*.*"
+            Title = UiText.Get("Abrir imagem no editor"),
+            Filter = UiText.Get("Imagens|*.png;*.jpg;*.jpeg;*.bmp;*.gif|Todos os arquivos|*.*")
         };
         if (dialog.ShowDialog(this) != true)
         {
@@ -2871,9 +2873,9 @@ public partial class MainWindow : Window
         }
 
         if (LoadCaptureWorkbenchImage(dialog.FileName, null,
-                $"Imagem · {Path.GetFileName(dialog.FileName)}"))
+                UiText.Format($"Imagem · {Path.GetFileName(dialog.FileName)}")))
         {
-            StatusText.Text = $"Imagem aberta: {Path.GetFileName(dialog.FileName)}";
+            StatusText.Text = UiText.Format($"Imagem aberta: {Path.GetFileName(dialog.FileName)}");
         }
     }
 
@@ -2910,7 +2912,7 @@ public partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is IOException or NotSupportedException or ArgumentException or System.Runtime.InteropServices.ExternalException)
         {
-            StatusText.Text = "Não foi possível abrir a imagem selecionada";
+            StatusText.Text = UiText.Get("Não foi possível abrir a imagem selecionada");
             return false;
         }
     }
@@ -2919,7 +2921,7 @@ public partial class MainWindow : Window
     {
         if (!CaptureInlineEditor.HasImage)
         {
-            ShowAppDialog("Abra uma imagem ou faça uma captura antes de editar.", "Edição rápida",
+            ShowAppDialog(UiText.Get("Abra uma imagem ou faça uma captura antes de editar."), UiText.Get("Edição rápida"),
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -2933,24 +2935,24 @@ public partial class MainWindow : Window
         CaptureInlineEditor.SelectTool(selected);
         UpdateCaptureWorkbenchToolState(selected);
         StatusText.Text = selected is null
-            ? "Seleção ativada"
-            : $"{CaptureWorkbenchToolLabel(selected.Value)} ativado — arraste sobre a imagem";
+            ? UiText.Get("Seleção ativada")
+            : UiText.Format($"{CaptureWorkbenchToolLabel(selected.Value)} ativado — arraste sobre a imagem");
     }
 
     private static string CaptureWorkbenchToolLabel(CaptureAnnotationKind tool) => tool switch
     {
-        CaptureAnnotationKind.Pencil => "Caneta",
-        CaptureAnnotationKind.Highlighter => "Marca-texto",
-        CaptureAnnotationKind.Arrow => "Seta",
-        CaptureAnnotationKind.Rectangle => "Retângulo",
-        CaptureAnnotationKind.Text => "Texto",
+        CaptureAnnotationKind.Pencil => UiText.Get("Caneta"),
+        CaptureAnnotationKind.Highlighter => UiText.Get("Marca-texto"),
+        CaptureAnnotationKind.Arrow => UiText.Get("Seta"),
+        CaptureAnnotationKind.Rectangle => UiText.Get("Retângulo"),
+        CaptureAnnotationKind.Text => UiText.Get("Texto"),
         CaptureAnnotationKind.Stamp => "Emoji",
-        CaptureAnnotationKind.Ellipse => "Elipse",
-        CaptureAnnotationKind.Line => "Linha",
-        CaptureAnnotationKind.Number => "Número",
-        CaptureAnnotationKind.Blur => "Desfocar",
-        CaptureAnnotationKind.Pixelate => "Pixelizar",
-        _ => "Ferramenta"
+        CaptureAnnotationKind.Ellipse => UiText.Get("Elipse"),
+        CaptureAnnotationKind.Line => UiText.Get("Linha"),
+        CaptureAnnotationKind.Number => UiText.Get("Número"),
+        CaptureAnnotationKind.Blur => UiText.Get("Desfocar"),
+        CaptureAnnotationKind.Pixelate => UiText.Get("Pixelizar"),
+        _ => UiText.Get("Ferramenta")
     };
 
     private void UpdateCaptureWorkbenchToolState(CaptureAnnotationKind? selected)
@@ -2996,9 +2998,9 @@ public partial class MainWindow : Window
         CaptureExpandEditorButton.IsEnabled = CaptureInlineEditor.HasImage;
         CaptureDiscardChangesButton.IsEnabled = CaptureInlineEditor.HasUnsavedChanges && !_captureCommitInProgress;
         CaptureEditorSessionText.Text = CaptureInlineEditor.Document is { } document
-            ? $"{document.Dimensions.Width} × {document.Dimensions.Height} px · {document.OperationCount} edição(ões) · " +
-              (document.HasUnsavedChanges ? "Alterações não salvas" : "Sem alterações pendentes")
-            : "Uma sessão · edição não destrutiva";
+            ? UiText.Format($"{document.Dimensions.Width} × {document.Dimensions.Height} px · {document.OperationCount} edição(ões) · ") +
+              (document.HasUnsavedChanges ? UiText.Get("Alterações não salvas") : UiText.Get("Sem alterações pendentes"))
+            : UiText.Get("Uma sessão · edição não destrutiva");
         foreach (ComboBoxItem item in CaptureWorkbenchZoomBox.Items)
             if (item.Tag is string value && double.TryParse(value, System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var zoom) && Math.Abs(zoom - CaptureInlineEditor.Zoom) < .001)
@@ -3030,7 +3032,7 @@ public partial class MainWindow : Window
     {
         if (!CaptureInlineEditor.HasImage)
         {
-            ShowAppDialog("Abra uma imagem ou faça uma captura antes de editar.", "Editor avançado",
+            ShowAppDialog(UiText.Get("Abra uma imagem ou faça uma captura antes de editar."), UiText.Get("Editor avançado"),
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -3072,7 +3074,7 @@ public partial class MainWindow : Window
                      CaptureBlurToolButton, CapturePixelateToolButton, CaptureCropToolButton, CaptureResizeToolButton })
             tool.Visibility = expanded ? Visibility.Visible : Visibility.Collapsed;
         UpdateCaptureToolbarLayout();
-        CaptureExpandEditorButton.Content = expanded ? "Voltar ao painel · Esc" : "Expandir editor";
+        CaptureExpandEditorButton.Content = expanded ? UiText.Get("Voltar ao painel · Esc") : UiText.Get("Expandir editor");
         if (expanded)
         {
             _capturePageVisibility.Clear();
@@ -3115,10 +3117,10 @@ public partial class MainWindow : Window
     private bool CanReplaceCaptureSession()
     {
         if (_pendingCaptureEdit is not null || _captureCommitInProgress)
-        { StatusText.Text = "Conclua ou cancele a captura atual antes de abrir outra imagem."; return false; }
+        { StatusText.Text = UiText.Get("Conclua ou cancele a captura atual antes de abrir outra imagem."); return false; }
         if (!CaptureInlineEditor.HasUnsavedChanges && !CaptureInlineEditor.HasPendingCrop) return true;
-        return ShowAppDialog("Há alterações ou uma seleção de recorte pendentes. Descartá-las e abrir outra imagem?",
-            "Editor de imagem", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
+        return ShowAppDialog(UiText.Get("Há alterações ou uma seleção de recorte pendentes. Descartá-las e abrir outra imagem?"),
+            UiText.Get("Editor de imagem"), MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
     }
 
     internal void PrepareCaptureEvidence(DrawingBitmap source, CaptureAnnotationKind tool, bool expanded)
@@ -3131,7 +3133,7 @@ public partial class MainWindow : Window
         }
         CapturePreviewEmptyPanel.Visibility = Visibility.Collapsed;
         CaptureWorkbenchToolbar.Visibility = CaptureWorkbenchFooter.Visibility = CaptureEditorContext.Visibility = Visibility.Visible;
-        CapturePreviewDetailsText.Text = "Imagem de teste local · sessão única";
+        CapturePreviewDetailsText.Text = UiText.Get("Imagem de teste local · sessão única");
         CaptureInlineEditor.SelectTool(tool);
         SetCaptureEditorExpanded(expanded);
     }
@@ -3142,7 +3144,7 @@ public partial class MainWindow : Window
 
     private void CaptureDiscardChanges_OnClick(object sender, RoutedEventArgs e)
     {
-        if (ShowAppDialog("Voltar à última versão salva nesta sessão?", "Descartar alterações", MessageBoxButton.YesNo,
+        if (ShowAppDialog(UiText.Get("Voltar à última versão salva nesta sessão?"), UiText.Get("Descartar alterações"), MessageBoxButton.YesNo,
                 MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes) CaptureInlineEditor.DiscardChanges();
     }
 
@@ -3156,7 +3158,7 @@ public partial class MainWindow : Window
         CapturePreviewEmptyPanel.Visibility = Visibility.Collapsed;
         CaptureWorkbenchToolbar.Visibility = CaptureWorkbenchFooter.Visibility = CaptureEditorContext.Visibility = Visibility.Visible;
         CaptureInlineEditor.SelectTool(initialTool);
-        CapturePreviewDetailsText.Text = "Nova captura · conclua para aplicar a regra";
+        CapturePreviewDetailsText.Text = UiText.Get("Nova captura · conclua para aplicar a regra");
         _pendingCaptureEdit = new(TaskCreationOptions.RunContinuationsAsynchronously);
         CaptureCancelPendingButton.Visibility = Visibility.Visible;
         ShowFromTray(); ShowView(CaptureView, CaptureTabButton); CaptureInlineEditor.BringIntoView(); CaptureInlineEditor.Focus();
@@ -3170,7 +3172,7 @@ public partial class MainWindow : Window
         CaptureInlineEditor.Clear();
         CapturePreviewEmptyPanel.Visibility = Visibility.Visible;
         CaptureWorkbenchToolbar.Visibility = CaptureWorkbenchFooter.Visibility = CaptureEditorContext.Visibility = Visibility.Collapsed;
-        StatusText.Text = "Captura cancelada sem salvar";
+        StatusText.Text = UiText.Get("Captura cancelada sem salvar");
     }
 
     private void AcceptCompletedCapture(CaptureRecord result)
@@ -3219,12 +3221,12 @@ public partial class MainWindow : Window
             CaptureInlineEditor.MarkSaved();
             CapturePreviewDetailsText.Text = $"{CaptureTypeLabel(record)} · {record.Width}×{record.Height}";
             RefreshCaptureHistory();
-            StatusText.Text = $"Edição salva e atualizada nos Recentes: {Path.GetFileName(path)}";
+            StatusText.Text = UiText.Format($"Edição salva e atualizada nos Recentes: {Path.GetFileName(path)}");
             return true;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or System.Runtime.InteropServices.ExternalException)
         {
-            ShowAppDialog(exception.Message, "Salvar captura", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShowAppDialog(exception.Message, UiText.Get("Salvar captura"), MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
         finally
@@ -3240,7 +3242,7 @@ public partial class MainWindow : Window
         if (CaptureInlineEditor.HasPendingCrop || _captureCommitInProgress) return;
         if (!CaptureInlineEditor.HasImage)
         {
-            ShowAppDialog("Não há uma imagem no editor.", "Copiar",
+            ShowAppDialog(UiText.Get("Não há uma imagem no editor."), UiText.Get("Copiar"),
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -3248,10 +3250,10 @@ public partial class MainWindow : Window
         try
         {
             Clipboard.SetImage(ToBitmapSource(rendered));
-            StatusText.Text = "Imagem copiada para a área de transferência";
+            StatusText.Text = UiText.Get("Imagem copiada para a área de transferência");
         }
         catch (System.Runtime.InteropServices.ExternalException)
-        { StatusText.Text = "A área de transferência está ocupada. Tente copiar novamente."; }
+        { StatusText.Text = UiText.Get("A área de transferência está ocupada. Tente copiar novamente."); }
     }
 
     private async void SaveCapturePreview_OnClick(object sender, RoutedEventArgs e)
@@ -3259,11 +3261,11 @@ public partial class MainWindow : Window
         if (CaptureInlineEditor.HasPendingCrop || _captureCommitInProgress) return;
         if (!CaptureInlineEditor.HasImage)
         {
-            ShowAppDialog("Não há uma imagem no editor.", "Salvar",
+            ShowAppDialog(UiText.Get("Não há uma imagem no editor."), UiText.Get("Salvar"),
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        var dialog = CreateCapturePreviewSaveDialog("Salvar uma cópia");
+        var dialog = CreateCapturePreviewSaveDialog(UiText.Get("Salvar uma cópia"));
         if (dialog.ShowDialog(this) != true)
         {
             return;
@@ -3286,7 +3288,7 @@ public partial class MainWindow : Window
         }
         if (!CaptureInlineEditor.HasImage)
         {
-            ShowAppDialog("Abra uma imagem ou faça uma captura antes de concluir.", "Concluir",
+            ShowAppDialog(UiText.Get("Abra uma imagem ou faça uma captura antes de concluir."), UiText.Get("Concluir"),
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
@@ -3301,7 +3303,7 @@ public partial class MainWindow : Window
         }
         else if (_settings.Capture.SaveAutomatically)
         {
-            var dialog = CreateCapturePreviewSaveDialog("Salvar edição");
+            var dialog = CreateCapturePreviewSaveDialog(UiText.Get("Salvar edição"));
             if (dialog.ShowDialog(this) != true || !await CommitCaptureWorkbenchImageAsync(rendered, dialog.FileName)) return;
             saved = true;
         }
@@ -3309,11 +3311,11 @@ public partial class MainWindow : Window
         {
             try { Clipboard.SetImage(ToBitmapSource(rendered)); }
             catch (System.Runtime.InteropServices.ExternalException)
-            { StatusText.Text = saved ? "Edição salva; a área de transferência está ocupada. Tente copiar novamente." : "A área de transferência está ocupada. Tente copiar novamente."; return; }
+            { StatusText.Text = saved ? UiText.Get("Edição salva; a área de transferência está ocupada. Tente copiar novamente.") : UiText.Get("A área de transferência está ocupada. Tente copiar novamente."); return; }
         }
         StatusText.Text = saved
-            ? "Edição concluída e atualizada nos Recentes"
-            : _settings.Capture.CopyToClipboard ? "Captura copiada; a sessão permanece disponível" : "Resultado mantido apenas na sessão — copiar e salvar estão desativados na regra";
+            ? UiText.Get("Edição concluída e atualizada nos Recentes")
+            : _settings.Capture.CopyToClipboard ? UiText.Get("Captura copiada; a sessão permanece disponível") : UiText.Get("Resultado mantido apenas na sessão — copiar e salvar estão desativados na regra");
     }
 
     private void CaptureWorkbenchZoom_OnChanged(object sender, SelectionChangedEventArgs e)
@@ -3398,7 +3400,7 @@ public partial class MainWindow : Window
                 CornerRadius = new CornerRadius(9),
                 Child = new TextBlock
                 {
-                    Text = _captureService.History.Count > 0 ? "Nenhuma captura corresponde à busca e ao filtro." : "As últimas capturas aparecerão aqui.",
+                    Text = _captureService.History.Count > 0 ? UiText.Get("Nenhuma captura corresponde à busca e ao filtro.") : UiText.Get("As últimas capturas aparecerão aqui."),
                     Foreground = (Brush)FindResource("MutedBrush")
                 }
             };
@@ -3406,7 +3408,7 @@ public partial class MainWindow : Window
             empty.SetResourceReference(Border.BorderBrushProperty, "Lab.line");
             CaptureHistoryPanel.Children.Add(empty);
         }
-        CaptureHistoryStatusText.Text = filtered.Count > 40 ? $"40 de {filtered.Count:N0} · Ver todas" : filtered.Count.ToString("N0");
+        CaptureHistoryStatusText.Text = filtered.Count > 40 ? UiText.Format($"40 de {filtered.Count:N0} · Ver todas") : filtered.Count.ToString("N0");
         Dispatcher.BeginInvoke(new Action(UpdateCaptureHistoryNavigationState));
     }
 
@@ -3421,7 +3423,7 @@ public partial class MainWindow : Window
             Padding = new Thickness(10),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(9),
-            ToolTip = "Selecionar no editor",
+            ToolTip = UiText.Get("Selecionar no editor"),
             Tag = record,
             Cursor = Cursors.Hand,
             RenderTransform = new TranslateTransform(),
@@ -3519,13 +3521,13 @@ public partial class MainWindow : Window
             Orientation = Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Center
         };
-        actions.Children.Add(HistoryButton("ExternalLink", "Abrir", record, OpenHistoryItem_OnClick));
-        actions.Children.Add(HistoryButton("Copy", "Copiar", record, CopyHistoryItem_OnClick));
+        actions.Children.Add(HistoryButton("ExternalLink", UiText.Get("Abrir"), record, OpenHistoryItem_OnClick));
+        actions.Children.Add(HistoryButton("Copy", UiText.Get("Copiar"), record, CopyHistoryItem_OnClick));
         if (record.MediaKind.Equals("image", StringComparison.OrdinalIgnoreCase))
         {
-            actions.Children.Add(HistoryButton("PenLine", "Editar", record, EditHistoryItem_OnClick));
+            actions.Children.Add(HistoryButton("PenLine", UiText.Get("Editar"), record, EditHistoryItem_OnClick));
         }
-        actions.Children.Add(HistoryButton("X", "Excluir", record, DeleteHistoryItem_OnClick));
+        actions.Children.Add(HistoryButton("X", UiText.Get("Excluir"), record, DeleteHistoryItem_OnClick));
         Grid.SetColumn(actions, 2);
         grid.Children.Add(actions);
         card.Child = grid;
@@ -3551,21 +3553,21 @@ public partial class MainWindow : Window
                 $"{CaptureTypeLabel(record)} · {record.Width}×{record.Height}"))
         {
             CaptureInlineEditor.BringIntoView();
-            StatusText.Text = "Captura selecionada no editor";
+            StatusText.Text = UiText.Get("Captura selecionada no editor");
         }
     }
 
     private static string CaptureTypeLabel(CaptureRecord record) => record.MediaKind.ToLowerInvariant() switch
     {
         "gif" => "GIF",
-        "video" => "Vídeo MP4",
+        "video" => UiText.Get("Vídeo MP4"),
         _ => record.Type.ToLowerInvariant() switch
         {
             "monitor" => "Monitor",
-            "regiao" => "Região",
-            "janela" => "Janela",
-            "rolagem" => "Captura longa",
-            _ => "Imagem"
+            "regiao" => UiText.Get("Região"),
+            "janela" => UiText.Get("Janela"),
+            "rolagem" => UiText.Get("Captura longa"),
+            _ => UiText.Get("Imagem")
         }
     };
 
@@ -3702,8 +3704,8 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
             ShowAppDialog(
-                "O arquivo não está mais disponível.",
-                "Histórico",
+                UiText.Get("O arquivo não está mais disponível."),
+                UiText.Get("Histórico"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
             return;
@@ -3721,13 +3723,13 @@ public partial class MainWindow : Window
         {
             var path = _captureService.ResolveFilePath(record);
             CaptureService.CopyFileToClipboard(path);
-            StatusText.Text = $"Captura copiada: {Path.GetFileName(path)}";
+            StatusText.Text = UiText.Format($"Captura copiada: {Path.GetFileName(path)}");
         }
         catch (Exception exception)
         {
             ShowAppDialog(
                 exception.Message,
-                "Histórico",
+                UiText.Get("Histórico"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
         }
@@ -3744,7 +3746,7 @@ public partial class MainWindow : Window
         {
             ShowView(CaptureView, CaptureTabButton);
             CaptureInlineEditor.BringIntoView(); CaptureInlineEditor.Focus();
-            StatusText.Text = "Imagem aberta na sessão única de edição";
+            StatusText.Text = UiText.Get("Imagem aberta na sessão única de edição");
         }
     }
 
@@ -3755,8 +3757,8 @@ public partial class MainWindow : Window
             return;
         }
         var choice = ShowAppDialog(
-            "Sim: excluir também o arquivo local.\nNão: remover somente do histórico.",
-            "Excluir captura",
+            UiText.Get("Sim: excluir também o arquivo local.\nNão: remover somente do histórico."),
+            UiText.Get("Excluir captura"),
             MessageBoxButton.YesNoCancel,
             MessageBoxImage.Warning);
         if (choice == MessageBoxResult.Cancel)
@@ -3774,11 +3776,11 @@ public partial class MainWindow : Window
         var days = ParseSelectedInt(CaptureRetentionBox, 90);
         if (days <= 0)
         {
-            CaptureHistoryStatusText.Text = "Limpeza automática desativada";
+            CaptureHistoryStatusText.Text = UiText.Get("Limpeza automática desativada");
             return;
         }
         var count = await _captureService.CleanOlderThanAsync(days, deleteFiles: false);
-        CaptureHistoryStatusText.Text = $"{count:N0} entrada(s) antiga(s) removida(s)";
+        CaptureHistoryStatusText.Text = UiText.Format($"{count:N0} entrada(s) antiga(s) removida(s)");
         RefreshCaptureHistory();
     }
 
@@ -3808,8 +3810,8 @@ public partial class MainWindow : Window
             else
             {
                 ShowSettingsDialog(
-                    result.Message,
-                    "Atualizações do SlashDesk",
+                    UiText.UpdateStatus(result.Message),
+                    UiText.Get("Atualizações do SlashDesk"),
                     MessageBoxButton.OK,
                     result.Status == UpdateCheckStatus.Offline
                         ? MessageBoxImage.Information
@@ -3819,8 +3821,8 @@ public partial class MainWindow : Window
         catch (Exception exception)
         {
             ShowSettingsDialog(
-                $"Não foi possível consultar o GitHub.\n\n{exception.Message}",
-                "Atualizações do SlashDesk",
+                UiText.Format($"Não foi possível consultar o GitHub.\n\n{exception.Message}"),
+                UiText.Get("Atualizações do SlashDesk"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -3890,11 +3892,11 @@ public partial class MainWindow : Window
                 result.Release is not null &&
                 _updateNotificationGate.TryMark(result.Release.Version))
             {
-                StatusText.Text = result.Message;
+                StatusText.Text = UiText.UpdateStatus(result.Message);
                 ShowTrayBalloon(
                     2500,
-                    "Atualização disponível",
-                    result.Message,
+                    UiText.Get("Atualização disponível"),
+                    UiText.UpdateStatus(result.Message),
                     Forms.ToolTipIcon.Info);
                 await OfferUpdateAsync(result);
             }
@@ -3930,10 +3932,10 @@ public partial class MainWindow : Window
                     else
                     {
                         ShowAppDialog(
-                            "Esta compilação instalada ainda não possui um instalador transacional. " +
-                            "A página oficial será aberta para uma atualização manual que preserva " +
+                            UiText.Get("Esta compilação instalada ainda não possui um instalador transacional. ") +
+                            UiText.Get("A página oficial será aberta para uma atualização manual que preserva ") +
                             "%LocalAppData%\\SlashDesk.",
-                            "Atualização da versão instalada",
+                            UiText.Get("Atualização da versão instalada"),
                             MessageBoxButton.OK,
                             MessageBoxImage.Information);
                         Process.Start(new ProcessStartInfo(result.Release.PageUrl) { UseShellExecute = true });
@@ -3966,7 +3968,7 @@ public partial class MainWindow : Window
                 progressWindow,
                 progressWindow.Cancellation.Token);
             progressWindow.Report(new UpdateProgress(
-                "Download validado. Encerrando para substituir somente SlashDesk.exe...",
+                UiText.Get("Download validado. Encerrando para substituir somente SlashDesk.exe..."),
                 0,
                 null,
                 IsApplying: true));
@@ -3978,16 +3980,16 @@ public partial class MainWindow : Window
         catch (OperationCanceledException)
         {
             progressWindow.AllowClose();
-            StatusText.Text = "Atualização cancelada; nenhum arquivo do aplicativo foi alterado";
+            StatusText.Text = UiText.Get("Atualização cancelada; nenhum arquivo do aplicativo foi alterado");
         }
         catch (Exception exception)
         {
             progressWindow.AllowClose();
             AppDiagnosticLog.WriteException("update.prepare.failed", exception);
             ShowAppDialog(
-                "A atualização não foi aplicada. O executável atual e SlashDeskData foram " +
+                UiText.Get("A atualização não foi aplicada. O executável atual e SlashDeskData foram ") +
                 "preservados.\n\n" + exception.Message,
-                "Falha na atualização",
+                UiText.Get("Falha na atualização"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -4003,9 +4005,9 @@ public partial class MainWindow : Window
     private void UpdateUpdateDisplay(UpdateState state)
     {
         LastUpdateCheckText.Text = state.LastCheckedUtc is null
-            ? "Última verificação: ainda não verificado"
-            : $"Última verificação: {state.LastCheckedUtc.Value.ToLocalTime():g}";
-        LastUpdateResultText.Text = $"Resultado: {state.LastResult}";
+            ? UiText.Get("Última verificação: ainda não verificado")
+            : UiText.Format($"Última verificação: {state.LastCheckedUtc.Value.ToLocalTime():g}");
+        LastUpdateResultText.Text = UiText.Format($"Resultado: {UiText.UpdateStatus(state.LastResult)}");
         SettingsLastUpdateCheckText.Text = LastUpdateCheckText.Text;
         SettingsLastUpdateResultText.Text = LastUpdateResultText.Text;
         _lastReleaseUrl = state.LastReleaseUrl;
@@ -4212,22 +4214,22 @@ public partial class MainWindow : Window
 
     private void MainWindow_OnClosing(object? sender, CancelEventArgs e)
     {
-        if (_settingsOperationInProgress) { e.Cancel = true; _exitRequested = false; StatusText.Text = "Aguarde a manutenção em andamento antes de sair."; return; }
+        if (_settingsOperationInProgress) { e.Cancel = true; _exitRequested = false; StatusText.Text = UiText.Get("Aguarde a manutenção em andamento antes de sair."); return; }
         if (!_exitRequested && _settings.CloseToTray)
         {
             e.Cancel = true;
             Hide();
             ShowTrayBalloon(
                 1800,
-                "SlashDesk continua ativo",
-                "Use o ícone da bandeja para abrir ou sair.",
+                UiText.Get("SlashDesk continua ativo"),
+                UiText.Get("Use o ícone da bandeja para abrir ou sair."),
                 Forms.ToolTipIcon.Info);
             return;
         }
 
         if (!CanDiscardShortcutDraft()) { e.Cancel = true; _exitRequested = false; return; }
         _activeUpdateCancellation?.Cancel();
-        if (CaptureInlineEditor.HasUnsavedChanges && ShowAppDialog("Há alterações de imagem não salvas. Sair sem salvar?", "Editor de imagem",
+        if (CaptureInlineEditor.HasUnsavedChanges && ShowAppDialog(UiText.Get("Há alterações de imagem não salvas. Sair sem salvar?"), UiText.Get("Editor de imagem"),
                 MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
         { e.Cancel = true; _exitRequested = false; return; }
         _pendingCaptureEdit?.TrySetResult(null);

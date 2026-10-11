@@ -30,7 +30,7 @@ public sealed class CaptureOcrService
     {
         cancellation.ThrowIfCancellationRequested();
         if ((long)snapshot.Width * snapshot.Height > MaxPixels)
-            throw new InvalidOperationException("A região é muito grande. Selecione um trecho menor para extrair texto.");
+            throw new InvalidOperationException(UiText.Get("A região é muito grande. Selecione um trecho menor para extrair texto."));
         var folder = Path.Combine(Path.GetTempPath(), "SlashDesk-OCR", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
@@ -47,7 +47,7 @@ public sealed class CaptureOcrService
             process.StartInfo.ArgumentList.Add(_modelsDirectory ?? "");
             process.StartInfo.ArgumentList.Add(JsonSerializer.Serialize(Options));
             linked.Token.ThrowIfCancellationRequested();
-            if (!process.Start()) throw new InvalidOperationException("Não foi possível iniciar a leitura de texto.");
+            if (!process.Start()) throw new InvalidOperationException(UiText.Get("Não foi possível iniciar a leitura de texto."));
             // Drain without retaining native diagnostics, which may contain recognized text.
             var errors = DrainAsync(process.StandardError); var stdout = DrainAsync(process.StandardOutput);
             try { await process.WaitForExitAsync(linked.Token); }
@@ -56,16 +56,16 @@ public sealed class CaptureOcrService
                 if (!process.HasExited) process.Kill(entireProcessTree: true);
                 await process.WaitForExitAsync(); await Task.WhenAll(errors, stdout);
                 if (cancellation.IsCancellationRequested) throw new OperationCanceledException(cancellation);
-                throw new TimeoutException("A leitura demorou demais. Tente selecionar uma região menor.");
+                throw new TimeoutException(UiText.Get("A leitura demorou demais. Tente selecionar uma região menor."));
             }
             await Task.WhenAll(errors, stdout); linked.Token.ThrowIfCancellationRequested();
             if (process.ExitCode == 4)
-                throw new InvalidOperationException("Não foi possível carregar os componentes locais do OCR. Confira o requisito Microsoft Visual C++ x64 no LEIA-ANTES do piloto.");
+                throw new InvalidOperationException(UiText.Get("Não foi possível carregar os componentes locais do OCR. Confira o requisito Microsoft Visual C++ x64 no LEIA-ANTES do piloto."));
             if (process.ExitCode != 0 || !File.Exists(output))
-                throw new InvalidOperationException("Não foi possível reconhecer o texto. Tente uma região menor ou uma imagem mais nítida.");
-            if (new FileInfo(output).Length > 4 * 1024 * 1024) throw new InvalidDataException("Resultado de texto muito grande.");
+                throw new InvalidOperationException(UiText.Get("Não foi possível reconhecer o texto. Tente uma região menor ou uma imagem mais nítida."));
+            if (new FileInfo(output).Length > 4 * 1024 * 1024) throw new InvalidDataException(UiText.Get("Resultado de texto muito grande."));
             var result = JsonSerializer.Deserialize<CaptureOcrResult>(await File.ReadAllTextAsync(output, linked.Token))
-                ?? throw new InvalidDataException("Resultado OCR inválido.");
+                ?? throw new InvalidDataException(UiText.Get("Resultado OCR inválido."));
             return result with { Text = result.Text.Trim(), ElapsedMilliseconds = clock.ElapsedMilliseconds };
         }
         finally
@@ -150,7 +150,7 @@ public sealed class CaptureOcrService
                     ?? throw new FileNotFoundException("Modelo OCR ausente."))
                 using (var destination = File.Create(temporary)) input.CopyTo(destination);
                 using (var restored = File.OpenRead(temporary))
-                    if (Convert.ToHexStringLower(SHA256.HashData(restored)) != hash) throw new InvalidDataException("Modelo OCR inválido.");
+                    if (Convert.ToHexStringLower(SHA256.HashData(restored)) != hash) throw new InvalidDataException(UiText.Get("Modelo OCR inválido."));
                 File.Move(temporary, path, overwrite: true);
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }

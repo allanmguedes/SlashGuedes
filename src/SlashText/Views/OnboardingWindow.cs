@@ -10,7 +10,7 @@ public sealed class OnboardingWindow : Window
 {
     public OnboardingWindow()
     {
-        Title = "Bem-vindo ao SlashDesk";
+        Title = UiText.Get("Bem-vindo ao SlashDesk");
         Width = 760;
         Height = 590;
         MinWidth = 620;
@@ -44,13 +44,13 @@ public sealed class OnboardingWindow : Window
         var headingCopy = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
         headingCopy.Children.Add(new TextBlock
         {
-            Text = "Bem-vindo ao SlashDesk",
+            Text = UiText.Get("Bem-vindo ao SlashDesk"),
             FontSize = 28,
             FontWeight = FontWeights.SemiBold
         });
         headingCopy.Children.Add(new TextBlock
         {
-            Text = "Texto, acentos, capturas e gravações no seu dia a dia.", TextWrapping = TextWrapping.Wrap,
+            Text = UiText.Get("Texto, acentos, capturas e gravações no seu dia a dia."), TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 4, 0, 0),
             Foreground = (Brush)Application.Current.FindResource("MutedBrush")
         });
@@ -59,13 +59,13 @@ public sealed class OnboardingWindow : Window
         root.Children.Add(heading);
 
         var features = new UniformGrid { Rows = 2, Columns = 2 };
-        features.Children.Add(Card("01", "Atalhos de texto", "Digite /atalho e confirme para inserir textos reutilizáveis."));
-        features.Children.Add(Card("02", "Acento Rápido", "Segure uma letra e toque na tecla de ativação para escolher o caractere."));
-        features.Children.Add(Card("03", "Captura local", "Capture monitor, região ou janela e marque a imagem antes de salvar."));
+        features.Children.Add(Card("01", UiText.Get("Atalhos de texto"), UiText.Get("Digite /atalho e confirme para inserir textos reutilizáveis.")));
+        features.Children.Add(Card("02", UiText.Get("Acento Rápido"), UiText.Get("Segure uma letra e toque na tecla de ativação para escolher o caractere.")));
+        features.Children.Add(Card("03", UiText.Get("Captura local"), UiText.Get("Capture monitor, região ou janela e marque a imagem antes de salvar.")));
         features.Children.Add(Card(
             "04",
-            "Traga seus atalhos",
-            "Importe arquivos do Text Blaze, Espanso ou outro SlashDesk; o original fica protegido por backup."));
+            UiText.Get("Traga seus atalhos"),
+            UiText.Get("Importe arquivos do Text Blaze, Espanso ou outro SlashDesk; o original fica protegido por backup.")));
         var featuresScroll = new ScrollViewer { Content = features, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         Grid.SetRow(featuresScroll, 2);
         root.Children.Add(featuresScroll);
@@ -75,13 +75,13 @@ public sealed class OnboardingWindow : Window
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         footer.Children.Add(new TextBlock
         {
-            Text = "Seus dados ficam com você · sem conta",
+            Text = UiText.Get("Seus dados ficam com você · sem conta"),
             VerticalAlignment = VerticalAlignment.Center,
             Foreground = (Brush)Application.Current.FindResource("MutedBrush")
         });
         var finish = new Button
         {
-            Content = "Começar a usar", IsDefault = true,
+            Content = UiText.Get("Começar a usar"), IsDefault = true,
             Style = (Style)Application.Current.FindResource("PrimaryButton"),
             HorizontalAlignment = HorizontalAlignment.Right,
             MinWidth = 150

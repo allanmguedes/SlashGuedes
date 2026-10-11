@@ -15,16 +15,16 @@ public static class CaptureInkPicker
 {
     private static readonly (string Name, string Hex)[] Colors =
     [
-        ("Preto", "000000"), ("Branco", "FFFFFF"), ("Vermelho", "E84E60"),
-        ("Laranja", "FF5F00"), ("Amarelo", "FFD800"), ("Verde", "008758"),
-        ("Turquesa", "00A6BF"), ("Azul", "004CDF"), ("Violeta", "6600CC"),
-        ("Rosa escuro", "AF0F64"), ("Cinza", "A6A6A6"), ("Cinza claro", "D4D4D4"),
-        ("Cinza médio", "838383"), ("Cinza escuro", "595959"), ("Âmbar", "FFAE00"),
-        ("Amarelo vivo", "FFEA00"), ("Lima", "AAE31B"), ("Verde vivo", "00D900"),
-        ("Índigo", "4400B3"), ("Roxo", "800080"), ("Pêssego", "F7D7C4"),
-        ("Bege", "BF966A"), ("Marrom", "90552F"), ("Marrom escuro", "643C2B"),
-        ("Rosa claro", "FB83FF"), ("Laranja claro", "FFC481"), ("Amarelo claro", "FFFF89"),
-        ("Verde claro", "A2F7B6"), ("Azul claro", "7FD7FD"), ("Lilás", "B9A7FB")
+        (UiText.Get("Preto"), "000000"), (UiText.Get("Branco"), "FFFFFF"), (UiText.Get("Vermelho"), "E84E60"),
+        (UiText.Get("Laranja"), "FF5F00"), (UiText.Get("Amarelo"), "FFD800"), (UiText.Get("Verde"), "008758"),
+        (UiText.Get("Turquesa"), "00A6BF"), (UiText.Get("Azul"), "004CDF"), (UiText.Get("Violeta"), "6600CC"),
+        (UiText.Get("Rosa escuro"), "AF0F64"), (UiText.Get("Cinza"), "A6A6A6"), (UiText.Get("Cinza claro"), "D4D4D4"),
+        (UiText.Get("Cinza médio"), "838383"), (UiText.Get("Cinza escuro"), "595959"), (UiText.Get("Âmbar"), "FFAE00"),
+        (UiText.Get("Amarelo vivo"), "FFEA00"), (UiText.Get("Lima"), "AAE31B"), (UiText.Get("Verde vivo"), "00D900"),
+        (UiText.Get("Índigo"), "4400B3"), (UiText.Get("Roxo"), "800080"), (UiText.Get("Pêssego"), "F7D7C4"),
+        (UiText.Get("Bege"), "BF966A"), (UiText.Get("Marrom"), "90552F"), (UiText.Get("Marrom escuro"), "643C2B"),
+        (UiText.Get("Rosa claro"), "FB83FF"), (UiText.Get("Laranja claro"), "FFC481"), (UiText.Get("Amarelo claro"), "FFFF89"),
+        (UiText.Get("Verde claro"), "A2F7B6"), (UiText.Get("Azul claro"), "7FD7FD"), (UiText.Get("Lilás"), "B9A7FB")
     ];
 
     public static bool TryParseHex(string text, out int argb)
@@ -83,15 +83,15 @@ public static class CaptureInkPicker
             var title = Label(caption); title.Margin = new Thickness(0, 0, 6, 0); group.Children.Add(title);
             var field = new TextBox { Name = name, Width = width, MaxLength = maxLength };
             field.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Field");
-            System.Windows.Automation.AutomationProperties.SetName(field, caption == "Hex" ? "Cor hexadecimal" : $"Componente {caption}, de 0 a 255");
+            System.Windows.Automation.AutomationProperties.SetName(field, caption == "Hex" ? UiText.Get("Cor hexadecimal") : UiText.Format($"Componente {caption}, de 0 a 255"));
             group.Children.Add(field); fields.Children.Add(group); return field;
         }
         var r = Field("R", "InkRed", 62, 3); var g = Field("G", "InkGreen", 62, 3); var b = Field("B", "InkBlue", 62, 3);
         var hex = Field("Hex", "InkHex", 110, 7);
-        var apply = new Button { Name = "ApplyInkHex", Content = "Aplicar", Margin = new Thickness(0, 0, 0, 6) };
+        var apply = new Button { Name = "ApplyInkHex", Content = UiText.Get("Aplicar"), Margin = new Thickness(0, 0, 0, 6) };
         apply.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Button"); fields.Children.Add(apply);
         rgbPanel.Children.Add(fields);
-        var error = Label("Use R, G e B de 0 a 255 ou uma cor #RRGGBB."); error.FontSize = 11;
+        var error = Label(UiText.Get("Use R, G e B de 0 a 255 ou uma cor #RRGGBB.")); error.FontSize = 11;
         error.TextWrapping = TextWrapping.Wrap; error.Visibility = Visibility.Collapsed;
         error.SetResourceReference(TextBlock.ForegroundProperty, "Lab.error"); rgbPanel.Children.Add(error);
         bool syncing = false, hexEdited = false;
@@ -119,7 +119,7 @@ public static class CaptureInkPicker
             {
                 if (item.Argb == getInk()) item.Ring.SetResourceReference(Border.BorderBrushProperty, "Lab.accent");
                 else item.Ring.BorderBrush = Brushes.Transparent;
-                System.Windows.Automation.AutomationProperties.SetItemStatus(item.Button, item.Argb == getInk() ? "Selecionada" : "");
+                System.Windows.Automation.AutomationProperties.SetItemStatus(item.Button, item.Argb == getInk() ? UiText.Get("Selecionada") : "");
             }
         }
         var palette = compactPalette && highlighter
@@ -144,7 +144,7 @@ public static class CaptureInkPicker
         {
             var icon = new LabIcon { Kind = "ArrowLeft", Width = 14, Height = 14, RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform(forward ? 180 : 0) };
             icon.SetResourceReference(LabIcon.ForegroundProperty, "Lab.text");
-            var button = new Button { Content = icon, Width = 30, Height = 40, Padding = new Thickness(4), Margin = new Thickness(0, 0, 4, 0), ToolTip = forward ? "Próximas cores" : "Cores anteriores" };
+            var button = new Button { Content = icon, Width = 30, Height = 40, Padding = new Thickness(4), Margin = new Thickness(0, 0, 4, 0), ToolTip = forward ? UiText.Get("Próximas cores") : UiText.Get("Cores anteriores") };
             button.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Pilot.ToolButton");
             System.Windows.Automation.AutomationProperties.SetName(button, button.ToolTip.ToString());
             button.Click += (_, _) => scroll.ScrollToHorizontalOffset(scroll.HorizontalOffset + (forward ? 228 : -228)); return button;
@@ -152,7 +152,7 @@ public static class CaptureInkPicker
         var previous = Arrow(false); var next = Arrow(true); Place(previous, 1); Place(next, 3);
         scroll.ScrollChanged += (_, _) => { previous.IsEnabled = scroll.HorizontalOffset > 0; next.IsEnabled = scroll.HorizontalOffset < scroll.ScrollableWidth; };
         var rgb = new Button { Name = "OpenInkRgb", Content = "RGB", Padding = new Thickness(12, 6, 12, 6) };
-        rgb.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Button"); rgb.ToolTip = "Definir uma cor específica por RGB ou hexadecimal";
+        rgb.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Button"); rgb.ToolTip = UiText.Get("Definir uma cor específica por RGB ou hexadecimal");
         rgb.Click += (_, _) => { rgbPanel.Visibility = rgbPanel.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible; if (rgbPanel.IsVisible) r.Focus(); };
         Place(rgb, 4);
         if (compactPalette)
@@ -182,11 +182,11 @@ public static class CaptureInkPicker
         var sizeRow = new Grid { Margin = new Thickness(0, 8, 0, 0) };
         foreach (var width in new[] { GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto })
             sizeRow.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
-        var sizeLabel = Label("Espessura"); sizeLabel.Margin = new Thickness(0, 0, 10, 0); sizeRow.Children.Add(sizeLabel);
+        var sizeLabel = Label(UiText.Get("Espessura")); sizeLabel.Margin = new Thickness(0, 0, 10, 0); sizeRow.Children.Add(sizeLabel);
         var slider = new Slider { Name = "InkThickness", Minimum = 1, Maximum = 24, Value = getThickness(),
             TickFrequency = 1, IsSnapToTickEnabled = true, SmallChange = 1, LargeChange = 4, MinWidth = 70 };
         slider.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Pilot.InkSlider");
-        System.Windows.Automation.AutomationProperties.SetName(slider, "Espessura do traço em pixels");
+        System.Windows.Automation.AutomationProperties.SetName(slider, UiText.Get("Espessura do traço em pixels"));
         slider.ValueChanged += (_, _) => { setThickness((float)slider.Value); Refresh(); };
         Grid.SetColumn(slider, 1); sizeRow.Children.Add(slider);
         Grid.SetColumn(sizeValue, 2); sizeValue.Margin = new Thickness(10, 0, 10, 0); sizeRow.Children.Add(sizeValue);
@@ -199,17 +199,17 @@ public static class CaptureInkPicker
         if (getOpacity is not null && setOpacity is not null)
         {
             var opacityRow = new DockPanel { Margin = new Thickness(0, 10, 0, 4) };
-            var caption = Label("Opacidade"); caption.Margin = new Thickness(0, 0, 12, 0); opacityRow.Children.Add(caption);
+            var caption = Label(UiText.Get("Opacidade")); caption.Margin = new Thickness(0, 0, 12, 0); opacityRow.Children.Add(caption);
             var percent = Label($"{getOpacity() * 100:0}%"); percent.Width = 42; percent.TextAlignment = TextAlignment.Right;
             DockPanel.SetDock(percent, Dock.Right); opacityRow.Children.Add(percent);
             var opacity = new Slider { Name = "InkOpacity", Minimum = 10, Maximum = highlighter ? 38 : 100, Value = getOpacity() * 100,
                 TickFrequency = 1, IsSnapToTickEnabled = true, SmallChange = 1, LargeChange = 10 };
             opacity.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Pilot.InkSlider");
-            System.Windows.Automation.AutomationProperties.SetName(opacity, "Opacidade");
+            System.Windows.Automation.AutomationProperties.SetName(opacity, UiText.Get("Opacidade"));
             opacity.ValueChanged += (_, _) => { setOpacity((float)(opacity.Value / 100)); percent.Text = $"{opacity.Value:0}%"; Refresh(); };
             opacityRow.Children.Add(opacity); panel.Children.Add(opacityRow);
         }
-        var hint = Label("Aplica às próximas anotações."); hint.FontSize = 11; hint.Margin = new Thickness(0, 4, 0, 0);
+        var hint = Label(UiText.Get("Aplica às próximas anotações.")); hint.FontSize = 11; hint.Margin = new Thickness(0, 4, 0, 0);
         hint.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); if (!colorOnly) panel.Children.Add(hint);
         Refresh(); LabMotion.SetEntrance(border, "Popup"); return border;
     }

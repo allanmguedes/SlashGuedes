@@ -12,7 +12,7 @@ public partial class MainWindow
         _captureMediaMode = CaptureMediaMode.Image; CaptureImageMediaButton.IsChecked = true;
         CapturePreviewEmptyPanel.Visibility = Visibility.Collapsed;
         CaptureWorkbenchToolbar.Visibility = CaptureWorkbenchFooter.Visibility = CaptureEditorContext.Visibility = Visibility.Visible;
-        CapturePreviewDetailsText.Text = "Região · textos e emojis continuam editáveis nesta sessão";
+        CapturePreviewDetailsText.Text = UiText.Get("Região · textos e emojis continuam editáveis nesta sessão");
         UpdateCaptureLauncherSummary();
         _completedCaptureDocument = CaptureInlineEditor.Document;
     }

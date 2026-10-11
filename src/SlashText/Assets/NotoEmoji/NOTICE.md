@@ -44,3 +44,17 @@ Fontes:
 - https://github.com/googlefonts/emoji-metadata
 - https://github.com/unicode-org/cldr-json
 - https://unicode.org/Public/emoji/18.0/emoji-test.txt
+
+## Idiomas da interface (#82)
+
+Nomes e termos de busca em inglês e espanhol são derivados de `annotations`
+e `annotationsDerived` do Unicode CLDR, commit fixo
+`91c267402229a59e3ef2774544f001bf959e8809` de
+[unicode-org/cldr-json](https://github.com/unicode-org/cldr-json/tree/91c267402229a59e3ef2774544f001bf959e8809).
+São metadados Unicode sob `UNICODE-LICENSE.txt`. Os hashes dos inputs e a
+quantidade de nomes disponíveis ficam em `Localization/emoji-en.json` e
+`emoji-es.json`; o gerador é `scripts/generate-emoji-languages.py`.
+Sequências sem nome neste snapshot usam o código Unicode como fallback.
+Os PNGs, valores, categorias salvas e nomes de imagens pessoais são preservados.
+A busca aceita os termos dos três idiomas, independentemente do idioma da tela.
+Estes catálogos são incorporados ao EXE e não requerem rede durante o uso.

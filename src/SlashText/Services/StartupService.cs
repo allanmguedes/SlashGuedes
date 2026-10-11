@@ -16,7 +16,7 @@ public static class StartupService
         if (enabled)
         {
             var executable = Environment.ProcessPath
-                ?? throw new InvalidOperationException("Não foi possível localizar o SlashDesk.exe.");
+                ?? throw new InvalidOperationException(UiText.Get("Não foi possível localizar o SlashDesk.exe."));
             key.SetValue(ValueName, $"\"{executable}\" --tray");
             key.DeleteValue(LegacyValueName, throwOnMissingValue: false);
         }

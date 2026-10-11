@@ -10,13 +10,13 @@ public partial class MainWindow
     {
         if (!CaptureInlineEditor.HasImage) return;
         if (CaptureInlineEditor.HasPendingCrop)
-        { StatusText.Text = "Aplique ou cancele o recorte antes de extrair texto."; return; }
+        { StatusText.Text = UiText.Get("Aplique ou cancele o recorte antes de extrair texto."); return; }
         using var snapshot = CaptureInlineEditor.Render();
         var dialog = new CaptureOcrWindow(snapshot, CaptureInlineEditor.SetOcrReading,
             new Services.CaptureOcrService(options: _settings.Capture.Ocr)) { Owner = this };
         LabMotion.SetReduced(dialog, LabMotion.GetReduced(this));
         try { ShowCaptureDialog(dialog); }
         finally { CaptureInlineEditor.SetOcrReading(false); }
-        if (dialog.CopiedText) StatusText.Text = "Texto da imagem copiado.";
+        if (dialog.CopiedText) StatusText.Text = UiText.Get("Texto da imagem copiado.");
     }
 }

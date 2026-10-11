@@ -308,7 +308,7 @@ public partial class DesignGalleryWindow : Window
         next.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); picker.UpdateLayout();
         Require(Descendants(picker).OfType<TextBlock>().Any(t => t.Text.Contains("página 2/")), "Picker next page is functional");
         var category = Descendants(picker).OfType<ComboBox>().Single();
-        category.SelectedItem = "Bandeiras"; picker.UpdateLayout();
+        category.SelectedItem = category.Items.OfType<ComboBoxItem>().Single(item => item.Tag as string == "Bandeiras"); picker.UpdateLayout();
         Require(Descendants(picker).OfType<Image>().Count() <= CaptureEmojiPicker.PageSize && next.IsEnabled,
             "Flag category remains paginated and complete");
         var pngPicker = new PngBitmapEncoder();
@@ -587,7 +587,8 @@ public partial class DesignGalleryWindow : Window
             var size = new Size(900, 560);
             void Layout() { host.Measure(size); host.Arrange(new Rect(size)); host.UpdateLayout(); }
             Layout();
-            var category = Descendants(picker).OfType<ComboBox>().Single(); category.SelectedItem = Services.CaptureStampCatalog.CustomCategory; Layout();
+            var category = Descendants(picker).OfType<ComboBox>().Single();
+            category.SelectedItem = category.Items.OfType<ComboBoxItem>().Single(item => item.Tag as string == Services.CaptureStampCatalog.CustomCategory); Layout();
             var item = Descendants(picker).OfType<Button>().Single(b => System.Windows.Automation.AutomationProperties.GetName(b) == "Selo do projeto");
             item.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Require(chosen == value, "Custom collection can select a local image stamp");

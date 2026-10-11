@@ -15,7 +15,7 @@ internal static class ShortcutCodeEditor
 {
     internal static readonly (string Id, string Label, string? Resource)[] Languages =
     [
-        ("text", "Texto simples", null), ("csharp", "C#", "CSharp-Mode.xshd"),
+        ("text", UiText.Get("Texto simples"), null), ("csharp", "C#", "CSharp-Mode.xshd"),
         ("javascript", "JavaScript", "JavaScript-Mode.xshd"), ("json", "JSON", "Json.xshd"),
         ("python", "Python", "Python-Mode.xshd"), ("sql", "SQL", "TSQL-Mode.xshd"),
         ("powershell", "PowerShell", "PowerShell.xshd"), ("html", "HTML", "HTML-Mode.xshd"),
@@ -70,7 +70,7 @@ internal static class ShortcutCodeEditor
         var key = resource + dark;
         if (Definitions.TryGetValue(key, out var cached)) return cached;
         using var stream = typeof(TextEditor).Assembly.GetManifestResourceStream("ICSharpCode.AvalonEdit.Highlighting.Resources." + resource)
-            ?? throw new InvalidOperationException("Definição de linguagem não encontrada: " + resource);
+            ?? throw new InvalidOperationException(UiText.Get("Definição de linguagem não encontrada: ") + resource);
         var xml = XDocument.Load(stream);
         foreach (var item in xml.Descendants().Where(item => item.Name.LocalName == "Color" && item.Attribute("foreground") is not null))
         {

@@ -25,10 +25,12 @@
     <CapturePilotBuild Condition="'$(SettingsPilotBuild)' == 'true'">true</CapturePilotBuild>
     <CapturePilotBuild Condition="'$(AboutPilotBuild)' == 'true'">true</CapturePilotBuild>
     <CapturePilotBuild Condition="'$(AuxiliaryPilotBuild)' == 'true'">true</CapturePilotBuild>
+    <CapturePilotBuild Condition="'$(LanguagesPilotBuild)' == 'true'">true</CapturePilotBuild>
     <SlashDeskDistribution Condition="'$(SlashDeskDistribution)' == ''">Installed</SlashDeskDistribution>
   </PropertyGroup>
 
   <ItemGroup>
+    <AssemblyMetadata Include="SlashDeskLanguagesPilot" Value="true" Condition="'$(LanguagesPilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskAboutPilot" Value="true" Condition="'$(AboutPilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskAuxiliaryPilot" Value="true" Condition="'$(AuxiliaryPilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskDistribution" Value="$(SlashDeskDistribution)" />
@@ -50,6 +52,7 @@
   <ItemGroup>
     <Resource Include="Assets\SlashDesk.ico" />
     <EmbeddedResource Include="Assets\Lucide\LICENSE.txt" />
+    <EmbeddedResource Include="Localization\*.json" />
     <EmbeddedResource Include="Assets\AvalonEdit\LICENSE.txt" />
     <Resource Include="Assets\SlashDesk.png" />
     <EmbeddedResource Include="Assets\NotoEmoji\*.png" />

@@ -1,4 +1,4 @@
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:views="clr-namespace:SlashText.Views" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="SlashText.Views.CaptureRuleDialog" Title="Configurações de captura" Width="700" Height="740" MaxHeight="820" ResizeMode="NoResize" WindowStyle="None" ShowInTaskbar="False" WindowStartupLocation="CenterOwner" Background="Transparent" Foreground="{DynamicResource Lab.text}" AllowsTransparency="True" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:views="clr-namespace:SlashText.Views" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="SlashText.Views.CaptureRuleDialog" Title="{DynamicResource Ui.78F05F4C783C4546}" Width="700" Height="740" MaxHeight="820" ResizeMode="NoResize" WindowStyle="None" ShowInTaskbar="False" WindowStartupLocation="CenterOwner" Background="Transparent" Foreground="{DynamicResource Lab.text}" AllowsTransparency="True" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
     <Window.Resources>
         <Style TargetType="TabItem">
             <Setter Property="Foreground" Value="{DynamicResource Lab.muted}"/>
@@ -49,35 +49,35 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Configurações de captura" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Lab.text}" />
-                    <Button Grid.Column="1" Width="38" Height="38" Padding="8" Style="{StaticResource Lab.Button}" ToolTip="Fechar" Click="Cancel_OnClick">
+                    <TextBlock Text="{DynamicResource Ui.78F05F4C783C4546}" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource Lab.text}" />
+                    <Button Grid.Column="1" Width="38" Height="38" Padding="8" Style="{StaticResource Lab.Button}" ToolTip="{DynamicResource Ui.0F2BD88EF0ACBDA9}" Click="Cancel_OnClick">
                         <Path Data="{StaticResource Lab.Icon.X}" Stroke="{DynamicResource Lab.text}" StrokeThickness="1.8" Stretch="Uniform" />
                     </Button>
                 </Grid>
             </Border>
             <TabControl x:Name="Sections" Grid.Row="1" Margin="12,12,12,0" Background="{DynamicResource Lab.raised}" Foreground="{DynamicResource Lab.text}" BorderThickness="0">
-                <TabItem Header="Imagem e destino">
+                <TabItem Header="{DynamicResource Ui.BC41C706A6889C81}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" FontWeight="Normal">
                         <StackPanel Margin="20">
-                            <TextBlock Text="Monitor, janela e captura longa" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.143C169EF4183B36}" Style="{StaticResource Lab.Metadata}" />
                             <ComboBox x:Name="AfterCaptureBox" Margin="0,6,0,10" Style="{StaticResource Lab.Combo}">
-                                <ComboBoxItem Content="Direta — copiar e salvar automaticamente" Tag="Direct" />
-                                <ComboBoxItem Content="Editor — revisar antes de concluir" Tag="Editor" />
+                                <ComboBoxItem Content="{DynamicResource Ui.70339F48600A324F}" Tag="Direct" />
+                                <ComboBoxItem Content="{DynamicResource Ui.29371BF0AA03FFC8}" Tag="Editor" />
                             </ComboBox>
-                            <CheckBox x:Name="CopyCheckBox" Content="Copiar após capturar" Style="{StaticResource Lab.Switch}" />
-                            <CheckBox x:Name="SaveCheckBox" Content="Salvar automaticamente" Style="{StaticResource Lab.Switch}" />
-                            <TextBlock Text="Destino" Style="{StaticResource Lab.Metadata}" Margin="0,14,0,0" />
+                            <CheckBox x:Name="CopyCheckBox" Content="{DynamicResource Ui.EEDA311E352F6637}" Style="{StaticResource Lab.Switch}" />
+                            <CheckBox x:Name="SaveCheckBox" Content="{DynamicResource Ui.550EC49AF7E5FEED}" Style="{StaticResource Lab.Switch}" />
+                            <TextBlock Text="{DynamicResource Ui.8E7290E445465B86}" Style="{StaticResource Lab.Metadata}" Margin="0,14,0,0" />
                             <TextBox x:Name="DirectoryBox" Margin="0,6,0,8" Style="{StaticResource Lab.Field}" />
                             <Button HorizontalAlignment="Left" Style="{StaticResource Lab.Button}" Click="Browse_OnClick">
                                 <StackPanel Orientation="Horizontal">
                                     <Path Data="{StaticResource Lab.Icon.FolderOpen}" Width="17" Height="17" Stroke="{DynamicResource Lab.text}" StrokeThickness="1.7" Stretch="Uniform" Margin="0,0,8,0" />
-                                    <TextBlock Text="Escolher pasta" />
+                                    <TextBlock Text="{DynamicResource Ui.7630BC441A573796}" />
                                 </StackPanel>
                             </Button>
-                            <TextBlock Text="Variáveis: {year}, {month}, {month-name}, {day}" Style="{StaticResource Lab.Metadata}" Margin="0,7,0,14" />
-                            <TextBlock Text="Nome do arquivo" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.332B169F8647E037}" Style="{StaticResource Lab.Metadata}" Margin="0,7,0,14" />
+                            <TextBlock Text="{DynamicResource Ui.4DC131B3EFF8473B}" Style="{StaticResource Lab.Metadata}" />
                             <TextBox x:Name="FileNameBox" Margin="0,6,0,0" Style="{StaticResource Lab.Field}" />
-                            <TextBlock Text="Variáveis: {date}, {time}, {type}, {app}" Style="{StaticResource Lab.Metadata}" Margin="0,7,0,14" />
+                            <TextBlock Text="{DynamicResource Ui.35C8848373C19E6B}" Style="{StaticResource Lab.Metadata}" Margin="0,7,0,14" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -85,19 +85,19 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Formato" Style="{StaticResource Lab.Metadata}" />
+                                    <TextBlock Text="{DynamicResource Ui.73E1804EB968F73E}" Style="{StaticResource Lab.Metadata}" />
                                     <ComboBox x:Name="FormatBox" Margin="0,6,0,0" Style="{StaticResource Lab.Combo}" SelectionChanged="Format_OnChanged">
-                                        <ComboBoxItem Content="PNG" Tag="PNG" />
-                                        <ComboBoxItem Content="JPEG" Tag="JPEG" />
+                                        <ComboBoxItem Content="{DynamicResource Ui.796120837694D3F3}" Tag="PNG" />
+                                        <ComboBoxItem Content="{DynamicResource Ui.F4DC1C96A30FBDEB}" Tag="JPEG" />
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Qualidade JPEG" Style="{StaticResource Lab.Metadata}" />
+                                    <TextBlock Text="{DynamicResource Ui.F21FE08973538F82}" Style="{StaticResource Lab.Metadata}" />
                                     <TextBox x:Name="QualityBox" Margin="0,6,0,0" Style="{StaticResource Lab.Field}" />
                                 </StackPanel>
                             </Grid>
-                            <CheckBox x:Name="CursorCheckBox" Content="Incluir cursor na imagem" Style="{StaticResource Lab.Switch}" Margin="0,14,0,0" />
-                            <CheckBox x:Name="HideCheckBox" Content="Ocultar SlashDesk durante a captura" Style="{StaticResource Lab.Switch}" />
+                            <CheckBox x:Name="CursorCheckBox" Content="{DynamicResource Ui.EFA41494410B4F69}" Style="{StaticResource Lab.Switch}" Margin="0,14,0,0" />
+                            <CheckBox x:Name="HideCheckBox" Content="{DynamicResource Ui.DD4669AA76324ACE}" Style="{StaticResource Lab.Switch}" />
                             <Grid Margin="0,14,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -105,119 +105,119 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel>
-                                    <TextBlock Text="Atraso" Style="{StaticResource Lab.Metadata}" />
+                                    <TextBlock Text="{DynamicResource Ui.8DFA0C1971F8E4BE}" Style="{StaticResource Lab.Metadata}" />
                                     <ComboBox x:Name="DelayBox" Margin="0,6,0,0" Style="{StaticResource Lab.Combo}">
-                                        <ComboBoxItem Content="Sem atraso" Tag="0" />
-                                        <ComboBoxItem Content="3 segundos" Tag="3" />
-                                        <ComboBoxItem Content="5 segundos" Tag="5" />
-                                        <ComboBoxItem Content="10 segundos" Tag="10" />
+                                        <ComboBoxItem Content="{DynamicResource Ui.54B5898948C34093}" Tag="0" />
+                                        <ComboBoxItem Content="{DynamicResource Ui.37C62233D3EBB384}" Tag="3" />
+                                        <ComboBoxItem Content="{DynamicResource Ui.23B4808DEEFEF53D}" Tag="5" />
+                                        <ComboBoxItem Content="{DynamicResource Ui.635F900C7BD08F23}" Tag="10" />
                                     </ComboBox>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Limpar histórico após" Style="{StaticResource Lab.Metadata}" />
+                                    <TextBlock Text="{DynamicResource Ui.05BFB4E8B1F6FC04}" Style="{StaticResource Lab.Metadata}" />
                                     <ComboBox x:Name="RetentionBox" Margin="0,6,0,0" Style="{StaticResource Lab.Combo}">
-                                        <ComboBoxItem Content="30 dias" Tag="30" />
-                                        <ComboBoxItem Content="90 dias" Tag="90" />
-                                        <ComboBoxItem Content="180 dias" Tag="180" />
-                                        <ComboBoxItem Content="Nunca" Tag="0" />
+                                        <ComboBoxItem Content="{DynamicResource Ui.59C86FB6958ADC3F}" Tag="30" />
+                                        <ComboBoxItem Content="{DynamicResource Ui.F168CCC814C48C70}" Tag="90" />
+                                        <ComboBoxItem Content="{DynamicResource Ui.7694B013E043D1DD}" Tag="180" />
+                                        <ComboBoxItem Content="{DynamicResource Ui.12FCD0C7B77C94F2}" Tag="0" />
                                     </ComboBox>
                                 </StackPanel>
                             </Grid>
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
-                <TabItem Header="Atalhos">
+                <TabItem Header="{DynamicResource Ui.4F30B1F869E56FCB}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" FontWeight="Normal">
                         <StackPanel Margin="20">
-                            <TextBlock Text="Clique no campo e pressione uma tecla, roda ou botão do mouse." TextWrapping="Wrap" Style="{StaticResource Lab.Metadata}" />
-                            <TextBlock Text="Monitor" Margin="0,18,0,6" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.9C5F513DFA3857AC}" TextWrapping="Wrap" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.4C2E1DF4570BEBD6}" Margin="0,18,0,6" Style="{StaticResource Lab.Metadata}" />
                             <views:ShortcutRecorderBox x:Name="MonitorBox" Style="{StaticResource Lab.Field}" />
-                            <TextBlock Text="Região" Margin="0,18,0,6" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.1433152B0C58A9B9}" Margin="0,18,0,6" Style="{StaticResource Lab.Metadata}" />
                             <views:ShortcutRecorderBox x:Name="RegionBox" Style="{StaticResource Lab.Field}" />
-                            <TextBlock Text="Janela" Margin="0,18,0,6" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.28014EF3525228E8}" Margin="0,18,0,6" Style="{StaticResource Lab.Metadata}" />
                             <views:ShortcutRecorderBox x:Name="WindowBox" Style="{StaticResource Lab.Field}" />
-                            <TextBlock Text="Captura longa" Margin="0,18,0,6" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.B8A9923CBF3F1345}" Margin="0,18,0,6" Style="{StaticResource Lab.Metadata}" />
                             <views:ShortcutRecorderBox x:Name="ScrollingBox" Style="{StaticResource Lab.Field}" />
-                            <TextBlock Text="A roda exige Ctrl, Alt, Shift ou Win. Cada ação precisa de uma combinação diferente." TextWrapping="Wrap" Margin="0,16,0,0" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.3E9AC6ABCE93F48C}" TextWrapping="Wrap" Margin="0,16,0,0" Style="{StaticResource Lab.Metadata}" />
                             <TextBlock x:Name="ShortcutStatusText" TextWrapping="Wrap" Margin="0,12,0,0" Style="{StaticResource Lab.Metadata}" />
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
-                <TabItem Header="Vídeo e GIF">
+                <TabItem Header="{DynamicResource Ui.A5367296C9CB15F4}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" FontWeight="Normal">
                         <StackPanel Margin="20">
-                            <TextBlock Text="Vídeo e GIF" FontSize="17" FontWeight="SemiBold" />
-                            <TextBlock Text="Qualidade e fluidez usadas ao iniciar uma gravação. Você também pode ajustar os controles rápidos da tela." TextWrapping="Wrap" Margin="0,8,0,0" Style="{StaticResource Lab.Metadata}" />
-                            <TextBlock Text="Vídeo — quadros por segundo" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.A5367296C9CB15F4}" FontSize="17" FontWeight="SemiBold" />
+                            <TextBlock Text="{DynamicResource Ui.727D9D6040328EB2}" TextWrapping="Wrap" Margin="0,8,0,0" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.04A0DB6536D8586E}" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
                             <ComboBox x:Name="VideoFpsBox" Style="{StaticResource Lab.Combo}">
-                                <ComboBoxItem Content="24 FPS" Tag="24" />
-                                <ComboBoxItem Content="30 FPS" Tag="30" />
-                                <ComboBoxItem Content="60 FPS" Tag="60" />
+                                <ComboBoxItem Content="{DynamicResource Ui.AD73871F299AD4A9}" Tag="24" />
+                                <ComboBoxItem Content="{DynamicResource Ui.39F81D21015AF161}" Tag="30" />
+                                <ComboBoxItem Content="{DynamicResource Ui.8DE37D25B5895BD4}" Tag="60" />
                             </ComboBox>
-                            <TextBlock Text="Vídeo — qualidade" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.24E600C435784D45}" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
                             <ComboBox x:Name="VideoQualityBox" Style="{StaticResource Lab.Combo}">
-                                <ComboBoxItem Content="Baixa" Tag="Baixa" />
-                                <ComboBoxItem Content="Média" Tag="Média" />
-                                <ComboBoxItem Content="Alta" Tag="Alta" />
-                                <ComboBoxItem Content="Muito alta" Tag="Muito alta" />
+                                <ComboBoxItem Content="{DynamicResource Ui.3591FC74B0B7A73C}" Tag="Baixa" />
+                                <ComboBoxItem Content="{DynamicResource Ui.4304CCFA3F662AC5}" Tag="Média" />
+                                <ComboBoxItem Content="{DynamicResource Ui.42719229FD62E2D6}" Tag="Alta" />
+                                <ComboBoxItem Content="{DynamicResource Ui.33122DDB4E60A854}" Tag="Muito alta" />
                             </ComboBox>
-                            <CheckBox x:Name="RecordingCursorBox" Content="Incluir cursor nas gravações" Margin="0,18,0,0" Style="{StaticResource Lab.Switch}" />
-                            <TextBlock Text="Áudio do vídeo MP4" FontSize="15" FontWeight="SemiBold" Margin="0,24,0,0" />
+                            <CheckBox x:Name="RecordingCursorBox" Content="{DynamicResource Ui.0970824475984613}" Margin="0,18,0,0" Style="{StaticResource Lab.Switch}" />
+                            <TextBlock Text="{DynamicResource Ui.B9B63D7E6EA25F7E}" FontSize="15" FontWeight="SemiBold" Margin="0,24,0,0" />
                             <ContentControl x:Name="RecordingAudioHost" />
-                            <TextBlock Text="GIF — quadros por segundo" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.08D7FB6BB1D2AD11}" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
                             <ComboBox x:Name="GifFpsBox" Style="{StaticResource Lab.Combo}">
-                                <ComboBoxItem Content="10 FPS — recomendado" Tag="10" />
-                                <ComboBoxItem Content="20 FPS — equilibrado" Tag="20" />
-                                <ComboBoxItem Content="30 FPS — fluido" Tag="30" />
+                                <ComboBoxItem Content="{DynamicResource Ui.47993EF2E3364581}" Tag="10" />
+                                <ComboBoxItem Content="{DynamicResource Ui.39E45AB57A2FC977}" Tag="20" />
+                                <ComboBoxItem Content="{DynamicResource Ui.544F8AC80555EDAB}" Tag="30" />
                             </ComboBox>
-                            <TextBlock Text="GIF — cores por quadro" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.1967FBE48A17FCA5}" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
                             <ComboBox x:Name="GifQualityBox" Style="{StaticResource Lab.Combo}">
-                                <ComboBoxItem Content="32 — baixa" Tag="32" />
-                                <ComboBoxItem Content="64 — média" Tag="64" />
-                                <ComboBoxItem Content="128 — alta" Tag="128" />
-                                <ComboBoxItem Content="256 — muito alta" Tag="256" />
+                                <ComboBoxItem Content="{DynamicResource Ui.EC514DC85382FD6A}" Tag="32" />
+                                <ComboBoxItem Content="{DynamicResource Ui.5A9E59998EDDDCAE}" Tag="64" />
+                                <ComboBoxItem Content="{DynamicResource Ui.FDB86660E85F3CD7}" Tag="128" />
+                                <ComboBoxItem Content="{DynamicResource Ui.68F094C4A88AADC0}" Tag="256" />
                             </ComboBox>
-                            <TextBlock Text="Mais FPS aumenta a fluidez e o uso de recursos. Mais cores no GIF aumentam a fidelidade e podem ampliar o arquivo." TextWrapping="Wrap" Margin="0,16,0,0" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.970AB58ACC74DBD4}" TextWrapping="Wrap" Margin="0,16,0,0" Style="{StaticResource Lab.Metadata}" />
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
-                <TabItem Header="OCR">
+                <TabItem Header="{DynamicResource Ui.5E5BEA5354E3F22E}">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" FontWeight="Normal">
                         <StackPanel Margin="20">
-                            <TextBlock Text="Extração local de texto" FontSize="17" FontWeight="SemiBold" />
-                            <TextBlock Text="Os dois modelos estão incluídos no app. As preferências valem para a seleção de região e o editor." TextWrapping="Wrap" Margin="0,8,0,0" Style="{StaticResource Lab.Metadata}" />
-                            <TextBlock Text="Modelo" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.7B9719CBCCD92727}" FontSize="17" FontWeight="SemiBold" />
+                            <TextBlock Text="{DynamicResource Ui.EC155F6EFD0709E8}" TextWrapping="Wrap" Margin="0,8,0,0" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.A5AB3212DAD17406}" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
                             <ComboBox x:Name="OcrModelBox" Style="{StaticResource Lab.Combo}">
-                                <ComboBoxItem Content="Best — priorizar precisão" Tag="Best" />
-                                <ComboBoxItem Content="Fast — priorizar velocidade" Tag="Fast" />
+                                <ComboBoxItem Content="{DynamicResource Ui.956DF44673F61C06}" Tag="Best" />
+                                <ComboBoxItem Content="{DynamicResource Ui.2A5668DD83ADEA11}" Tag="Fast" />
                             </ComboBox>
-                            <TextBlock Text="Best é o padrão. Fast costuma ser mais rápido, com possíveis perdas na leitura. Nenhum modelo garante acerto em fontes estilizadas ou imagens com pouca definição." TextWrapping="Wrap" Margin="0,8,0,0" Style="{StaticResource Lab.Metadata}" />
-                            <TextBlock Text="Idiomas" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.4B6A031728537D25}" TextWrapping="Wrap" Margin="0,8,0,0" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.DFEE336770735631}" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
                             <ComboBox x:Name="OcrLanguageBox" Style="{StaticResource Lab.Combo}">
-                                <ComboBoxItem Content="Português + inglês" Tag="por+eng" />
-                                <ComboBoxItem Content="Português" Tag="por" />
-                                <ComboBoxItem Content="Inglês" Tag="eng" />
+                                <ComboBoxItem Content="{DynamicResource Ui.2CBBE13F808A53BF}" Tag="por+eng" />
+                                <ComboBoxItem Content="{DynamicResource Ui.D4ADA8EC276411A1}" Tag="por" />
+                                <ComboBoxItem Content="{DynamicResource Ui.85A560BC1AF92AF8}" Tag="eng" />
                             </ComboBox>
-                            <TextBlock Text="Organização do texto" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.F40A9AB5D12BC9C8}" Margin="0,16,0,6" Style="{StaticResource Lab.Metadata}" />
                             <ComboBox x:Name="OcrLayoutBox" Style="{StaticResource Lab.Combo}">
-                                <ComboBoxItem Content="Automática — páginas e interfaces" Tag="Auto" />
-                                <ComboBoxItem Content="Bloco — títulos ou parágrafos juntos" Tag="Block" />
-                                <ComboBoxItem Content="Texto espalhado — trechos separados" Tag="Sparse" />
+                                <ComboBoxItem Content="{DynamicResource Ui.69679DFD9DD976D3}" Tag="Auto" />
+                                <ComboBoxItem Content="{DynamicResource Ui.EA45BF8CB65D9AF8}" Tag="Block" />
+                                <ComboBoxItem Content="{DynamicResource Ui.9ECEE64759FA6958}" Tag="Sparse" />
                             </ComboBox>
-                            <CheckBox x:Name="OcrImproveCheckBox" Content="Tentar melhorar imagens difíceis" Margin="0,18,0,0" Style="{StaticResource Lab.Switch}" />
-                            <TextBlock Text="Se a confiança estiver baixa, tenta outras formas de separar as linhas e tratar o contraste. Pode levar mais tempo. Revise o resultado antes de copiar." Margin="0,8,0,0" TextWrapping="Wrap" Style="{StaticResource Lab.Metadata}" />
-                            <TextBlock Text="Tesseract 5.2.0 · Sem treinamento próprio · Nenhum envio à internet" TextWrapping="Wrap" Margin="0,20,0,0" Style="{StaticResource Lab.Metadata}" />
+                            <CheckBox x:Name="OcrImproveCheckBox" Content="{DynamicResource Ui.FCE17560B8545F10}" Margin="0,18,0,0" Style="{StaticResource Lab.Switch}" />
+                            <TextBlock Text="{DynamicResource Ui.38974CA10B436CCE}" Margin="0,8,0,0" TextWrapping="Wrap" Style="{StaticResource Lab.Metadata}" />
+                            <TextBlock Text="{DynamicResource Ui.A305D30BE265698A}" TextWrapping="Wrap" Margin="0,20,0,0" Style="{StaticResource Lab.Metadata}" />
                         </StackPanel>
                     </ScrollViewer>
                 </TabItem>
             </TabControl>
             <Border Grid.Row="2" Padding="24,16" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Lab.line}">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Cancelar" Style="{StaticResource Lab.Button}" Margin="0,0,10,0" Click="Cancel_OnClick" />
+                    <Button Content="{DynamicResource Ui.BB9DBB406DCBD524}" Style="{StaticResource Lab.Button}" Margin="0,0,10,0" Click="Cancel_OnClick" />
                     <Button Style="{StaticResource Lab.Pilot.PrimaryButton}" Click="Save_OnClick">
                         <StackPanel Orientation="Horizontal">
                             <Path Data="{StaticResource Lab.Icon.Check}" Width="16" Height="16" Stroke="{DynamicResource Lab.on}" StrokeThickness="1.8" Stretch="Uniform" Margin="0,0,8,0" />
-                            <TextBlock Text="Salvar configurações" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                            <TextBlock Text="{DynamicResource Ui.AA8464858F9E831F}" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
                         </StackPanel>
                     </Button>
                 </StackPanel>

@@ -9,8 +9,8 @@ public static class CaptureHistoryQuery
 {
     public static string Label(CaptureRecord record) => record.MediaKind.ToLowerInvariant() switch
     {
-        "gif" => "GIF", "video" => "Vídeo MP4", _ => record.Type.ToLowerInvariant() switch
-        { "monitor" => "Monitor", "regiao" => "Região", "janela" => "Janela", "rolagem" => "Captura longa", _ => "Imagem" }
+        "gif" => "GIF", "video" => UiText.Get("Vídeo MP4"), _ => record.Type.ToLowerInvariant() switch
+        { "monitor" => "Monitor", "regiao" => UiText.Get("Região"), "janela" => UiText.Get("Janela"), "rolagem" => UiText.Get("Captura longa"), _ => UiText.Get("Imagem") }
     };
     public static IReadOnlyList<CaptureRecord> Filter(IEnumerable<CaptureRecord> records, string filter, string search)
     {

@@ -16,7 +16,7 @@ public sealed class VariableInputWindow : Window
 
     public VariableInputWindow(IReadOnlyList<TemplateField> fields)
     {
-        Title = "Preencher campos";
+        Title = UiText.Get("Preencher campos");
         Width = 480;
         Height = Math.Clamp(240 + (fields.Count * 70), 320, 650);
         MinHeight = 320;
@@ -36,7 +36,7 @@ public sealed class VariableInputWindow : Window
 
         root.Children.Add(new TextBlock
         {
-            Text = "Complete antes de inserir",
+            Text = UiText.Get("Complete antes de inserir"),
             FontFamily = new FontFamily("Segoe UI Variable Display"),
             FontSize = 22,
             FontWeight = FontWeights.SemiBold
@@ -80,10 +80,10 @@ public sealed class VariableInputWindow : Window
         Grid.SetRow(buttons, 4);
         root.Children.Add(buttons);
 
-        var cancel = new Button { Content = "Cancelar", IsCancel = true, Margin = new Thickness(0, 0, 10, 0) };
+        var cancel = new Button { Content = UiText.Get("Cancelar"), IsCancel = true, Margin = new Thickness(0, 0, 10, 0) };
         var insert = new Button
         {
-            Content = "Inserir",
+            Content = UiText.Get("Inserir"),
             IsDefault = true,
             Style = (Style)Application.Current.FindResource("PrimaryButton")
         };
@@ -139,7 +139,7 @@ public sealed class VariableInputWindow : Window
     {
         var value = name.Replace('_', ' ').Trim();
         return string.IsNullOrEmpty(value)
-            ? "Campo"
+            ? UiText.Get("Campo")
             : char.ToUpper(value[0]) + value[1..];
     }
 }

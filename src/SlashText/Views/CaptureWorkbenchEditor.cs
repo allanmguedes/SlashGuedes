@@ -137,7 +137,7 @@ public sealed class CaptureWorkbenchEditor : UserControl, IDisposable
         using var source = new DrawingBitmap(path);
         // Never flatten animation into an editable still image.
         if (source.RawFormat.Guid == System.Drawing.Imaging.ImageFormat.Gif.Guid)
-            throw new NotSupportedException("GIF é uma gravação; sua edição ficará para outra etapa.");
+            throw new NotSupportedException(UiText.Get("GIF é uma gravação; sua edição ficará para outra etapa."));
         LoadImage(source);
     }
 
@@ -199,8 +199,8 @@ public sealed class CaptureWorkbenchEditor : UserControl, IDisposable
     public void DiscardChanges() { CancelCrop(); _document?.DiscardChanges(); RefreshSelection(); RefreshPreview(); NotifyStateChanged(); }
     public DrawingBitmap Render()
     {
-        if (_document is null) throw new InvalidOperationException("Nenhuma imagem carregada.");
-        if (HasPendingCrop) throw new InvalidOperationException("Aplique ou cancele o recorte antes de copiar/salvar.");
+        if (_document is null) throw new InvalidOperationException(UiText.Get("Nenhuma imagem carregada."));
+        if (HasPendingCrop) throw new InvalidOperationException(UiText.Get("Aplique ou cancele o recorte antes de copiar/salvar."));
         return _document.Render();
     }
     public void SetOcrReading(bool reading)
@@ -272,13 +272,13 @@ public sealed class CaptureWorkbenchEditor : UserControl, IDisposable
 
     public void InsertAnnotation(CaptureAnnotation annotation)
     {
-        if (_document is null) throw new InvalidOperationException("Nenhuma imagem carregada.");
+        if (_document is null) throw new InvalidOperationException(UiText.Get("Nenhuma imagem carregada."));
         _document.AddAnnotation(annotation); RefreshPreview(); NotifyStateChanged();
     }
     public void InsertStamp(string value, Point center, float size = 48)
     {
         var asset = value == _selectedStamp && _selectedStampImage is not null ? _selectedStampImage : CaptureStampCatalog.Current.GetImage(value);
-        if (asset is null && !NotoEmojiCatalog.TryGet(value, out _)) throw new ArgumentException("Emoji não disponível.", nameof(value));
+        if (asset is null && !NotoEmojiCatalog.TryGet(value, out _)) throw new ArgumentException(UiText.Get("Emoji não disponível."), nameof(value));
         InsertAnnotation(new CaptureAnnotation { Kind = CaptureAnnotationKind.Stamp, Start = Clamp(center), End = Clamp(center), Text = value, Size = size, StampImage = asset });
     }
 

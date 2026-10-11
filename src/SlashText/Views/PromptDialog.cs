@@ -39,14 +39,14 @@ public sealed class PromptDialog : Window
         };
         buttons.Children.Add(new Button
         {
-            Content = "Cancelar",
+            Content = UiText.Get("Cancelar"),
             IsCancel = true,
             Margin = new Thickness(0, 0, 10, 0)
         });
 
         var confirm = new Button
         {
-            Content = "Aplicar",
+            Content = UiText.Get("Aplicar"),
             IsDefault = true,
             Style = (Style)Application.Current.FindResource("PrimaryButton")
         };

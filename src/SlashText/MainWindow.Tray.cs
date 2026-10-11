@@ -15,12 +15,12 @@ public partial class MainWindow
     {
         if (_quickAccentTrayToggle is not null)
         {
-            _quickAccentTrayToggle.Text = _settings.QuickAccentEnabled ? "Inativar Acento Rápido" : "Ativar Acento Rápido";
+            _quickAccentTrayToggle.Text = _settings.QuickAccentEnabled ? UiText.Get("Inativar Acento Rápido") : UiText.Get("Ativar Acento Rápido");
             _quickAccentTrayToggle.Tag = _settings.QuickAccentEnabled ? "X" : "Check";
             _quickAccentTrayToggle.Enabled = !_settingsOperationInProgress && !_shortcutOperationInProgress && !_quickAccentTraySaving;
         }
         foreach (Forms.ToolStripMenuItem group in menu.Items.OfType<Forms.ToolStripMenuItem>())
-            if (group.Text is "Capturas" or "Gravações" or "Atalhos") group.Enabled = !_settingsOperationInProgress && !_shortcutOperationInProgress;
+            if (group.Name is "Captures" or "Recordings" or "Shortcuts") group.Enabled = !_settingsOperationInProgress && !_shortcutOperationInProgress;
     }
 
     internal void OpenQuickAccentFromTray()
@@ -48,13 +48,13 @@ public partial class MainWindow
             try { QuickAccentEnabledCheckBox.IsChecked = enabled; }
             finally { _updatingQuickAccentControls = false; }
             ApplyQuickAccentSettings();
-            StatusText.Text = enabled ? "Acento Rápido ativado" : "Acento Rápido inativado";
+            StatusText.Text = enabled ? UiText.Get("Acento Rápido ativado") : UiText.Get("Acento Rápido inativado");
             return true;
         }
         catch (Exception exception)
         {
             _settings.QuickAccentEnabled = previous;
-            _quickAccentTrayError = "A preferência anterior foi mantida. " + exception.Message;
+            _quickAccentTrayError = UiText.Get("A preferência anterior foi mantida. ") + exception.Message;
             return false;
         }
         finally
@@ -73,7 +73,7 @@ public partial class MainWindow
         menu.ShowImageMargin = true;
         menu.Padding = new Forms.Padding(4);
 
-        var capturesMenu = new Forms.ToolStripMenuItem("Capturas");
+        var capturesMenu = new Forms.ToolStripMenuItem(UiText.Get("Capturas")) { Name = "Captures" };
         capturesMenu.DropDownItems.Add(
             "Monitor",
             null,
@@ -82,40 +82,40 @@ public partial class MainWindow
                     CaptureShortcutAction.ActiveMonitor,
                     invokedByShortcut: true))));
         capturesMenu.DropDownItems.Add(
-            "Região",
+            UiText.Get("Região"),
             null,
             (_, _) => Dispatcher.BeginInvoke(new Action(() =>
                 _ = RunCaptureAsync(
                     CaptureShortcutAction.Region,
                     invokedByShortcut: true))));
         capturesMenu.DropDownItems.Add(
-            "Janela",
+            UiText.Get("Janela"),
             null,
             (_, _) => Dispatcher.BeginInvoke(new Action(() =>
                 _ = RunCaptureAsync(
                     CaptureShortcutAction.Window,
                     invokedByShortcut: true))));
         capturesMenu.DropDownItems.Add(
-            "Captura longa",
+            UiText.Get("Captura longa"),
             null,
             (_, _) => Dispatcher.BeginInvoke(new Action(() =>
                 _ = RunScrollingCaptureAsync(invokedByShortcut: false))));
 
-        var recordingsMenu = new Forms.ToolStripMenuItem("Gravações");
+        var recordingsMenu = new Forms.ToolStripMenuItem(UiText.Get("Gravações")) { Name = "Recordings" };
         recordingsMenu.DropDownItems.Add(
-            "Vídeo MP4",
+            UiText.Get("Vídeo MP4"),
             null,
             (_, _) => Dispatcher.BeginInvoke(new Action(() =>
                 StartMp4Recording_OnClick(this, new RoutedEventArgs()))));
         recordingsMenu.DropDownItems.Add(
-            "GIF animado",
+            UiText.Get("GIF animado"),
             null,
             (_, _) => Dispatcher.BeginInvoke(new Action(() =>
                 StartGifRecording_OnClick(this, new RoutedEventArgs()))));
 
-        var shortcutsMenu = new Forms.ToolStripMenuItem("Atalhos");
+        var shortcutsMenu = new Forms.ToolStripMenuItem(UiText.Get("Atalhos")) { Name = "Shortcuts" };
         shortcutsMenu.DropDownItems.Add(
-            "Novo atalho",
+            UiText.Get("Novo atalho"),
             null,
             (_, _) => Dispatcher.Invoke(() =>
             {
@@ -123,7 +123,7 @@ public partial class MainWindow
                 BeginNewSnippet();
             }));
         shortcutsMenu.DropDownItems.Add(
-            "Gerenciar atalhos",
+            UiText.Get("Gerenciar atalhos"),
             null,
             (_, _) => Dispatcher.Invoke(() =>
             {
@@ -131,24 +131,24 @@ public partial class MainWindow
                 ShowView(ShortcutsView, ShortcutsTabButton);
             }));
 
-        var accentMenu = new Forms.ToolStripMenuItem("Acento Rápido") { Tag = "Languages" };
+        var accentMenu = new Forms.ToolStripMenuItem(UiText.Get("Acento Rápido")) { Tag = "Languages" };
         _quickAccentTrayToggle = new Forms.ToolStripMenuItem();
         _quickAccentTrayToggle.Click += async (_, _) =>
         {
             if (!await SetQuickAccentEnabledFromTrayAsync(!_settings.QuickAccentEnabled) && _quickAccentTrayError is { } error)
             {
-                ShowFromTray(); ShowSettingsDialog(error, "Não foi possível alterar o Acento Rápido", image: MessageBoxImage.Warning);
+                ShowFromTray(); ShowSettingsDialog(error, UiText.Get("Não foi possível alterar o Acento Rápido"), image: MessageBoxImage.Warning);
             }
         };
         accentMenu.DropDownItems.Add(_quickAccentTrayToggle);
-        accentMenu.DropDownItems.Add("Gerenciar Acento Rápido", null, (_, _) => Dispatcher.Invoke(OpenQuickAccentFromTray));
-        var applicationMenu = new Forms.ToolStripMenuItem("Aplicativo");
+        accentMenu.DropDownItems.Add(UiText.Get("Gerenciar Acento Rápido"), null, (_, _) => Dispatcher.Invoke(OpenQuickAccentFromTray));
+        var applicationMenu = new Forms.ToolStripMenuItem(UiText.Get("Aplicativo"));
         applicationMenu.DropDownItems.Add(
-            "Abrir SlashDesk",
+            UiText.Get("Abrir SlashDesk"),
             null,
             (_, _) => Dispatcher.Invoke(ShowFromTray));
         applicationMenu.DropDownItems.Add(
-            "Configurações",
+            UiText.Get("Configurações"),
             null,
             (_, _) => Dispatcher.Invoke(() =>
             {
@@ -156,7 +156,7 @@ public partial class MainWindow
                 ShowView(SettingsView, SettingsTabButton);
             }));
         applicationMenu.DropDownItems.Add(
-            "Sobre",
+            UiText.Get("Sobre"),
             null,
             (_, _) => Dispatcher.Invoke(() =>
             {
@@ -165,7 +165,7 @@ public partial class MainWindow
             }));
         applicationMenu.DropDownItems.Add(new Forms.ToolStripSeparator());
         applicationMenu.DropDownItems.Add(
-            "Sair",
+            UiText.Get("Sair"),
             null,
             (_, _) => Dispatcher.Invoke(RequestExit));
 
@@ -187,7 +187,8 @@ public partial class MainWindow
         {
             foreach (Forms.ToolStripMenuItem item in items.OfType<Forms.ToolStripMenuItem>())
             {
-                if (icons.TryGetValue(item.Text ?? "", out var kind)) item.Tag = kind;
+                var source = icons.Keys.FirstOrDefault(key => UiText.Get(key) == item.Text);
+                if (source is not null) item.Tag = icons[source];
                 if (item.HasDropDownItems) AssignIcons(item.DropDownItems);
             }
         }

@@ -82,7 +82,7 @@ public sealed class KeyboardHookService : IDisposable
         if (_hookHandle == IntPtr.Zero)
         {
             throw new InvalidOperationException(
-                $"O Windows não permitiu iniciar o monitoramento do teclado (erro {Marshal.GetLastWin32Error()}).");
+                UiText.Format($"O Windows não permitiu iniciar o monitoramento do teclado (erro {Marshal.GetLastWin32Error()})."));
         }
 
         _mouseHookHandle = SetWindowsHookEx(
@@ -602,7 +602,7 @@ internal sealed class KeyboardModifierState
         ArgumentNullException.ThrowIfNull(keyboardState);
         if (keyboardState.Length < 256)
         {
-            throw new ArgumentException("O estado do teclado precisa ter 256 posições.", nameof(keyboardState));
+            throw new ArgumentException(UiText.Get("O estado do teclado precisa ter 256 posições."), nameof(keyboardState));
         }
 
         foreach (var virtualKey in _pressed)

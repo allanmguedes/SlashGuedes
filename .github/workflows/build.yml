@@ -26,6 +26,10 @@ jobs:
       - name: Restore
         run: dotnet restore SlashText.sln -p:Platform=x64
 
+      - name: Offline interface language catalogs
+        shell: pwsh
+        run: ./scripts/languages-catalog-smoke.ps1
+
       - name: Build
         run: dotnet build SlashText.sln --configuration Release --no-restore -p:Platform=x64
 

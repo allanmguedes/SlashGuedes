@@ -20,7 +20,7 @@ internal sealed class UpdateAvailableWindow : Window
 
     public UpdateAvailableWindow(UpdateCheckResult result)
     {
-        Title = "Atualização do SlashDesk";
+        Title = UiText.Get("Atualização do SlashDesk");
         Width = 590;
         Height = 470;
         MinWidth = 500;
@@ -39,7 +39,7 @@ internal sealed class UpdateAvailableWindow : Window
 
         var heading = new TextBlock
         {
-            Text = $"SlashDesk {result.LatestVersion} está disponível",
+            Text = UiText.Format($"SlashDesk {result.LatestVersion} está disponível"),
             FontSize = 23,
             TextWrapping = TextWrapping.Wrap,
             FontWeight = FontWeights.SemiBold,
@@ -49,7 +49,7 @@ internal sealed class UpdateAvailableWindow : Window
 
         var summary = new TextBlock
         {
-            Text = $"Versão atual: {result.CurrentVersion}   •   Download: {FormatSize(result.DownloadSize)}",
+            Text = UiText.Format($"Versão atual: {result.CurrentVersion}   •   Download: {FormatSize(result.DownloadSize)}"),
             Margin = new Thickness(0, 8, 0, 14),
             Foreground = Resource<Brush>("MutedBrush", Brushes.DimGray)
         };
@@ -59,7 +59,7 @@ internal sealed class UpdateAvailableWindow : Window
         var notes = new TextBox
         {
             Text = string.IsNullOrWhiteSpace(result.Notes)
-                ? "As notas desta versão não foram informadas."
+                ? UiText.Get("As notas desta versão não foram informadas.")
                 : result.Notes,
             IsReadOnly = true,
             TextWrapping = TextWrapping.Wrap,
@@ -77,9 +77,9 @@ internal sealed class UpdateAvailableWindow : Window
             HorizontalAlignment = HorizontalAlignment.Right,
             Margin = new Thickness(0, 16, 0, 0)
         };
-        buttons.Children.Add(CreateButton("Ignorar esta versão", UpdateDecision.IgnoreVersion));
-        buttons.Children.Add(CreateButton("Lembrar depois", UpdateDecision.RemindLater));
-        var update = CreateButton("Atualizar agora", UpdateDecision.UpdateNow);
+        buttons.Children.Add(CreateButton(UiText.Get("Ignorar esta versão"), UpdateDecision.IgnoreVersion));
+        buttons.Children.Add(CreateButton(UiText.Get("Lembrar depois"), UpdateDecision.RemindLater));
+        var update = CreateButton(UiText.Get("Atualizar agora"), UpdateDecision.UpdateNow);
         if (Application.Current.TryFindResource("PrimaryButton") is Style primary)
         {
             update.Style = primary;
@@ -116,7 +116,7 @@ internal sealed class UpdateAvailableWindow : Window
     {
         if (bytes is null or <= 0)
         {
-            return "tamanho não informado";
+            return UiText.Get("tamanho não informado");
         }
         var mib = bytes.Value / 1024d / 1024d;
         return $"{mib:0.0} MB";

@@ -8,8 +8,8 @@ namespace SlashText.Views;
 // Shared by Capture settings and the preparation toolbar; edits remain local until saved.
 internal sealed class RecordingAudioPanel : StackPanel
 {
-    private readonly CheckBox _computer = new() { Content = "Áudio do computador" };
-    private readonly CheckBox _microphone = new() { Content = "Microfone" };
+    private readonly CheckBox _computer = new() { Content = UiText.Get("Áudio do computador") };
+    private readonly CheckBox _microphone = new() { Content = UiText.Get("Microfone") };
     private readonly ComboBox _output = new();
     private readonly ComboBox _input = new();
     private readonly Slider _outputVolume = new() { Minimum = 0, Maximum = 1, TickFrequency = .1 };
@@ -26,7 +26,7 @@ internal sealed class RecordingAudioPanel : StackPanel
         AddSource(_microphone, _input, _inputVolume);
         Children.Add(new TextBlock
         {
-            Text = "O áudio do PC inclui os sons da saída escolhida. As fontes e dispositivos são definidos antes de iniciar. GIF não tem áudio.",
+            Text = UiText.Get("O áudio do PC inclui os sons da saída escolhida. As fontes e dispositivos são definidos antes de iniciar. GIF não tem áudio."),
             TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 12, 0, 0)
         });
         Children.Add(_message);
@@ -79,10 +79,10 @@ internal sealed class RecordingAudioPanel : StackPanel
         devices.DisplayMemberPath = nameof(RecordingAudioDevice.Name);
         devices.HorizontalContentAlignment = HorizontalAlignment.Stretch;
         volume.Margin = new Thickness(0, 6, 0, 0);
-        volume.ToolTip = "Volume na gravação: 0 a 100%. Não altera o volume do Windows.";
+        volume.ToolTip = UiText.Get("Volume na gravação: 0 a 100%. Não altera o volume do Windows.");
         Children.Add(toggle);
         Children.Add(devices);
-        Children.Add(new TextBlock { Text = "Volume na gravação", FontSize = 12, Margin = new Thickness(0, 10, 0, 0) });
+        Children.Add(new TextBlock { Text = UiText.Get("Volume na gravação"), FontSize = 12, Margin = new Thickness(0, 10, 0, 0) });
         Children.Add(volume);
         toggle.Checked += OnChanged;
         toggle.Unchecked += OnChanged;
@@ -93,10 +93,10 @@ internal sealed class RecordingAudioPanel : StackPanel
     private static void Fill(ComboBox box, IReadOnlyList<RecordingAudioDevice> devices, string selected)
     {
         box.Items.Clear();
-        box.Items.Add(new RecordingAudioDevice(string.Empty, "Padrão do Windows"));
+        box.Items.Add(new RecordingAudioDevice(string.Empty, UiText.Get("Padrão do Windows")));
         foreach (var device in devices) box.Items.Add(device);
         if (!string.IsNullOrEmpty(selected) && !devices.Any(device => device.Id == selected))
-            box.Items.Add(new RecordingAudioDevice(selected, "Dispositivo indisponível — escolha outro"));
+            box.Items.Add(new RecordingAudioDevice(selected, UiText.Get("Dispositivo indisponível — escolha outro")));
         box.SelectedItem = box.Items.Cast<RecordingAudioDevice>().First(device => device.Id == selected);
     }
 

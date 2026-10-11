@@ -3,7 +3,7 @@
                     xmlns:lab="clr-namespace:SlashText.Design">
     <Style x:Key="Lab.Shortcuts.HeightGrip" TargetType="Thumb">
         <Setter Property="Height" Value="16"/><Setter Property="Cursor" Value="SizeNS"/><Setter Property="Focusable" Value="True"/>
-        <Setter Property="ToolTip" Value="Arraste para ajustar a altura. ↑/↓ ajustam; Home restaura."/>
+        <Setter Property="ToolTip" Value="{DynamicResource Ui.561E1F5693E8F1BB}"/>
         <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Thumb">
             <Border x:Name="GripSurface" Background="Transparent" CornerRadius="4">
                 <Border x:Name="Grip" Width="38" Height="3" CornerRadius="2" Background="{DynamicResource Lab.line-strong}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
