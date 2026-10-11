@@ -40,7 +40,8 @@ four-repository allowlist, full SHAs, version comments, explicit checkout
 credential choices and the two permitted write jobs. The guard supports the
 repository's block-style YAML conventions; it is not a general YAML parser or
 an upstream vulnerability scanner. `actions-policy-regression.ps1` confirms that
-15 invalid configurations fail while the valid workflow set passes. Both run
+17 invalid configurations fail while the valid workflow set passes. Publication
+jobs must also bind to the protected `release-approval` environment. Both run
 before compilation in Build Windows and Capture OCR Pilot Windows. actionlint
 provides complementary Actions/YAML syntax validation during maintenance.
 
@@ -81,12 +82,13 @@ commit too; do not confuse the tag-object SHA with the executable commit.
 
 ## Repository-wide policy evaluation
 
-The live repository currently allows all Actions and does not require SHA pins.
-Its token default is already read-only, with Action PR approval disabled
-(checked 2026-10-11). The versioned guard narrows the workflow allowlist, but does
-not change those server settings.
+The live repository now requires full SHA pins and selected Actions only. Token
+defaults remain read-only and Action PR approval remains disabled (configured and
+verified in #91 on 2026-10-11). Desired API payloads are versioned under
+`.github/repository-controls/`; these files document settings and do not apply
+them automatically.
 
-Recommended server policy after pinned workflows are integrated:
+Applied server policy after #93 integration:
 
 - Require full commit SHAs (`sha_pinning_required: true`).
 - Use selected Actions: `actions/checkout@*`, `actions/setup-dotnet@*`,
@@ -94,12 +96,13 @@ Recommended server policy after pinned workflows are integrated:
   GitHub-owned and verified-creator allowances.
 - Keep token defaults read-only and PR approval disabled.
 
-Apply and verify this with the repository controls in #91, after integration,
-so the existing main workflows can finish and pending branches can be rebased.
+Apply future changes together with the repository controls, after pin integration,
+so pending branches can be rebased and compatibility can be checked.
 Older branches with mutable refs will need updates before their workflows run
 under the stricter server policy. The scanners planned in #94 may require a
-deliberate extension of the allowlist. This PR changes versioned workflow policy;
-it does not preemptively change repository-wide execution settings.
+deliberate extension of the allowlist. See
+[repository release controls](repository-release-controls.md) for approval,
+main/tag policies, exceptions and verification.
 
 References: [GitHub secure use](https://docs.github.com/en/actions/reference/security/secure-use),
 [Dependabot supported ecosystems](https://docs.github.com/en/code-security/reference/supply-chain-security/supported-ecosystems-and-repositories),

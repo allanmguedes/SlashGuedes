@@ -81,6 +81,11 @@ jobs:
           $headSha = git rev-parse HEAD
           if ($LASTEXITCODE -ne 0) { throw 'Não foi possível resolver o checkout.' }
           if ($tagSha -ne $headSha) { throw 'O checkout não corresponde ao commit da tag.' }
+          git fetch origin main
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível conferir o histórico da main.' }
+          git merge-base --is-ancestor $tagSha origin/main
+          if ($LASTEXITCODE -eq 1) { throw 'O commit da tag não pertence ao histórico da main.' }
+          if ($LASTEXITCODE -ne 0) { throw 'Não foi possível verificar a origem do commit da tag.' }
           "sha=$headSha" >> $env:GITHUB_OUTPUT
 
       - name: Setup .NET 10
@@ -163,6 +168,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    environment: release-approval
 
     steps:
       - name: Checkout validated tag commit

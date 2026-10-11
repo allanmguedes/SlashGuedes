@@ -27,11 +27,12 @@ foreach ($file in $files) {
         throw "Pull request workflow must not explicitly request secrets/tokens: $($file.Name)"
     }
     $job = ''
+    $jobStart = 0
     $insideJobs = $false
     for ($index = 0; $index -lt $lines.Count; $index++) {
         $line = $lines[$index]
         if ($line -eq 'jobs:') { $insideJobs = $true }
-        if ($insideJobs -and $line -match '^  ([a-zA-Z0-9_-]+):\s*$') { $job = $Matches[1] }
+        if ($insideJobs -and $line -match '^  ([a-zA-Z0-9_-]+):\s*$') { $job = $Matches[1]; $jobStart = $index }
         $context = "$($file.Name)/$job"
 
         if ($line -match '^(\s*)permissions:(.*)$') {
@@ -53,6 +54,14 @@ foreach ($file in $files) {
             }
             if ($entries[0] -eq 'contents: write') {
                 if ($indent -ne 4 -or $context -cnotin $writeJobs) { throw "Unexpected write permission: $context" }
+                $jobEnd = $lines.Count
+                for ($next = $index + 1; $next -lt $lines.Count; $next++) {
+                    if ($lines[$next] -match '^  [a-zA-Z0-9_-]+:') { $jobEnd = $next; break }
+                }
+                $environments = @($lines[$jobStart..($jobEnd - 1)] | Where-Object { $_ -match '^    environment:' })
+                if ($environments.Count -ne 1 -or $environments[0].Trim() -cne 'environment: release-approval') {
+                    throw "Publication job must use release-approval environment: $context"
+                }
                 $writes.Add($context)
             }
         }

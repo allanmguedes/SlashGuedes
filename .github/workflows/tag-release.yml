@@ -76,6 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    environment: release-approval
 
     steps:
       - name: Checkout validated main

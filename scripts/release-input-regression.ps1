@@ -71,7 +71,7 @@ function Invoke-Case([string]$Kind, [string]$Tag, [hashtable]$Options = @{}) {
     $state = @{
         calls = [Collections.Generic.List[object]]::new()
         main = $sha; head = $sha; tag = $sha
-        duplicate = $false; fetchExit = 0; refExit = 1; tagExit = 0; pushExit = 0; ghExit = 0; resolveExit = 0
+        duplicate = $false; fetchExit = 0; refExit = 1; tagExit = 0; pushExit = 0; ghExit = 0; resolveExit = 0; ancestryExit = 0
     }
     foreach ($key in $Options.Keys) { $state[$key] = $Options[$key] }
     function git {
@@ -89,6 +89,7 @@ function Invoke-Case([string]$Kind, [string]$Tag, [hashtable]$Options = @{}) {
                 }
             }
             'config' { }
+            'merge-base' { $global:LASTEXITCODE = $state.ancestryExit }
             'tag' { $global:LASTEXITCODE = $state.tagExit }
             'push' { $global:LASTEXITCODE = $state.pushExit }
             default { throw 'Unexpected git command in regression test.' }
@@ -163,7 +164,7 @@ try {
     foreach ($options in @(@{ projectVersion = '3.3.0' }, @{ duplicate = $true }, @{ refExit = 2 }, @{ fetchExit = 1 }, @{ resolveExit = 1 }, @{ head = $otherSha })) {
         Assert-Rejected (Invoke-Case stable 'v3.2.0' $options) 'stable source/duplicate/error guard'
     }
-    foreach ($options in @(@{ projectVersion = '3.3.0' }, @{ resolveExit = 1 }, @{ tag = $otherSha })) {
+    foreach ($options in @(@{ projectVersion = '3.3.0' }, @{ resolveExit = 1 }, @{ tag = $otherSha }, @{ fetchExit = 1 }, @{ ancestryExit = 1 }, @{ ancestryExit = 2 })) {
         Assert-Rejected (Invoke-Case source 'v3.2.0' $options) 'existing tag source/version guard'
     }
     $result = Invoke-Case source 'v3.2.0'

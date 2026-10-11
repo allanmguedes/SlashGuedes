@@ -17,7 +17,9 @@ $cases = @(
     @{ file = 'build.yml'; old = 'persist-credentials: false'; replacement = "persist-credentials: false`n          allow-unsafe-pr-checkout: true"; label = 'unsafe checkout' },
     @{ file = 'build.yml'; old = 'persist-credentials: false'; replacement = '# no explicit credential policy'; label = 'implicit credentials' },
     @{ file = 'build.yml'; old = 'permissions:\s*\r?\n  contents: read'; replacement = 'permissions: read-all'; label = 'broad scalar permission' },
-    @{ file = 'tag-release.yml'; old = 'persist-credentials: true'; replacement = 'persist-credentials: false'; label = 'missing push credential exception' }
+    @{ file = 'tag-release.yml'; old = 'persist-credentials: true'; replacement = 'persist-credentials: false'; label = 'missing push credential exception' },
+    @{ file = 'tag-release.yml'; old = '    environment: release-approval'; replacement = ''; label = 'missing tag approval environment' },
+    @{ file = 'release.yml'; old = '    environment: release-approval'; replacement = '    environment: unprotected'; label = 'wrong release approval environment' }
 )
 try {
     New-Item -Path $fixture -ItemType Directory | Out-Null
