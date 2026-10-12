@@ -1698,5 +1698,11 @@
   "Ui.2A086B4F697F8FFD": "Bandeiras",
   "Ui.561E1F5693E8F1BB": "Arraste para ajustar a altura. ↑/↓ ajustam; Home restaura.",
   "Ui.02E233622C53898B": "Ferramentas pequenas.\nPossibilidades maiores.",
-  "Ui.E7CAF42543537B50": "Texto, acentos, capturas e gravações.\nTudo no seu ritmo."
+  "Ui.E7CAF42543537B50": "Texto, acentos, capturas e gravações.\nTudo no seu ritmo.",
+  "Ui.E02BA38B61E1F038": "O histórico do backup não é válido.",
+  "Ui.7A2D127AB9203155": "O arquivo do histórico não está autorizado ou não é uma mídia válida.",
+  "Ui.066C6C983965EC63": "O arquivo não está disponível ou foi bloqueado. O histórico aceita PNG, JPEG, GIF e MP4 locais, sem links ou redirecionamentos. Você pode remover somente a entrada do histórico.",
+  "Ui.DD9FF4F756A75B0C": "Este registro é antigo ou veio de um backup. Confirme o arquivo antes de permitir acesso nesta sessão:\n\n{0}\n\nAutorizar este arquivo?",
+  "Ui.3F46B105353FF59D": "Confirme o arquivo do histórico",
+  "Ui.BD514F84E7B8B774": "Confirmar arquivo do histórico"
 }

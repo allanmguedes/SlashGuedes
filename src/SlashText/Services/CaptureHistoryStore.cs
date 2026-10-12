@@ -41,6 +41,10 @@ internal sealed class CaptureHistoryStore
                     var record = element.Deserialize<CaptureRecord>(Options);
                     if (record is not null)
                     {
+                        record.FilePath ??= string.Empty;
+                        record.Type ??= string.Empty;
+                        record.MediaKind = string.IsNullOrWhiteSpace(record.MediaKind)
+                            ? CaptureHistoryFilePolicy.MediaKind(record.FilePath) : record.MediaKind.ToLowerInvariant();
                         records.Add(record);
                     }
                 }

@@ -20,19 +20,47 @@ public sealed class CaptureService
     private readonly CaptureHistoryStore _historyStore =
         new(AppPaths.CaptureHistoryFile);
     private List<CaptureRecord> _history = [];
+    private readonly Dictionary<CaptureRecord, string> _fileApprovals = new();
 
     public IReadOnlyList<CaptureRecord> History => _history;
     public Func<Bitmap, CaptureAnnotationKind, Task<CaptureImageEditResult?>>? ImageEditor { get; set; }
-    public string ResolveFilePath(CaptureRecord record) =>
-        CapturePathResolver.Resolve(record, AppPaths.Current);
+    public string ResolveFilePath(CaptureRecord record)
+    {
+        if (record.RequiresFileApproval && !_fileApprovals.ContainsKey(record)) return string.Empty;
+        var path = CapturePathResolver.Resolve(record, AppPaths.Current);
+        if (!CaptureHistoryFilePolicy.TryValidate(record, path, out var fingerprint)) return string.Empty;
+        if (record.RequiresFileApproval && _fileApprovals[record] != fingerprint) return string.Empty;
+        return path;
+    }
+
+    // Used only after an explicit click, never for thumbnails or automatic editor loading.
+    internal string GetFileApprovalPath(CaptureRecord record)
+    {
+        if (!_history.Contains(record)) return string.Empty;
+        var path = CapturePathResolver.Resolve(record, AppPaths.Current);
+        return CaptureHistoryFilePolicy.TryValidate(record, path, out _) ? path : string.Empty;
+    }
+
+    internal bool ApproveFileAccess(CaptureRecord record, string expectedPath)
+    {
+        if (!_history.Contains(record)) return false;
+        var path = CapturePathResolver.Resolve(record, AppPaths.Current);
+        if (!string.Equals(path, expectedPath, StringComparison.OrdinalIgnoreCase) ||
+            !CaptureHistoryFilePolicy.TryValidate(record, path, out var fingerprint)) return false;
+        _fileApprovals[record] = fingerprint;
+        return true;
+    }
     public async Task LoadAsync()
     {
+        _fileApprovals.Clear();
         _history = await _historyStore.LoadAsync();
+        var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var record in _history)
         {
-            if (string.IsNullOrWhiteSpace(record.Id))
+            if (string.IsNullOrWhiteSpace(record.Id) || !ids.Add(record.Id))
             {
                 record.Id = Guid.NewGuid().ToString("N");
+                ids.Add(record.Id);
             }
             if (string.IsNullOrWhiteSpace(record.MediaKind))
             {
@@ -184,6 +212,7 @@ public sealed class CaptureService
 
     public async Task AddMediaRecordAsync(CaptureRecord record)
     {
+        record.RequiresFileApproval = false; // Called only for newly completed local recordings.
         record.PortableRelativePath ??=
             CapturePathResolver.CreatePortableRelativePath(record.FilePath, AppPaths.Current);
         _history.Insert(0, record);
@@ -205,7 +234,9 @@ public sealed class CaptureService
             throw new ArgumentException(UiText.Get("Salve a imagem editada em PNG ou JPEG."), nameof(path));
         }
         var record = _history.FirstOrDefault(item =>
-            string.Equals(ResolveFilePath(item), path, StringComparison.OrdinalIgnoreCase));
+            string.Equals(CapturePathResolver.Resolve(item, AppPaths.Current), path, StringComparison.OrdinalIgnoreCase));
+        if (record is not null && string.IsNullOrEmpty(ResolveFilePath(record)))
+            throw new InvalidOperationException(UiText.Get("O arquivo do histórico não está autorizado ou não é uma mídia válida."));
         if (record is not null && !record.MediaKind.Equals("image", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(UiText.Get("Uma edição estática não pode substituir uma gravação."));
@@ -230,6 +261,7 @@ public sealed class CaptureService
         }
         record ??= new CaptureRecord
         {
+            RequiresFileApproval = false,
             CreatedAt = DateTimeOffset.Now,
             Type = sourceRecord?.Type ?? "regiao"
         };
@@ -237,6 +269,8 @@ public sealed class CaptureService
         record.PortableRelativePath = CapturePathResolver.CreatePortableRelativePath(path, AppPaths.Current);
         record.Width = bitmap.Width;
         record.Height = bitmap.Height;
+        if (record.RequiresFileApproval && CaptureHistoryFilePolicy.TryValidate(record, path, out var fingerprint))
+            _fileApprovals[record] = fingerprint;
         _history.Remove(record);
         _history.Insert(0, record);
         if (_history.Count > 1000) _history.RemoveRange(1000, _history.Count - 1000);
@@ -251,12 +285,14 @@ public sealed class CaptureService
         {
             return false;
         }
-        if (deleteFile &&
-            !string.IsNullOrWhiteSpace(ResolveFilePath(record)) &&
-            File.Exists(ResolveFilePath(record)))
+        if (deleteFile)
         {
-            File.Delete(ResolveFilePath(record));
+            var path = ResolveFilePath(record);
+            if (string.IsNullOrEmpty(path))
+                throw new InvalidOperationException(UiText.Get("O arquivo do histórico não está autorizado ou não é uma mídia válida."));
+            File.Delete(path);
         }
+        _fileApprovals.Remove(record);
         _history.Remove(record);
         await _historyStore.SaveAsync(_history);
         return true;
@@ -272,13 +308,13 @@ public sealed class CaptureService
         var expired = _history.Where(item => item.CreatedAt < threshold).ToList();
         foreach (var record in expired)
         {
-            if (deleteFiles &&
-                !string.IsNullOrWhiteSpace(ResolveFilePath(record)) &&
-                File.Exists(ResolveFilePath(record)))
+            var path = deleteFiles ? ResolveFilePath(record) : string.Empty;
+            // Automatic retention never authorizes restored references on the user's behalf.
+            if (!string.IsNullOrWhiteSpace(path) && !record.RequiresFileApproval)
             {
                 try
                 {
-                    File.Delete(ResolveFilePath(record));
+                    File.Delete(path);
                 }
                 catch (IOException)
                 {
@@ -286,6 +322,7 @@ public sealed class CaptureService
                 }
             }
             _history.Remove(record);
+            _fileApprovals.Remove(record);
         }
         if (expired.Count > 0)
         {
@@ -802,6 +839,7 @@ public sealed class CaptureService
 
             var record = new CaptureRecord
             {
+                RequiresFileApproval = false,
                 CreatedAt = DateTimeOffset.Now,
                 Type = type,
                 FilePath = filePath,

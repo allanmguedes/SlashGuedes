@@ -424,6 +424,7 @@ try
     // Exercise the real WPF preview and clipboard payload on an STA thread,
     // without changing the runner's system clipboard or opening production UI.
     Directory.CreateDirectory(root);
+    await CaptureHistoryTrustChecks.RunAsync(root);
     Exception? workbenchFailure = null;
     var workbenchThread = new Thread(() =>
     {

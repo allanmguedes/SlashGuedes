@@ -83,16 +83,17 @@ public sealed class CaptureHistoryWindow : Window
         foreach (var record in records.Skip(_page * PageSize).Take(PageSize))
         {
             var path = _resolvePath(record); var available = File.Exists(path);
+            var pending = record.RequiresFileApproval && !available;
             var row = new WrapPanel { Margin = new Thickness(10) };
             var text = new StackPanel { Width = 290, Margin = new Thickness(0, 0, 12, 8) };
-            text.Children.Add(new TextBlock { Text = Path.GetFileName(path), TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = path, FontWeight = FontWeights.SemiBold });
-            var detail = new TextBlock { Text = $"{CaptureHistoryQuery.Label(record)} · {record.CreatedAt.ToLocalTime():dd/MM/yyyy HH:mm} · {record.Width}×{record.Height}" + (available ? "" : UiText.Get(" · Arquivo ausente")), FontSize = 11, TextWrapping = TextWrapping.Wrap };
+            text.Children.Add(new TextBlock { Text = Path.GetFileName(string.IsNullOrEmpty(path) ? record.FilePath : path), TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = path, FontWeight = FontWeights.SemiBold });
+            var detail = new TextBlock { Text = $"{CaptureHistoryQuery.Label(record)} · {record.CreatedAt.ToLocalTime():dd/MM/yyyy HH:mm} · {record.Width}×{record.Height}" + (pending ? " · " + UiText.Get("Confirme o arquivo do histórico") : available ? "" : UiText.Get(" · Arquivo ausente")), FontSize = 11, TextWrapping = TextWrapping.Wrap };
             detail.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); text.Children.Add(detail); row.Children.Add(text);
             foreach (var (label, icon, action) in new[] { (UiText.Get("Abrir"), "ExternalLink", "open"), (UiText.Get("Copiar"), "Copy", "copy"), (UiText.Get("Editar"), "PenLine", "edit"), (UiText.Get("Excluir"), "Trash2", "delete") })
             {
                 if (action == "edit" && record.MediaKind != "image") continue;
                 var button = Button(label, icon, () => { RequestedRecord = record; RequestedAction = action; Close(); });
-                button.IsEnabled = available || action == "delete"; row.Children.Add(button);
+                button.IsEnabled = available || pending || action == "delete"; row.Children.Add(button);
             }
             var border = new Border { Child = row, Margin = new Thickness(0, 0, 0, 8), CornerRadius = new CornerRadius(8), BorderThickness = new Thickness(1) };
             border.SetResourceReference(Border.BackgroundProperty, "Lab.raised"); border.SetResourceReference(Border.BorderBrushProperty, "Lab.line"); _rows.Children.Add(border);

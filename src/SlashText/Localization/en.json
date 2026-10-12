@@ -1698,5 +1698,11 @@
   "Ui.2A086B4F697F8FFD": "Flags",
   "Ui.561E1F5693E8F1BB": "Drag to adjust height. ↑/↓ adjusts; Home resets.",
   "Ui.02E233622C53898B": "Small tools.\nGreater possibilities.",
-  "Ui.E7CAF42543537B50": "Text, accents, screenshots and recordings.\nAll at your own pace."
+  "Ui.E7CAF42543537B50": "Text, accents, screenshots and recordings.\nAll at your own pace.",
+  "Ui.E02BA38B61E1F038": "The backup history is invalid.",
+  "Ui.7A2D127AB9203155": "The history file is not authorized or is not valid media.",
+  "Ui.066C6C983965EC63": "The file is unavailable or was blocked. History supports local PNG, JPEG, GIF and MP4 files without links or redirects. You can remove just the history entry.",
+  "Ui.DD9FF4F756A75B0C": "This entry is old or came from a backup. Confirm the file before allowing access for this session:\n\n{0}\n\nAuthorize this file?",
+  "Ui.3F46B105353FF59D": "Confirm the history file",
+  "Ui.BD514F84E7B8B774": "Confirm history file"
 }

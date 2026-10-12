@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace SlashText.Services;
 
@@ -204,6 +205,21 @@ public sealed class BackupService
 
         var includesEmotes = ReadIncludesCaptureEmotes(archive);
         if (includesEmotes) CaptureStampCatalog.ValidateDirectory(Path.Combine(stagingDirectory, "capture-emotes"));
+        if (restoredFiles.Contains("capture-history.json", StringComparer.OrdinalIgnoreCase))
+        {
+            var historyPath = ResolveWithin(stagingDirectory,
+                restoredFiles.Single(p => p.Equals("capture-history.json", StringComparison.OrdinalIgnoreCase)));
+            var history = JsonNode.Parse(File.ReadAllText(historyPath)) as JsonArray
+                ?? throw new InvalidDataException(UiText.Get("O histórico do backup não é válido."));
+            foreach (var item in history.OfType<JsonObject>())
+            {
+                foreach (var key in item.Select(p => p.Key).Where(k => k.Equals("requiresFileApproval", StringComparison.OrdinalIgnoreCase)).ToArray())
+                    item.Remove(key);
+                item["requiresFileApproval"] = true;
+            }
+            // Transform staging only: validation used original bytes; rollback keeps the prior history intact.
+            File.WriteAllText(historyPath, history.ToJsonString(ManifestOptions));
+        }
         return new RestorePlan(restoredFiles, includesAssets, includesEmotes);
     }
 

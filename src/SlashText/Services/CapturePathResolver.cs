@@ -25,17 +25,35 @@ internal static class CapturePathResolver
 
     public static string Resolve(CaptureRecord record, AppDataEnvironment environment)
     {
-        if (!environment.IsPortable || string.IsNullOrWhiteSpace(record.PortableRelativePath))
+        try
         {
-            return record.FilePath;
+            string candidate;
+            if (!string.IsNullOrWhiteSpace(record.PortableRelativePath))
+            {
+                // Never fall back to an absolute path when a portable reference is invalid.
+                var relative = record.PortableRelativePath.Replace('/', '\\');
+                if (Path.IsPathRooted(relative) || relative.Split('\\').Any(p => p is ".." or ".")) return string.Empty;
+                candidate = Path.GetFullPath(Path.Combine(environment.ExecutableDirectory, relative));
+                var root = environment.ExecutableDirectory.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
+                if (!candidate.StartsWith(root, StringComparison.OrdinalIgnoreCase)) return string.Empty;
+                if (!environment.IsPortable) candidate = record.FilePath;
+            }
+            else candidate = record.FilePath;
+            // Reject network/device paths and alternate data streams before any filesystem access.
+            if (string.IsNullOrWhiteSpace(candidate) || candidate.Length < 3 ||
+                !char.IsAsciiLetter(candidate[0]) || candidate[1] != ':' || candidate[2] != '\\' ||
+                candidate.AsSpan(2).Contains(':')) return string.Empty;
+            if (candidate.Split('\\').Skip(1).Any(p => p.EndsWith(' ') || p.EndsWith('.') || IsDeviceName(p))) return string.Empty;
+            return Path.GetFullPath(candidate);
         }
-        var candidate = Path.GetFullPath(Path.Combine(
-            environment.ExecutableDirectory,
-            record.PortableRelativePath));
-        var root = environment.ExecutableDirectory.TrimEnd(Path.DirectorySeparatorChar) +
-                   Path.DirectorySeparatorChar;
-        return candidate.StartsWith(root, StringComparison.OrdinalIgnoreCase)
-            ? candidate
-            : record.FilePath;
+        catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException)
+        { return string.Empty; }
+    }
+
+    private static bool IsDeviceName(string segment)
+    {
+        var name = segment.Split('.')[0].ToUpperInvariant();
+        return name is "CON" or "PRN" or "AUX" or "NUL" or "CONIN$" or "CONOUT$" ||
+            name.Length == 4 && (name.StartsWith("COM") || name.StartsWith("LPT")) && "123456789¹²³".Contains(name[3]);
     }
 }

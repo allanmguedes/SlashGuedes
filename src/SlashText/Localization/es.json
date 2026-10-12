@@ -1698,5 +1698,11 @@
   "Ui.2A086B4F697F8FFD": "Banderas",
   "Ui.561E1F5693E8F1BB": "Arrastra para ajustar la altura. ↑/↓ ajusta; Inicio restablece.",
   "Ui.02E233622C53898B": "Pequeñas herramientas.\nGrandes posibilidades.",
-  "Ui.E7CAF42543537B50": "Texto, acentos, capturas y grabaciones.\nTodo a tu ritmo."
+  "Ui.E7CAF42543537B50": "Texto, acentos, capturas y grabaciones.\nTodo a tu ritmo.",
+  "Ui.E02BA38B61E1F038": "El historial de la copia de seguridad no es válido.",
+  "Ui.7A2D127AB9203155": "El archivo del historial no está autorizado o no es un medio válido.",
+  "Ui.066C6C983965EC63": "El archivo no está disponible o fue bloqueado. El historial admite archivos PNG, JPEG, GIF y MP4 locales, sin enlaces ni redirecciones. Puedes eliminar solo la entrada del historial.",
+  "Ui.DD9FF4F756A75B0C": "Esta entrada es antigua o proviene de una copia de seguridad. Confirma el archivo antes de permitir el acceso durante esta sesión:\n\n{0}\n\n¿Autorizar este archivo?",
+  "Ui.3F46B105353FF59D": "Confirma el archivo del historial",
+  "Ui.BD514F84E7B8B774": "Confirmar archivo del historial"
 }
