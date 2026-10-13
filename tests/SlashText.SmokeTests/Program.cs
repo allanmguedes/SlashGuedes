@@ -6,6 +6,24 @@ using System.IO.Compression;
 using System.Diagnostics;
 using ScreenRecorderLib;
 
+if (args.Length == 1 && args[0] == "--clipboard-payload-smoke")
+{
+    var clipboardRoot = Path.Combine(Path.GetTempPath(), "slashdesk-clipboard-payload-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(clipboardRoot);
+    ClipboardPrivacyChecks.Run(clipboardRoot);
+    return;
+}
+if (args.Length == 2 && args[0] == "--clipboard-native-worker")
+{
+    Environment.Exit(ClipboardNativeChecks.RunWorker(args[1]));
+    return;
+}
+if (args.Length == 2 && args[0] == "--clipboard-native-isolated")
+{
+    Environment.Exit(ClipboardNativeChecks.RunIsolated(args[1]));
+    return;
+}
+
 var engine = new TemplateEngine();
 var reference = new DateTimeOffset(2026, 7, 27, 14, 35, 0, TimeSpan.FromHours(-3));
 var rendered = engine.Render(
@@ -426,6 +444,8 @@ try
     Directory.CreateDirectory(root);
     await CaptureHistoryTrustChecks.RunAsync(root);
     await ExternalInputBudgetChecks.RunAsync(root);
+    ClipboardPrivacyChecks.Run(root);
+    await ClipboardNativeChecks.RunChildAsync(root);
     Exception? workbenchFailure = null;
     var workbenchThread = new Thread(() =>
     {

@@ -1551,6 +1551,7 @@
     <TextBlock Text="{DynamicResource Ui.33B0B649632F81EF}" Style="{StaticResource Lab.Metadata}" Margin="0,0,0,14"/>
     <CheckBox x:Name="StartWithWindowsCheckBox" Style="{StaticResource Lab.Switch}" Content="{DynamicResource Ui.DB6E1DF7C86209DE}" Margin="0,0,0,16" Click="Settings_OnClick"/>
     <CheckBox x:Name="ShowSuggestionsCheckBox" Style="{StaticResource Lab.Switch}" Content="{DynamicResource Ui.8077FC25BF90C13C}" Click="Settings_OnClick"/>
+    <TextBlock Text="{DynamicResource Ui.8F466C539051C665}" Style="{StaticResource Lab.Metadata}" TextWrapping="Wrap" Margin="0,16,0,0"/>
     <TextBlock x:Name="SettingsPilotNoteText" Text="" Style="{StaticResource Lab.Metadata}" Margin="0,16,0,0"/>
    </StackPanel></Border>
    <Border x:Name="SettingsImportCard" Grid.Row="1" Style="{StaticResource Lab.Settings.Card}"><StackPanel>

@@ -1711,5 +1711,15 @@
   "Ui.5F3D3BA441041CC1": "Processing file",
   "Ui.11BB25D8E93900D8": "Canceling. Wait for the operation to finish safely.",
   "Ui.BFDD7A2089C7989E": "Operation canceled. Your current data was preserved.",
-  "Ui.5552DB7880C0587C": "Opening image…"
+  "Ui.5552DB7880C0587C": "Opening image…",
+  "Ui.57893BB73B19562E": "Expansion stopped because the clipboard content changed.",
+  "Ui.35D113FB03ED7FB5": "The clipboard could not be preserved. Copy something else and try expanding again.",
+  "Ui.903EBAE3E1E617D1": "The text was inserted, but the clipboard could not be restored because it is busy.",
+  "Ui.0993D8040767C2A5": "Clipboard privacy",
+  "Ui.9D1374B79BFF29E6": "Temporary expansions and intentional copies behave differently.",
+  "Ui.527A4F7C91552CD0": "During expansion, temporary content is marked to stay out of Windows clipboard history and synchronization.",
+  "Ui.76DD412132B12719": "Afterward, SlashDesk restores the previous content, including an empty clipboard. A new copy made during expansion is preserved.",
+  "Ui.F0B46DA5554A7581": "Copying a capture, OCR result or code block follows Windows history and synchronization preferences.",
+  "Ui.AEBBCA1138E3C8AE": "Other apps can observe the clipboard. This protection does not delete existing history entries or guarantee absolute secrecy.",
+  "Ui.8F466C539051C665": "Temporary expansions stay out of Windows history and synchronization. Copied captures and OCR follow Windows preferences."
 }

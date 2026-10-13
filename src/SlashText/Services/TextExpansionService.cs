@@ -1,10 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using SlashText.Models;
-using WpfClipboard = System.Windows.Clipboard;
-using WpfDataFormats = System.Windows.DataFormats;
-using WpfDataObject = System.Windows.DataObject;
-using WpfIDataObject = System.Windows.IDataObject;
 
 namespace SlashText.Services;
 
@@ -18,7 +14,6 @@ public sealed class TextExpansionService
     private const ushort VkControl = 0x11;
     private const ushort VkV = 0x56;
     private const uint GaRoot = 2;
-    private const string ClipboardMarkerFormat = "SlashDesk.Expansion.Marker";
     private readonly TemplateEngine _templateEngine = new();
     private readonly SingleFlightGate _singleFlight = new();
 
@@ -54,8 +49,9 @@ public sealed class TextExpansionService
                 : step.Segment.Length);
         var useClipboard = snippet.Format == SnippetFormat.Markdown ||
                            plan.Any(step => RequiresClipboard(step.Segment));
-        WpfIDataObject? previousClipboard = null;
-        var marker = Guid.NewGuid().ToString("N");
+        ExpansionClipboardSession? clipboard = null;
+        var marker = Guid.NewGuid();
+        var completed = false;
         SafeDiagnosticLog.Write("expansion.plan", new Dictionary<string, object?>
         {
             ["segmentCount"] = plan.Count,
@@ -68,7 +64,7 @@ public sealed class TextExpansionService
             await RecoverTargetAsync(targetWindow, cancellationToken);
             if (useClipboard)
             {
-                previousClipboard = await CaptureClipboardAsync(cancellationToken);
+                clipboard = await ExpansionClipboardSession.CaptureAsync(new WindowsExpansionClipboard(), cancellationToken);
             }
 
             await RequireTargetAsync(targetWindow, cancellationToken);
@@ -86,7 +82,7 @@ public sealed class TextExpansionService
                 await RequireTargetAsync(targetWindow, cancellationToken);
                 if (useClipboard)
                 {
-                    await SetClipboardSegmentAsync(step.Segment, snippet.Format, marker, cancellationToken);
+                    await clipboard!.PublishAsync(ClipboardPrivacy.CreateExpansionData(step.Segment, snippet.Format, marker), cancellationToken);
                     await RequireTargetAsync(targetWindow, cancellationToken);
                     SendPaste();
                 }
@@ -107,13 +103,23 @@ public sealed class TextExpansionService
                     await WaitForTargetAsync(targetWindow, cancellationToken);
                 }
             }
+            completed = true;
             return insertedCharacters;
         }
         finally
         {
-            if (previousClipboard is not null)
+            if (clipboard is not null)
             {
-                await TryRestoreClipboardAsync(previousClipboard, marker);
+                try
+                {
+                    var restored = await clipboard.RestoreAsync();
+                    if (!restored)
+                    {
+                        SafeDiagnosticLog.Write("expansion.clipboard_restore_unavailable", new Dictionary<string, object?>());
+                        if (completed) throw new InvalidOperationException(UiText.Get("O texto foi inserido, mas não foi possível restaurar a área de transferência porque ela está ocupada."));
+                    }
+                }
+                finally { clipboard.Dispose(); }
             }
         }
     }
@@ -179,95 +185,6 @@ public sealed class TextExpansionService
         await Task.Delay(35, cancellationToken);
         _ = SendMessageTimeout(targetWindow, 0, IntPtr.Zero, IntPtr.Zero, 0x0002, 350, out _);
         await RequireTargetAsync(targetWindow, cancellationToken);
-    }
-
-    private static async Task<WpfIDataObject?> CaptureClipboardAsync(CancellationToken cancellationToken)
-    {
-        for (var attempt = 0; attempt < 8; attempt++)
-        {
-            try
-            {
-                var source = WpfClipboard.GetDataObject();
-                if (source is null)
-                {
-                    return null;
-                }
-                var copy = new WpfDataObject();
-                foreach (var format in source.GetFormats(autoConvert: false))
-                {
-                    try
-                    {
-                        copy.SetData(format, source.GetData(format, autoConvert: false));
-                    }
-                    catch (Exception) when (attempt < 7)
-                    {
-                        // Um formato atrasado pode desaparecer entre a enumeração e a cópia.
-                    }
-                }
-                return copy;
-            }
-            catch (ExternalException) when (attempt < 7)
-            {
-                await Task.Delay(20 + (attempt * 15), cancellationToken);
-            }
-        }
-        return null;
-    }
-
-    private static async Task SetClipboardSegmentAsync(
-        string value,
-        SnippetFormat format,
-        string marker,
-        CancellationToken cancellationToken)
-    {
-        var plain = format == SnippetFormat.Markdown
-            ? RichTextMarkdownConverter.ToPlainText(value)
-            : value;
-        var data = new WpfDataObject();
-        data.SetData(WpfDataFormats.UnicodeText, plain);
-        data.SetData(WpfDataFormats.Text, plain);
-        data.SetData(ClipboardMarkerFormat, marker);
-        if (format == SnippetFormat.Markdown)
-        {
-            data.SetData(WpfDataFormats.Html, HtmlClipboardFormatter.Create(RichTextMarkdownConverter.ToHtml(value)));
-        }
-        await SetClipboardAsync(data, cancellationToken);
-    }
-
-    private static async Task SetClipboardAsync(WpfIDataObject data, CancellationToken cancellationToken)
-    {
-        ExternalException? lastException = null;
-        for (var attempt = 0; attempt < 8; attempt++)
-        {
-            try
-            {
-                WpfClipboard.SetDataObject(data, true);
-                return;
-            }
-            catch (ExternalException exception)
-            {
-                lastException = exception;
-                await Task.Delay(20 + (attempt * 15), cancellationToken);
-            }
-        }
-        throw new InvalidOperationException(UiText.Get("A área de transferência está ocupada. Tente novamente."), lastException);
-    }
-
-    private static async Task TryRestoreClipboardAsync(WpfIDataObject data, string marker)
-    {
-        try
-        {
-            var current = WpfClipboard.GetDataObject();
-            if (!string.Equals(current?.GetData(ClipboardMarkerFormat, false) as string, marker, StringComparison.Ordinal))
-            {
-                return;
-            }
-            await SetClipboardAsync(data, CancellationToken.None);
-        }
-        catch (ExternalException)
-        {
-            // Não sobrescreva um clipboard que outro processo passou a controlar.
-        }
     }
 
     private static void SendBackspaces(int count)

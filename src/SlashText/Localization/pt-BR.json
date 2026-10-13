@@ -1711,5 +1711,15 @@
   "Ui.5F3D3BA441041CC1": "Processando arquivo",
   "Ui.11BB25D8E93900D8": "Cancelando. Aguarde a operação terminar com segurança.",
   "Ui.BFDD7A2089C7989E": "Operação cancelada. Os dados atuais foram preservados.",
-  "Ui.5552DB7880C0587C": "Abrindo imagem…"
+  "Ui.5552DB7880C0587C": "Abrindo imagem…",
+  "Ui.57893BB73B19562E": "A expansão foi interrompida porque o conteúdo da área de transferência mudou.",
+  "Ui.35D113FB03ED7FB5": "Não foi possível preservar a área de transferência. Copie outro conteúdo e tente expandir novamente.",
+  "Ui.903EBAE3E1E617D1": "O texto foi inserido, mas não foi possível restaurar a área de transferência porque ela está ocupada.",
+  "Ui.0993D8040767C2A5": "Privacidade da área de transferência",
+  "Ui.9D1374B79BFF29E6": "Expansões temporárias e cópias escolhidas têm comportamentos diferentes.",
+  "Ui.527A4F7C91552CD0": "Durante uma expansão, o conteúdo temporário é marcado para não entrar no histórico nem na sincronização do Windows.",
+  "Ui.76DD412132B12719": "Ao terminar, o SlashDesk restaura o conteúdo anterior, inclusive uma área de transferência vazia. Uma nova cópia feita durante a expansão é preservada.",
+  "Ui.F0B46DA5554A7581": "Copiar uma captura, um resultado de OCR ou um bloco de código segue as preferências de histórico e sincronização do Windows.",
+  "Ui.AEBBCA1138E3C8AE": "Outros aplicativos podem observar a área de transferência. A proteção não apaga itens já registrados nem garante sigilo absoluto.",
+  "Ui.8F466C539051C665": "Expansões temporárias ficam fora do histórico e da sincronização do Windows. Capturas e OCR copiados seguem as preferências do Windows."
 }

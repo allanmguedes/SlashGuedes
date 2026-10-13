@@ -1711,5 +1711,15 @@
   "Ui.5F3D3BA441041CC1": "Procesando archivo",
   "Ui.11BB25D8E93900D8": "Cancelando. Espera a que la operación termine de forma segura.",
   "Ui.BFDD7A2089C7989E": "Operación cancelada. Se conservaron los datos actuales.",
-  "Ui.5552DB7880C0587C": "Abriendo imagen…"
+  "Ui.5552DB7880C0587C": "Abriendo imagen…",
+  "Ui.57893BB73B19562E": "La expansión se interrumpió porque cambió el contenido del portapapeles.",
+  "Ui.35D113FB03ED7FB5": "No se pudo preservar el portapapeles. Copie otro contenido e intente expandir de nuevo.",
+  "Ui.903EBAE3E1E617D1": "Se insertó el texto, pero no se pudo restaurar el portapapeles porque está ocupado.",
+  "Ui.0993D8040767C2A5": "Privacidad del portapapeles",
+  "Ui.9D1374B79BFF29E6": "Las expansiones temporales y las copias elegidas se comportan de forma diferente.",
+  "Ui.527A4F7C91552CD0": "Durante una expansión, el contenido temporal se marca para excluirlo del historial y la sincronización de Windows.",
+  "Ui.76DD412132B12719": "Al terminar, SlashDesk restaura el contenido anterior, incluso un portapapeles vacío. Se preserva cualquier nueva copia realizada durante la expansión.",
+  "Ui.F0B46DA5554A7581": "Copiar una captura, un resultado de OCR o un bloque de código sigue las preferencias de historial y sincronización de Windows.",
+  "Ui.AEBBCA1138E3C8AE": "Otras aplicaciones pueden observar el portapapeles. Esta protección no elimina elementos ya registrados ni garantiza confidencialidad absoluta.",
+  "Ui.8F466C539051C665": "Las expansiones temporales quedan fuera del historial y la sincronización de Windows. Las capturas y el OCR copiados siguen las preferencias de Windows."
 }
