@@ -134,7 +134,7 @@ public sealed class CaptureWorkbenchEditor : UserControl, IDisposable
 
     public void LoadImage(string path)
     {
-        using var source = new DrawingBitmap(path);
+        using var source = ExternalImageReader.Load(path);
         // Never flatten animation into an editable still image.
         if (source.RawFormat.Guid == System.Drawing.Imaging.ImageFormat.Gif.Guid)
             throw new NotSupportedException(UiText.Get("GIF é uma gravação; sua edição ficará para outra etapa."));
@@ -143,6 +143,7 @@ public sealed class CaptureWorkbenchEditor : UserControl, IDisposable
 
     public void LoadImage(DrawingBitmap bitmap)
     {
+        ExternalImageReader.CheckDimensions(bitmap.Width, bitmap.Height);
         var next = new CaptureEditorDocument(bitmap);
         _document?.Dispose();
         _document = next;

@@ -81,14 +81,22 @@ public sealed partial class SnippetMarkdownRepository
             cancellationToken);
     }
 
-    private static List<Snippet> Parse(string markdown)
+    internal static List<Snippet> ParseImport(string markdown, CancellationToken token)
+    {
+        ExternalInputBudget.CheckText(markdown, token);
+        return Parse(markdown, token, external: true);
+    }
+
+    private static List<Snippet> Parse(string markdown, CancellationToken token = default, bool external = false)
     {
         var normalized = markdown.TrimStart('\uFEFF').Replace("\r\n", "\n").Replace('\r', '\n');
         var lines = normalized.Split('\n');
         var snippets = new List<Snippet>();
+        var externalTriggers = new HashSet<string>(StringComparer.Ordinal);
 
         for (var index = 0; index < lines.Length; index++)
         {
+            token.ThrowIfCancellationRequested();
             var heading = HeadingPattern().Match(lines[index]);
             if (!heading.Success)
             {
@@ -96,6 +104,7 @@ public sealed partial class SnippetMarkdownRepository
             }
 
             var trigger = heading.Groups["trigger"].Value;
+            if (external && (snippets.Count >= ExternalInputBudget.SnippetCount || trigger.Length > ExternalInputBudget.MetadataCharacters)) throw ExternalInputBudget.Exceeded();
             var metadataIndex = NextNonEmptyLine(lines, index + 1);
             if (metadataIndex >= lines.Length ||
                 !TryReadMetadata(lines[metadataIndex], out var metadataJson))
@@ -104,6 +113,7 @@ public sealed partial class SnippetMarkdownRepository
                     UiText.Format($"Metadados do atalho '{trigger}' não encontrados após a linha {index + 1}."));
             }
 
+            if (external && metadataJson.Length > ExternalInputBudget.MetadataCharacters) throw ExternalInputBudget.Exceeded();
             var fenceIndex = NextNonEmptyLine(lines, metadataIndex + 1);
             if (fenceIndex >= lines.Length ||
                 !TryReadFence(lines[fenceIndex], out var fence, out var format))
@@ -113,9 +123,13 @@ public sealed partial class SnippetMarkdownRepository
             }
 
             var closingFenceIndex = fenceIndex + 1;
+            long contentCharacters = 0;
             while (closingFenceIndex < lines.Length &&
                    !lines[closingFenceIndex].Trim().Equals(fence, StringComparison.Ordinal))
             {
+                token.ThrowIfCancellationRequested();
+                contentCharacters += lines[closingFenceIndex].Length + 1L;
+                if (external && contentCharacters > ExternalInputBudget.SnippetCharacters + 1L) throw ExternalInputBudget.Exceeded();
                 closingFenceIndex++;
             }
 
@@ -153,7 +167,10 @@ public sealed partial class SnippetMarkdownRepository
             };
 
             snippet.HasLegacyIncompatibleTrigger = !TriggerRule.TryValidate(snippet.Trigger, out _);
-            Validate(snippet, snippets);
+            if (external) ExternalInputBudget.CheckSnippet(snippet, snippets.Count);
+            Validate(snippet, external ? [] : snippets);
+            if (external && !externalTriggers.Add(TriggerRule.Normalize(snippet.Trigger)))
+                throw new InvalidDataException(UiText.Format($"O atalho '{snippet.Trigger}' está duplicado."));
             snippets.Add(snippet);
             index = closingFenceIndex;
         }

@@ -70,10 +70,12 @@ public sealed class BackupService
         Prune();
     }
 
-    public string CreateManualSnapshot()
+    public string CreateManualSnapshot() => CreateManualSnapshot(default);
+
+    public string CreateManualSnapshot(CancellationToken cancellationToken)
     {
         var name = $"SlashDesk-backup-manual-{DateTime.Now:yyyyMMdd-HHmmss-fff}.zip";
-        var path = CreateSnapshot(name, skipWhenExisting: false);
+        var path = CreateSnapshot(name, skipWhenExisting: false, cancellationToken);
         Prune();
         return path;
     }
@@ -86,8 +88,9 @@ public sealed class BackupService
                 .ToList()
             : [];
 
-    public void RestoreSnapshot(string archivePath)
+    public void RestoreSnapshot(string archivePath, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!File.Exists(archivePath))
         {
             throw new FileNotFoundException(
@@ -95,7 +98,10 @@ public sealed class BackupService
                 archivePath);
         }
 
-        ValidateSnapshot(archivePath);
+        using var file = new FileStream(archivePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        BackupInputBudget.CheckDirectory(file, cancellationToken);
+        using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: true);
+        ValidateSnapshot(archive, cancellationToken);
         Directory.CreateDirectory(_backupDirectory);
         var transactionId = Guid.NewGuid().ToString("N");
         var stagingDirectory = Path.Combine(
@@ -107,15 +113,17 @@ public sealed class BackupService
 
         try
         {
-            var plan = ExtractToStaging(archivePath, stagingDirectory);
+            var plan = ExtractToStaging(archive, stagingDirectory, cancellationToken);
             if (CollectSources().Count > 0)
             {
                 CreateSnapshot(
                     $"SlashDesk-backup-before-restore-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.zip",
-                    skipWhenExisting: false);
+                    skipWhenExisting: false, cancellationToken);
             }
 
-            ApplyStagedRestore(plan, stagingDirectory, rollbackDirectory);
+            cancellationToken.ThrowIfCancellationRequested();
+            ApplyStagedRestore(plan, stagingDirectory, rollbackDirectory, cancellationToken);
+            archive.Dispose(); file.Dispose();
             Prune();
         }
         finally
@@ -126,11 +134,12 @@ public sealed class BackupService
     }
 
     private RestorePlan ExtractToStaging(
-        string archivePath,
-        string stagingDirectory)
+        ZipArchive archive,
+        string stagingDirectory,
+        CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(stagingDirectory);
-        using var archive = ZipFile.OpenRead(archivePath);
+        cancellationToken.ThrowIfCancellationRequested();
         var entries = archive.Entries
             .Where(entry =>
                 !string.IsNullOrEmpty(entry.Name) &&
@@ -145,10 +154,11 @@ public sealed class BackupService
 
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var restoredFiles = new List<string>();
-        var includesAssets = ReadIncludesAssets(archive);
+        var includesAssets = ReadIncludesAssets(archive, cancellationToken);
         long totalBytes = 0;
         foreach (var entry in entries)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var relative = NormalizeArchivePath(entry.FullName);
             EnsureAllowedArchivePath(relative);
             if (!paths.Add(relative))
@@ -168,7 +178,7 @@ public sealed class BackupService
 
             var destination = ResolveWithin(stagingDirectory, relative);
             Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            using var input = entry.Open();
+            using var input = new BoundedInputStream(entry.Open(), entry.Length, cancellationToken);
             using var output = new FileStream(
                 destination,
                 FileMode.CreateNew,
@@ -203,21 +213,26 @@ public sealed class BackupService
             }
         }
 
-        var includesEmotes = ReadIncludesCaptureEmotes(archive);
+        var includesEmotes = ReadIncludesCaptureEmotes(archive, cancellationToken);
         if (includesEmotes) CaptureStampCatalog.ValidateDirectory(Path.Combine(stagingDirectory, "capture-emotes"));
         if (restoredFiles.Contains("capture-history.json", StringComparer.OrdinalIgnoreCase))
         {
             var historyPath = ResolveWithin(stagingDirectory,
                 restoredFiles.Single(p => p.Equals("capture-history.json", StringComparison.OrdinalIgnoreCase)));
-            var history = JsonNode.Parse(File.ReadAllText(historyPath)) as JsonArray
+            using var historyFile = File.OpenRead(historyPath);
+            using var historyInput = new BoundedInputStream(historyFile, BackupInputBudget.MetadataBytes, cancellationToken);
+            var history = JsonNode.Parse(historyInput) as JsonArray
                 ?? throw new InvalidDataException(UiText.Get("O histórico do backup não é válido."));
             foreach (var item in history.OfType<JsonObject>())
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 foreach (var key in item.Select(p => p.Key).Where(k => k.Equals("requiresFileApproval", StringComparison.OrdinalIgnoreCase)).ToArray())
                     item.Remove(key);
                 item["requiresFileApproval"] = true;
             }
             // Transform staging only: validation used original bytes; rollback keeps the prior history intact.
+            historyInput.Dispose(); historyFile.Dispose();
+            cancellationToken.ThrowIfCancellationRequested();
             File.WriteAllText(historyPath, history.ToJsonString(ManifestOptions));
         }
         return new RestorePlan(restoredFiles, includesAssets, includesEmotes);
@@ -226,7 +241,8 @@ public sealed class BackupService
     private void ApplyStagedRestore(
         RestorePlan plan,
         string stagingDirectory,
-        string rollbackDirectory)
+        string rollbackDirectory,
+        CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(_dataDirectory);
         Directory.CreateDirectory(rollbackDirectory);
@@ -238,7 +254,9 @@ public sealed class BackupService
         {
             foreach (var relative in plan.Files)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 BeforeRestoreApply?.Invoke(step++, relative);
+                cancellationToken.ThrowIfCancellationRequested();
                 var staged = ResolveWithin(stagingDirectory, relative);
                 var target = ResolveWithin(_dataDirectory, relative);
                 var rollback = ResolveWithin(rollbackDirectory, relative);
@@ -260,10 +278,12 @@ public sealed class BackupService
                 appliedFiles.Add(new AppliedFile(target, rollback, existed));
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             if (plan.IncludesAssets)
             {
                 const string assetsLabel = "assets/";
                 BeforeRestoreApply?.Invoke(step++, assetsLabel);
+                cancellationToken.ThrowIfCancellationRequested();
                 var stagedAssets = Path.Combine(stagingDirectory, "assets");
                 Directory.CreateDirectory(stagedAssets);
                 var targetAssets = Path.GetFullPath(_assetsDirectory);
@@ -293,9 +313,11 @@ public sealed class BackupService
                     throw;
                 }
             }
+            cancellationToken.ThrowIfCancellationRequested();
             if (plan.IncludesCaptureEmotes)
             {
                 BeforeRestoreApply?.Invoke(step, "capture-emotes/");
+                cancellationToken.ThrowIfCancellationRequested();
                 var staged = Path.Combine(stagingDirectory, "capture-emotes");
                 Directory.CreateDirectory(staged);
                 var target = Path.GetFullPath(_captureEmotesDirectory);
@@ -314,6 +336,7 @@ public sealed class BackupService
                     throw;
                 }
             }
+            cancellationToken.ThrowIfCancellationRequested();
         }
         catch
         {
@@ -353,12 +376,13 @@ public sealed class BackupService
         }
     }
 
-    private static bool ReadIncludesAssets(ZipArchive archive)
+    private static bool ReadIncludesAssets(ZipArchive archive, CancellationToken cancellationToken)
     {
         var manifest = archive.Entries.Single(entry =>
             NormalizeArchivePath(entry.FullName)
                 .Equals(ManifestName, StringComparison.OrdinalIgnoreCase));
-        using var document = JsonDocument.Parse(manifest.Open());
+        using var input = new BoundedInputStream(manifest.Open(), Math.Min(manifest.Length, BackupInputBudget.ManifestBytes), cancellationToken);
+        using var document = JsonDocument.Parse(input);
         if (document.RootElement.TryGetProperty(
                 "includesAssets",
                 out var includesElement) &&
@@ -372,10 +396,11 @@ public sealed class BackupService
                 .StartsWith("assets/", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static bool ReadIncludesCaptureEmotes(ZipArchive archive)
+    private static bool ReadIncludesCaptureEmotes(ZipArchive archive, CancellationToken cancellationToken)
     {
         var manifest = archive.Entries.Single(entry => NormalizeArchivePath(entry.FullName).Equals(ManifestName, StringComparison.OrdinalIgnoreCase));
-        using var document = JsonDocument.Parse(manifest.Open());
+        using var input = new BoundedInputStream(manifest.Open(), Math.Min(manifest.Length, BackupInputBudget.ManifestBytes), cancellationToken);
+        using var document = JsonDocument.Parse(input);
         if (document.RootElement.TryGetProperty("includesCaptureEmotes", out var flag))
         {
             if (flag.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) throw new InvalidDataException(UiText.Get("Indicador da coleção de emojis inválido."));
@@ -446,8 +471,9 @@ public sealed class BackupService
         }
     }
 
-    private string CreateSnapshot(string fileName, bool skipWhenExisting)
+    private string CreateSnapshot(string fileName, bool skipWhenExisting, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var sources = CollectSources();
         if (sources.Count == 0)
         {
@@ -463,11 +489,21 @@ public sealed class BackupService
                 UiText.Format($"Mais de um arquivo produziria a entrada '{duplicate.Key}' no backup."));
         }
 
+        if (sources.Count > BackupInputBudget.Entries) throw ExternalInputBudget.Exceeded();
+        long sourceBytes = 0;
+        foreach (var source in sources)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var size = new FileInfo(source.SourcePath).Length;
+            var limit = source.ArchivePath.Contains('/') ? BackupInputBudget.EntryBytes : BackupInputBudget.MetadataBytes;
+            if (size > limit || sourceBytes > BackupInputBudget.TotalBytes - size) throw ExternalInputBudget.Exceeded();
+            sourceBytes += size;
+        }
         Directory.CreateDirectory(_backupDirectory);
         var destination = Path.Combine(_backupDirectory, fileName);
         if (skipWhenExisting && File.Exists(destination))
         {
-            ValidateSnapshot(destination);
+            ValidateSnapshot(destination, cancellationToken);
             return destination;
         }
 
@@ -476,8 +512,9 @@ public sealed class BackupService
             $".{fileName}-{Guid.NewGuid():N}.tmp");
         try
         {
-            CreateArchive(temporary, sources, _includeAssets, _includeCaptureEmotes);
-            ValidateSnapshot(temporary);
+            CreateArchive(temporary, sources, _includeAssets, _includeCaptureEmotes, cancellationToken);
+            ValidateSnapshot(temporary, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporary, destination, overwrite: false);
             return destination;
         }
@@ -548,9 +585,11 @@ public sealed class BackupService
         string path,
         IReadOnlyList<BackupSource> sources,
         bool includesAssets,
-        bool includesCaptureEmotes)
+        bool includesCaptureEmotes,
+        CancellationToken cancellationToken)
     {
         var files = new List<BackupManifestFile>();
+        long actualSourceBytes = 0;
         using (var archive = ZipFile.Open(path, ZipArchiveMode.Create))
         {
             foreach (var source in sources.OrderBy(
@@ -568,12 +607,17 @@ public sealed class BackupService
                     FileShare.Read,
                     bufferSize: 81920,
                     FileOptions.SequentialScan);
+                var sourceLimit = source.ArchivePath.Contains('/') ? BackupInputBudget.EntryBytes : BackupInputBudget.MetadataBytes;
+                if (input.Length > sourceLimit || actualSourceBytes > BackupInputBudget.TotalBytes - input.Length)
+                    throw ExternalInputBudget.Exceeded();
+                actualSourceBytes += input.Length;
                 using var output = entry.Open();
                 using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
                 var buffer = new byte[81920];
                 long size = 0;
+                using var bounded = new BoundedInputStream(input, input.Length, cancellationToken, leaveOpen: true);
                 int read;
-                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
+                while ((read = bounded.Read(buffer, 0, buffer.Length)) > 0)
                 {
                     output.Write(buffer, 0, read);
                     hash.AppendData(buffer, 0, read);
@@ -605,9 +649,17 @@ public sealed class BackupService
         }
     }
 
-    internal static void ValidateSnapshot(string path)
+    internal static void ValidateSnapshot(string path, CancellationToken cancellationToken = default)
     {
-        using var archive = ZipFile.OpenRead(path);
+        using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        BackupInputBudget.CheckDirectory(file, cancellationToken);
+        using var archive = new ZipArchive(file, ZipArchiveMode.Read);
+        ValidateSnapshot(archive, cancellationToken);
+    }
+
+    private static void ValidateSnapshot(ZipArchive archive, CancellationToken cancellationToken)
+    {
+        BackupInputBudget.CheckEntries(archive, cancellationToken);
         var manifestEntries = archive.Entries
             .Where(entry => NormalizeArchivePath(entry.FullName)
                 .Equals(ManifestName, StringComparison.OrdinalIgnoreCase))
@@ -618,7 +670,8 @@ public sealed class BackupService
                 UiText.Get("O backup deve conter exatamente um manifesto."));
         }
 
-        using var document = JsonDocument.Parse(manifestEntries[0].Open());
+        using var manifestInput = new BoundedInputStream(manifestEntries[0].Open(), Math.Min(manifestEntries[0].Length, BackupInputBudget.ManifestBytes), cancellationToken);
+        using var document = JsonDocument.Parse(manifestInput);
         if (!document.RootElement.TryGetProperty("schemaVersion", out var schemaElement) ||
             !schemaElement.TryGetInt32(out var schemaVersion))
         {
@@ -631,7 +684,7 @@ public sealed class BackupService
                 ValidateLegacySnapshot(archive);
                 break;
             case CurrentSchemaVersion:
-                ValidateCurrentSnapshot(archive, document.RootElement);
+                ValidateCurrentSnapshot(archive, document.RootElement, cancellationToken);
                 break;
             default:
                 throw new InvalidDataException(UiText.Get("Versão de backup não suportada."));
@@ -650,7 +703,8 @@ public sealed class BackupService
 
     private static void ValidateCurrentSnapshot(
         ZipArchive archive,
-        JsonElement manifest)
+        JsonElement manifest,
+        CancellationToken cancellationToken)
     {
         if (!manifest.TryGetProperty("files", out var filesElement) ||
             filesElement.ValueKind != JsonValueKind.Array)
@@ -676,13 +730,17 @@ public sealed class BackupService
 
         var manifestFiles = new Dictionary<string, BackupManifestFile>(
             StringComparer.OrdinalIgnoreCase);
+        if (filesElement.GetArrayLength() > MaximumRestoreEntries) throw ExternalInputBudget.Exceeded();
         foreach (var element in filesElement.EnumerateArray())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var file = element.Deserialize<BackupManifestFile>(ManifestOptions)
                 ?? throw new InvalidDataException(
                     UiText.Get("O manifesto contém uma entrada inválida."));
+            if (string.IsNullOrEmpty(file.Path)) throw ExternalInputBudget.Exceeded();
             EnsureAllowedArchivePath(file.Path);
             if (file.Size < 0 ||
+                string.IsNullOrEmpty(file.Path) || file.Sha256 is null ||
                 file.Sha256.Length != 64 ||
                 !file.Sha256.All(Uri.IsHexDigit) ||
                 !manifestFiles.TryAdd(file.Path, file))
@@ -709,9 +767,10 @@ public sealed class BackupService
                     UiText.Format($"O tamanho de '{item.Key}' não corresponde ao manifesto."));
             }
 
-            using var stream = item.Value.Open();
+            using var stream = new BoundedInputStream(item.Value.Open(), item.Value.Length, cancellationToken);
             var actualHash = Convert.ToHexString(SHA256.HashData(stream))
                 .ToLowerInvariant();
+            if (stream.BytesRead != expected.Size) throw ExternalInputBudget.Exceeded();
             if (!actualHash.Equals(
                     expected.Sha256,
                     StringComparison.OrdinalIgnoreCase))
@@ -724,6 +783,7 @@ public sealed class BackupService
 
     private static void EnsureAllowedArchivePath(string path)
     {
+        if (path.Length > 32_767) throw ExternalInputBudget.Exceeded();
         var normalized = NormalizeArchivePath(path);
         if (string.IsNullOrWhiteSpace(normalized) ||
             normalized.StartsWith('/') ||

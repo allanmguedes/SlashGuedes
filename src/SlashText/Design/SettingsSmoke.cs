@@ -20,6 +20,7 @@ internal static class SettingsSmoke
         AppPaths.Initialize(new AppDataEnvironment(DistributionMode.Portable, Path.Combine(output, "fixture"), Path.Combine(output, "unused-installed"), isCapturePilot: true));
         CultureInfo.CurrentCulture = CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("pt-BR");
         var checks = new List<string>();
+        await ExternalInputSmoke.RunAsync(output);
         CheckBackups(output); checks.Add("Emojis: normalized transparent PNG/catalog identity and hashes; rollback after assets; invalid ZIP unchanged; old backup preserves collection; new empty collection clears only selected collection: PASS");
         await CheckTrayAsync(output); checks.Add("Native themed tray: existing groups; shared icons; saved Quick Accent toggle and UI sync; save failure rollback; manage route; maintenance blocked: PASS");
         CheckDialogs(output); checks.Add("Real owned WPF settings dialogs: light/dark; disabled owner content; cancel default; OK/Yes/No/Cancel mapping; Escape dismissal; long content scroll: PASS");

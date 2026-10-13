@@ -140,10 +140,10 @@ public sealed class UsageService
     public UsageRecord? For(Guid snippetId) =>
         _records.FirstOrDefault(item => item.SnippetId == snippetId);
 
-    internal async Task RunMaintenanceAsync(Action action)
+    internal async Task RunMaintenanceAsync(Action action, CancellationToken cancellationToken = default)
     {
-        await _writeLock.WaitAsync();
-        try { await Task.Run(action); }
+        await _writeLock.WaitAsync(cancellationToken);
+        try { await Task.Run(action, cancellationToken); }
         finally { _writeLock.Release(); }
     }
 

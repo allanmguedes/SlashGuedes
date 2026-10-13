@@ -425,6 +425,7 @@ try
     // without changing the runner's system clipboard or opening production UI.
     Directory.CreateDirectory(root);
     await CaptureHistoryTrustChecks.RunAsync(root);
+    await ExternalInputBudgetChecks.RunAsync(root);
     Exception? workbenchFailure = null;
     var workbenchThread = new Thread(() =>
     {

@@ -14,6 +14,8 @@ namespace SlashText;
 public partial class MainWindow
 {
     private bool _settingsOperationInProgress;
+    private CancellationTokenSource? _settingsCancellation;
+    private ExternalOperationWindow? _settingsProgress;
     private ScreenHelpHighlighter? _settingsHelpHighlight;
 
     private MessageBoxResult ShowSettingsDialog(string message, string title, MessageBoxButton buttons = MessageBoxButton.OK,
@@ -76,7 +78,7 @@ public partial class MainWindow
         finally { _initialized = initialized; }
     }
 
-    private async Task RunSettingsMaintenanceAsync(string message, Func<Task> action)
+    private async Task RunSettingsMaintenanceAsync(string message, Func<Task> action, bool cancellable = false)
     {
         if (_settingsOperationInProgress || _shortcutOperationInProgress) throw new InvalidOperationException(UiText.Get("Aguarde a operação em andamento."));
         if (_recordingControl is not null || _gifRecordingSession is not null || _activeUpdateCancellation is not null)
@@ -84,6 +86,11 @@ public partial class MainWindow
         using var capture = _captureGate.TryEnter();
         using var expansion = _expansionRequestGate.TryEnter();
         if (capture is null || expansion is null) throw new InvalidOperationException(UiText.Get("Finalize a captura ou expansão em andamento antes de continuar."));
+        _captureImageLoadCancellation?.Cancel();
+        using var cancellation = cancellable ? new CancellationTokenSource() : null;
+        _settingsCancellation = cancellation;
+        var progress = cancellation is null ? null : new ExternalOperationWindow(message, cancellation) { Owner = this };
+        _settingsProgress = progress;
         var accentEnabled = _quickAccentService.Enabled;
         var root = (FrameworkElement)Content;
         var wasEnabled = root.IsEnabled;
@@ -94,9 +101,10 @@ public partial class MainWindow
         root.IsEnabled = false;
         SettingsOperationText.Text = message;
         StatusText.Text = message;
-        try { await action(); }
+        try { progress?.Show(); await action(); }
         finally
         {
+            progress?.Complete(); _settingsCancellation = null; _settingsProgress = null;
             if (SettingsOperationText.Text == message) SettingsOperationText.Text = UiText.Get("Pronto.");
             root.IsEnabled = wasEnabled;
             _quickAccentService.Enabled = accentEnabled;

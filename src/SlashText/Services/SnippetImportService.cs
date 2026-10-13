@@ -24,26 +24,27 @@ public sealed partial class SnippetImportService
         SnippetImportSource source,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!File.Exists(filePath))
         {
             throw new FileNotFoundException(UiText.Get("O arquivo selecionado não foi encontrado."), filePath);
         }
 
-        return source switch
+        return await Task.Run(async () => source switch
         {
             SnippetImportSource.SlashDesk => await ImportSlashDeskAsync(filePath, cancellationToken),
             SnippetImportSource.TextBlaze => await ImportTextBlazeAsync(filePath, cancellationToken),
             SnippetImportSource.Espanso => await ImportEspansoAsync(filePath, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(source))
-        };
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<SnippetImportResult> ImportSlashDeskAsync(
         string filePath,
         CancellationToken cancellationToken)
     {
-        var repository = new SnippetMarkdownRepository(filePath);
-        var snippets = await repository.LoadAsync(cancellationToken);
+        var text = await ExternalInputBudget.ReadTextAsync(filePath, ExternalInputBudget.ImportBytes, cancellationToken);
+        var snippets = SnippetMarkdownRepository.ParseImport(text, cancellationToken);
         return new SnippetImportResult(snippets, []);
     }
 
@@ -51,7 +52,9 @@ public sealed partial class SnippetImportService
         string filePath,
         CancellationToken cancellationToken)
     {
-        await using var stream = File.OpenRead(filePath);
+        await using var file = File.OpenRead(filePath);
+        if (file.Length > ExternalInputBudget.ImportBytes) throw ExternalInputBudget.Exceeded();
+        using var stream = new BoundedInputStream(file, ExternalInputBudget.ImportBytes, cancellationToken, leaveOpen: true);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
         if (!document.RootElement.TryGetProperty("folders", out var folders) ||
             folders.ValueKind != JsonValueKind.Array)
@@ -62,9 +65,13 @@ public sealed partial class SnippetImportService
 
         var snippets = new List<Snippet>();
         var warnings = new List<string>();
+        var visited = 0;
+        if (folders.GetArrayLength() > ExternalInputBudget.SnippetCount) throw ExternalInputBudget.Exceeded();
         foreach (var folder in folders.EnumerateArray())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var category = ReadString(folder, "name") ?? "Text Blaze";
+            if (category.Length > ExternalInputBudget.MetadataCharacters) throw ExternalInputBudget.Exceeded();
             if (!folder.TryGetProperty("snippets", out var items) ||
                 items.ValueKind != JsonValueKind.Array)
             {
@@ -73,11 +80,14 @@ public sealed partial class SnippetImportService
 
             foreach (var item in items.EnumerateArray())
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (++visited > ExternalInputBudget.SnippetCount) throw ExternalInputBudget.Exceeded();
                 var trigger = NormalizeTrigger(
                     ReadString(item, "shortcut"),
                     out var convertedColonPrefix);
                 var name = ReadString(item, "name");
                 var text = ReadString(item, "text");
+                if (text?.Length > ExternalInputBudget.SnippetCharacters || name?.Length > ExternalInputBudget.MetadataCharacters || trigger.Length > ExternalInputBudget.MetadataCharacters) throw ExternalInputBudget.Exceeded();
                 if (string.IsNullOrWhiteSpace(trigger) ||
                     string.IsNullOrWhiteSpace(name) ||
                     text is null)
@@ -115,6 +125,8 @@ public sealed partial class SnippetImportService
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+        for (var n = 0; n < snippets.Count; n++) ExternalInputBudget.CheckSnippet(snippets[n], n);
         return new SnippetImportResult(RemoveDuplicateTriggers(snippets, warnings), warnings);
     }
 
@@ -122,14 +134,17 @@ public sealed partial class SnippetImportService
         string filePath,
         CancellationToken cancellationToken)
     {
-        var yaml = await File.ReadAllTextAsync(filePath, cancellationToken);
+        var yaml = await ExternalInputBudget.ReadTextAsync(filePath, ExternalInputBudget.ImportBytes, cancellationToken);
+        ExternalInputBudget.CheckText(yaml, cancellationToken);
         var lines = yaml.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         var snippets = new List<Snippet>();
         var warnings = new List<string>();
         var category = Path.GetFileNameWithoutExtension(filePath);
+        var entries = 0;
 
         for (var index = 0; index < lines.Length; index++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var triggerMatch = EspansoTriggerPattern().Match(lines[index]);
             if (!triggerMatch.Success)
             {
@@ -137,6 +152,7 @@ public sealed partial class SnippetImportService
             }
 
             var itemIndent = triggerMatch.Groups["indent"].Value.Length;
+            if (++entries > ExternalInputBudget.SnippetCount) throw ExternalInputBudget.Exceeded();
             var triggers = triggerMatch.Groups["key"].Value.Equals(
                 "triggers",
                 StringComparison.OrdinalIgnoreCase)
@@ -147,6 +163,7 @@ public sealed partial class SnippetImportService
 
             for (index++; index < lines.Length; index++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var line = lines[index];
                 if (!string.IsNullOrWhiteSpace(line) &&
                     LeadingWhitespace(line) <= itemIndent &&
@@ -183,6 +200,8 @@ public sealed partial class SnippetImportService
                     var builder = new StringBuilder();
                     while (++index < lines.Length)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (builder.Length > ExternalInputBudget.SnippetCharacters) throw ExternalInputBudget.Exceeded();
                         var blockLine = lines[index];
                         if (string.IsNullOrWhiteSpace(blockLine))
                         {
@@ -198,6 +217,8 @@ public sealed partial class SnippetImportService
                         }
 
                         blockIndent = blockIndent < 0 ? indent : Math.Min(blockIndent, indent);
+                        if (builder.Length + (long)blockLine.Length - Math.Min(blockIndent, blockLine.Length) > ExternalInputBudget.SnippetCharacters + 2L)
+                            throw ExternalInputBudget.Exceeded();
                         builder.AppendLine(blockLine[Math.Min(blockIndent, blockLine.Length)..]);
                     }
                     replacement = builder.ToString().TrimEnd();
@@ -216,6 +237,8 @@ public sealed partial class SnippetImportService
 
             foreach (var rawTrigger in triggers)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (snippets.Count >= ExternalInputBudget.SnippetCount || rawTrigger.Length > ExternalInputBudget.MetadataCharacters || replacement.Length > ExternalInputBudget.SnippetCharacters || name.Length > ExternalInputBudget.MetadataCharacters) throw ExternalInputBudget.Exceeded();
                 var trigger = NormalizeTrigger(rawTrigger, out var convertedColonPrefix);
                 if (!TriggerRule.TryValidate(trigger, out _))
                 {
@@ -245,6 +268,8 @@ public sealed partial class SnippetImportService
                 UiText.Get("Nenhum atalho Espanso compatível foi encontrado. Selecione um arquivo YAML que contenha 'match', 'trigger' e 'replace'."));
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+        for (var n = 0; n < snippets.Count; n++) ExternalInputBudget.CheckSnippet(snippets[n], n);
         return new SnippetImportResult(RemoveDuplicateTriggers(snippets, warnings), warnings);
     }
 
@@ -341,34 +366,37 @@ public sealed partial class SnippetImportService
         return value;
     }
 
-    private static List<string> SplitInlineList(string value) =>
-        value.Trim().TrimStart('[').TrimEnd(']')
+    private static List<string> SplitInlineList(string value)
+    {
+        if (value.Count(c => c == ',') >= ExternalInputBudget.SnippetCount) throw ExternalInputBudget.Exceeded();
+        return value.Trim().TrimStart('[').TrimEnd(']')
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(Unquote)
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .ToList();
+    }
 
-    [GeneratedRegex(@"\{key:\s*tab\s*\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"\{key:\s*tab\s*\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex TextBlazeTabPattern();
 
-    [GeneratedRegex(@"\{time:\s*(?<format>[^;}]+)(?:;\s*shift=(?<shift>[^}]+))?\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"\{time:\s*(?<format>[^;}]+)(?:;\s*shift=(?<shift>[^}]+))?\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex TextBlazeTimePattern();
 
-    [GeneratedRegex(@"(?<!\{)\{(?!\{)[a-z][^{}\r\n]*\}(?!\})", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"(?<!\{)\{(?!\{)[a-z][^{}\r\n]*\}(?!\})", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex TextBlazeCommandPattern();
 
-    [GeneratedRegex(@"^(?<amount>[+-]\d+)(?<unit>[dmy])$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^(?<amount>[+-]\d+)(?<unit>[dmy])$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ShiftPattern();
 
-    [GeneratedRegex(@"^(?<indent>\s*)-\s*(?<key>trigger|triggers|match)\s*:\s*(?<value>.+?)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^(?<indent>\s*)-\s*(?<key>trigger|triggers|match)\s*:\s*(?<value>.+?)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex EspansoTriggerPattern();
 
-    [GeneratedRegex(@"^\s*triggers\s*:\s*(?<value>.+?)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^\s*triggers\s*:\s*(?<value>.+?)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex EspansoTriggersPattern();
 
-    [GeneratedRegex(@"^\s*label\s*:\s*(?<value>.+?)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^\s*label\s*:\s*(?<value>.+?)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex EspansoLabelPattern();
 
-    [GeneratedRegex(@"^\s*replace\s*:\s*(?<value>.*?)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^\s*replace\s*:\s*(?<value>.*?)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex EspansoReplacePattern();
 }

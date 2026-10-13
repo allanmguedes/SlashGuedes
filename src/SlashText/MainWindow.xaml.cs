@@ -35,6 +35,8 @@ public partial class MainWindow : Window
     private readonly BackupService _backupService = new();
     private readonly AssetMaintenanceService _assetMaintenanceService = new();
     private readonly SnippetImportService _snippetImportService = new();
+    private CancellationTokenSource? _captureImageLoadCancellation;
+    private CancellationTokenSource? _captureThumbnailCancellation;
     private readonly CaptureService _captureService = new();
     private readonly GifRecordingService _gifRecordingService = new();
     private readonly GlobalCaptureShortcutService _captureShortcuts = new();
@@ -1348,7 +1350,8 @@ public partial class MainWindow : Window
             {
             _shortcutOperationInProgress = true; ShortcutEditorPanel.IsEnabled = false;
             RefreshShortcutDraftState();
-            var result = await _snippetImportService.ImportAsync(picker.FileName, source);
+            var token = _settingsCancellation?.Token ?? default;
+            var result = await _snippetImportService.ImportAsync(picker.FileName, source, token);
             if (result.Snippets.Count == 0)
             {
                 ShowSettingsDialog(
@@ -1378,7 +1381,7 @@ public partial class MainWindow : Window
                 return;
             }
 
-            await _usageService.RunMaintenanceAsync(() => _backupService.CreateManualSnapshot());
+            await _usageService.RunMaintenanceAsync(() => _backupService.CreateManualSnapshot(token), token);
             var replaceConflicts = mode == MessageBoxResult.Yes;
             var incomingTriggers = result.Snippets
                 .Select(item => item.Trigger)
@@ -1398,7 +1401,9 @@ public partial class MainWindow : Window
 
             _shortcutOperationInProgress = true;
             ShortcutEditorPanel.IsEnabled = false;
-            await _repository.SaveAsync(merged);
+            token.ThrowIfCancellationRequested();
+            await _repository.SaveAsync(merged, token);
+            _settingsProgress?.PreventCancellation();
             ReplaceList(merged);
             _shortcutOperationInProgress = false;
             _shortcutDraftBaseline = null; _selected = null;
@@ -1417,7 +1422,11 @@ public partial class MainWindow : Window
             StatusText.Text = UiText.Format($"Importação do {ImportSourceName(source)} concluída");
             SettingsOperationText.Text = StatusText.Text;
             RefreshBackupSummary();
-            });
+            }, cancellable: true);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = SettingsOperationText.Text = UiText.Get("Operação cancelada. Os dados atuais foram preservados.");
         }
         catch (Exception exception)
         {
@@ -1565,7 +1574,9 @@ public partial class MainWindow : Window
             await RunSettingsMaintenanceAsync(UiText.Get("Verificando e restaurando o backup…"), async () =>
             {
             _shortcutOperationInProgress = true; ShortcutEditorPanel.IsEnabled = false;
-            await _usageService.RunMaintenanceAsync(() => _backupService.RestoreSnapshot(picker.FileName));
+            var token = _settingsCancellation?.Token ?? default;
+            await _usageService.RunMaintenanceAsync(() => _backupService.RestoreSnapshot(picker.FileName, token), token);
+            _settingsProgress?.PreventCancellation();
             CaptureStampCatalog.InvalidateCurrent();
             _settings = await _settingsStore.LoadAsync();
             ThemeService.Apply(_settings.Theme);
@@ -1590,7 +1601,11 @@ public partial class MainWindow : Window
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
             SettingsOperationText.Text = UiText.Get("Backup restaurado. Reabra o app para aplicar todas as preferências.");
-            });
+            }, cancellable: true);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = SettingsOperationText.Text = UiText.Get("Operação cancelada. Os dados atuais foram preservados.");
         }
         catch (Exception exception)
         {
@@ -2862,7 +2877,7 @@ public partial class MainWindow : Window
             ? value
             : fallback;
 
-    private void OpenCaptureImage_OnClick(object sender, RoutedEventArgs e)
+    private async void OpenCaptureImage_OnClick(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
@@ -2874,17 +2889,17 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (LoadCaptureWorkbenchImage(dialog.FileName, null,
+        if (await LoadCaptureWorkbenchImageAsync(dialog.FileName, null,
                 UiText.Format($"Imagem · {Path.GetFileName(dialog.FileName)}")))
         {
             StatusText.Text = UiText.Format($"Imagem aberta: {Path.GetFileName(dialog.FileName)}");
         }
     }
 
-    private bool LoadCaptureWorkbenchImage(
+    private async Task<bool> LoadCaptureWorkbenchImageAsync(
         string path,
         CaptureRecord? record,
-        string details)
+        string details, bool showProgress = true)
     {
         if (record is not null && !string.Equals(_captureService.ResolveFilePath(record), path, StringComparison.OrdinalIgnoreCase)) return false;
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
@@ -2895,7 +2910,26 @@ public partial class MainWindow : Window
         if (!CanReplaceCaptureSession()) return false;
         try
         {
-            CaptureInlineEditor.LoadImage(path);
+            _captureImageLoadCancellation?.Cancel();
+            using var cancellation = new CancellationTokenSource();
+            _captureImageLoadCancellation = cancellation;
+            var originalDocument = CaptureInlineEditor.Document;
+            var originalRevision = originalDocument?.Revision;
+            var progress = showProgress ? new ExternalOperationWindow(UiText.Get("Abrindo imagem…"), cancellation) { Owner = this } : null;
+            progress?.Show();
+            try
+            {
+                using var bitmap = await ExternalImageReader.DecodeAsync(() => ExternalImageReader.Load(path, cancellation.Token), cancellation.Token);
+                if (cancellation.IsCancellationRequested || _servicesDisposed || _settingsOperationInProgress ||
+                    !ReferenceEquals(originalDocument, CaptureInlineEditor.Document) || originalRevision != CaptureInlineEditor.Document?.Revision ||
+                    (record is not null && (!string.Equals(_captureService.ResolveFilePath(record), path, StringComparison.OrdinalIgnoreCase) || !_captureService.History.Contains(record)))) return false;
+                CaptureInlineEditor.LoadImage(bitmap);
+            }
+            finally
+            {
+                progress?.Complete();
+                if (ReferenceEquals(_captureImageLoadCancellation, cancellation)) _captureImageLoadCancellation = null;
+            }
             CapturePreviewEmptyPanel.Visibility = Visibility.Collapsed;
             CaptureWorkbenchToolbar.Visibility = Visibility.Visible;
             CaptureWorkbenchFooter.Visibility = Visibility.Visible;
@@ -2913,9 +2947,10 @@ public partial class MainWindow : Window
             }
             return true;
         }
-        catch (Exception exception) when (exception is IOException or NotSupportedException or ArgumentException or System.Runtime.InteropServices.ExternalException)
+        catch (OperationCanceledException) { StatusText.Text = UiText.Get("Operação cancelada. Os dados atuais foram preservados."); return false; }
+        catch (Exception exception) when (exception is InvalidDataException or IOException or NotSupportedException or ArgumentException or System.Runtime.InteropServices.ExternalException)
         {
-            StatusText.Text = UiText.Get("Não foi possível abrir a imagem selecionada");
+            StatusText.Text = UiText.Get("Não foi possível abrir a imagem selecionada") + ": " + exception.Message;
             return false;
         }
     }
@@ -3188,7 +3223,7 @@ public partial class MainWindow : Window
             if (!string.IsNullOrWhiteSpace(_captureWorkbenchPath)) CaptureInlineEditor.MarkSaved();
         }
         else if (!CaptureInlineEditor.HasUnsavedChanges && !string.IsNullOrWhiteSpace(result.FilePath))
-            LoadCaptureWorkbenchImage(_captureService.ResolveFilePath(result), result, $"{CaptureTypeLabel(result)} · {result.Width}×{result.Height}");
+            _ = LoadCaptureWorkbenchImageAsync(_captureService.ResolveFilePath(result), result, $"{CaptureTypeLabel(result)} · {result.Width}×{result.Height}", showProgress: false);
         _completedCaptureDocument = null;
         CaptureInlineEditor_OnStateChanged(this, EventArgs.Empty);
     }
@@ -3369,6 +3404,8 @@ public partial class MainWindow : Window
         }
 
         CaptureHistoryPanel.Children.Clear();
+        _captureThumbnailCancellation?.Cancel(); _captureThumbnailCancellation?.Dispose();
+        _captureThumbnailCancellation = new CancellationTokenSource();
         CaptureHistoryScroller.ScrollToLeftEnd();
 
         var mostRecent = _captureService.History.FirstOrDefault();
@@ -3379,10 +3416,10 @@ public partial class MainWindow : Window
                 !string.IsNullOrWhiteSpace(mostRecentPath) &&
                 File.Exists(mostRecentPath))
             {
-                LoadCaptureWorkbenchImage(
+                _ = LoadCaptureWorkbenchImageAsync(
                     mostRecentPath,
                     mostRecent,
-                    $"{CaptureTypeLabel(mostRecent)} · {mostRecent.Width}×{mostRecent.Height}");
+                    $"{CaptureTypeLabel(mostRecent)} · {mostRecent.Width}×{mostRecent.Height}", showProgress: false);
             }
         }
 
@@ -3465,16 +3502,6 @@ public partial class MainWindow : Window
             ClipToBounds = true
         };
         thumbnail.SetResourceReference(Border.BackgroundProperty, "Lab.canvas");
-        if (!record.MediaKind.Equals("video", StringComparison.OrdinalIgnoreCase) &&
-            TryLoadImage(path, out var image))
-        {
-            thumbnail.Child = new Image
-            {
-                Source = image,
-                Stretch = Stretch.UniformToFill
-            };
-        }
-        else
         {
             var icon = new System.Windows.Shapes.Path
             {
@@ -3491,6 +3518,8 @@ public partial class MainWindow : Window
             icon.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "Lab.muted");
             thumbnail.Child = icon;
         }
+        if (!record.MediaKind.Equals("video", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(path))
+            _ = LoadHistoryThumbnailAsync(thumbnail, path, record, _captureThumbnailCancellation?.Token ?? default);
         grid.Children.Add(thumbnail);
 
         // Display metadata without granting access for a thumbnail or other file action.
@@ -3541,7 +3570,7 @@ public partial class MainWindow : Window
         return card;
     }
 
-    private void CaptureHistoryCard_OnClick(object sender, MouseButtonEventArgs e)
+    private async void CaptureHistoryCard_OnClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is not Border { Tag: CaptureRecord record })
         {
@@ -3553,7 +3582,7 @@ public partial class MainWindow : Window
             OpenHistoryItem_OnClick(new Button { Tag = record }, new RoutedEventArgs());
             return;
         }
-        if (LoadCaptureWorkbenchImage(path, record,
+        if (await LoadCaptureWorkbenchImageAsync(path, record,
                 $"{CaptureTypeLabel(record)} · {record.Width}×{record.Height}"))
         {
             CaptureInlineEditor.BringIntoView();
@@ -3575,6 +3604,18 @@ public partial class MainWindow : Window
         }
     };
 
+    private async Task LoadHistoryThumbnailAsync(Border thumbnail, string path, CaptureRecord record, CancellationToken token)
+    {
+        try
+        {
+            var image = await ExternalImageReader.DecodeAsync(() => TryLoadImage(path, out var result) ? result : null, token);
+            if (image is not null && !token.IsCancellationRequested && !_servicesDisposed &&
+                _captureService.History.Contains(record) && string.Equals(_captureService.ResolveFilePath(record), path, StringComparison.OrdinalIgnoreCase))
+                thumbnail.Child = new Image { Source = image, Stretch = Stretch.UniformToFill };
+        }
+        catch (OperationCanceledException) { }
+    }
+
     private static bool TryLoadImage(string path, out BitmapImage? image)
     {
         image = null;
@@ -3584,18 +3625,21 @@ public partial class MainWindow : Window
         }
         try
         {
-            using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var dimensions = ExternalImageReader.CheckHeader(stream);
             var loaded = new BitmapImage();
             loaded.BeginInit();
             loaded.CacheOption = BitmapCacheOption.OnLoad;
-            loaded.DecodePixelWidth = 240;
+            var scale = Math.Min(1d, Math.Min(240d / dimensions.Width, 240d / dimensions.Height));
+            loaded.DecodePixelWidth = Math.Max(1, (int)Math.Ceiling(dimensions.Width * scale));
+            loaded.DecodePixelHeight = Math.Max(1, (int)Math.Ceiling(dimensions.Height * scale));
             loaded.StreamSource = stream;
             loaded.EndInit();
             loaded.Freeze();
             image = loaded;
             return true;
         }
-        catch (Exception exception) when (exception is IOException or NotSupportedException)
+        catch (Exception exception) when (exception is InvalidDataException or IOException or NotSupportedException or ArgumentException or System.Runtime.InteropServices.COMException)
         {
             return false;
         }
@@ -3728,14 +3772,14 @@ public partial class MainWindow : Window
         }
     }
 
-    private void EditHistoryItem_OnClick(object sender, RoutedEventArgs e)
+    private async void EditHistoryItem_OnClick(object sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: CaptureRecord record })
         {
             return;
         }
         if (!TryAuthorizeHistoryFile(record, out var path)) return;
-        if (LoadCaptureWorkbenchImage(path, record,
+        if (await LoadCaptureWorkbenchImageAsync(path, record,
                 $"{CaptureTypeLabel(record)} · {record.Width}×{record.Height}"))
         {
             ShowView(CaptureView, CaptureTabButton);
@@ -4261,6 +4305,8 @@ public partial class MainWindow : Window
         }
 
         _servicesDisposed = true;
+        _captureImageLoadCancellation?.Cancel();
+        _captureThumbnailCancellation?.Cancel();
         StopQuickAccentStatusMonitor();
         StopUpdateMonitor();
         Activated -= MainWindow_OnActivated;

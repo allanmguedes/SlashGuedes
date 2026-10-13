@@ -1704,5 +1704,12 @@
   "Ui.066C6C983965EC63": "O arquivo não está disponível ou foi bloqueado. O histórico aceita PNG, JPEG, GIF e MP4 locais, sem links ou redirecionamentos. Você pode remover somente a entrada do histórico.",
   "Ui.DD9FF4F756A75B0C": "Este registro é antigo ou veio de um backup. Confirme o arquivo antes de permitir acesso nesta sessão:\n\n{0}\n\nAutorizar este arquivo?",
   "Ui.3F46B105353FF59D": "Confirme o arquivo do histórico",
-  "Ui.BD514F84E7B8B774": "Confirmar arquivo do histórico"
+  "Ui.BD514F84E7B8B774": "Confirmar arquivo do histórico",
+  "Ui.D5182780D3187B1E": "O arquivo excede os limites de processamento seguro. Divida o conteúdo em arquivos menores ou reduza o tamanho da imagem.",
+  "Ui.3B000DC7CA26D9EF": "O ZIP não contém um diretório válido.",
+  "Ui.13795FF7ECB76606": "Abra uma imagem PNG, JPEG ou BMP válida para editar.",
+  "Ui.5F3D3BA441041CC1": "Processando arquivo",
+  "Ui.11BB25D8E93900D8": "Cancelando. Aguarde a operação terminar com segurança.",
+  "Ui.BFDD7A2089C7989E": "Operação cancelada. Os dados atuais foram preservados.",
+  "Ui.5552DB7880C0587C": "Abrindo imagem…"
 }

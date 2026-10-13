@@ -87,7 +87,7 @@ foreach ($behavior in @(
     'StartGifRecording_OnClick(sender, e)',
     'TryReadCaptureSettings(out var error)',
     'new CaptureRuleDialog(_settings.Capture)',
-    'LoadCaptureWorkbenchImage(',
+    'LoadCaptureWorkbenchImageAsync(',
     'BuildCaptureHistoryCard(item)',
     'SelectCaptureWorkbenchTool_OnClick',
     'ScrollCaptureHistoryBy(',
