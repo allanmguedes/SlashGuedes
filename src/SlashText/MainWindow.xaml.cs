@@ -1849,7 +1849,7 @@ public partial class MainWindow : Window
                 CaptureCompactTargetBox.Items.Clear();
                 CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = UiText.Get("Monitor ativo"), Tag = "Monitor" });
                 CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = UiText.Get("Região"), Tag = "Region" });
-                CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = UiText.Get("Janela sob o cursor"), Tag = "Window" });
+                CaptureCompactTargetBox.Items.Add(new ComboBoxItem { Content = UiText.Get("Janela"), Tag = "Window" });
                 CaptureCompactTargetBox.IsEnabled = true;
                 foreach (var fps in new[] { 24, 30, 60 })
                 {
@@ -1858,10 +1858,10 @@ public partial class MainWindow : Window
                 AddPresetItems(CaptureCompactQualityBox, RecordingPresetCatalog.Mp4Quality,
                     item => item.Name, item => item.Value);
                 SelectComboByTag(CaptureCompactTargetBox, SelectedTag(RecordingTargetBox, "Monitor"));
-                SelectComboByTag(CaptureCompactFpsBox, _settings.Capture.Recording.VideoFps.ToString());
-                SelectComboByTag(CaptureCompactQualityBox, _settings.Capture.Recording.VideoQuality);
+                SelectComboByTag(CaptureCompactFpsBox, SelectedTag(RecordingFpsBox, _settings.Capture.Recording.VideoFps.ToString()));
+                SelectComboByTag(CaptureCompactQualityBox, SelectedTag(RecordingQualityBox, _settings.Capture.Recording.VideoQuality));
             }
-            CaptureCompactCursorCheckBox.IsChecked = _settings.Capture.Recording.IncludeCursor;
+            CaptureCompactCursorCheckBox.IsChecked = RecordingCursorCheckBox.IsChecked == true;
         }
         finally
         {
@@ -1874,6 +1874,17 @@ public partial class MainWindow : Window
         if (_updatingCaptureRecordingCompact || RecordingCursorCheckBox is null)
         {
             return;
+        }
+        if (_captureMediaMode == CaptureMediaMode.Video && ReferenceEquals(sender, CaptureCompactTargetBox))
+        {
+            _captureLauncherMode = SelectedTag(CaptureCompactTargetBox, "Region") switch
+            {
+                "Monitor" => CaptureLauncherMode.ActiveMonitor,
+                "Window" => CaptureLauncherMode.Window,
+                _ => CaptureLauncherMode.Region
+            };
+            SyncVideoTargetControls();
+            UpdateCaptureSelectionSummary();
         }
         RecordingCursorCheckBox.IsChecked = CaptureCompactCursorCheckBox.IsChecked == true;
         if (_captureMediaMode == CaptureMediaMode.Gif)
@@ -1963,7 +1974,7 @@ public partial class MainWindow : Window
             capture.OpenEditorForMonitorAndWindow ? "Editor" : "Direct");
         SelectComboByTag(CaptureDelayBox, capture.DelaySeconds.ToString());
         SelectComboByTag(CaptureRetentionBox, capture.HistoryRetentionDays.ToString());
-        SelectComboByTag(RecordingTargetBox, "Monitor");
+        SelectComboByTag(RecordingTargetBox, _captureMediaMode == CaptureMediaMode.Video ? SelectedVideoTargetKind.ToString() : "Monitor");
         SelectComboByTag(RecordingFpsBox, capture.Recording.VideoFps.ToString());
         SelectComboByTag(RecordingQualityBox, capture.Recording.VideoQuality);
         RecordingCursorCheckBox.IsChecked = capture.Recording.IncludeCursor;
@@ -2160,6 +2171,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_captureMediaMode == CaptureMediaMode.Video && mode == CaptureLauncherMode.Scrolling) return;
         _captureLauncherMode = mode;
         if (mode == CaptureLauncherMode.Gif)
         {
@@ -2183,6 +2195,11 @@ public partial class MainWindow : Window
         }
 
         _captureMediaMode = mode;
+        if (mode == CaptureMediaMode.Video && _captureLauncherMode == CaptureLauncherMode.Scrolling)
+        {
+            _captureLauncherMode = CaptureLauncherMode.Region;
+            CaptureRegionModeButton.IsChecked = true;
+        }
         if (mode == CaptureMediaMode.Gif)
         {
             _captureLauncherMode = CaptureLauncherMode.Gif;
@@ -2245,20 +2262,10 @@ public partial class MainWindow : Window
             CaptureEditorCard.Visibility = image ? Visibility.Visible : Visibility.Collapsed;
             CaptureMediaPreviewPanel.Visibility = image ? Visibility.Collapsed : Visibility.Visible;
         }
-        var selection = _captureMediaMode switch
-        {
-            CaptureMediaMode.Video => UiText.Get("Vídeo MP4"),
-            CaptureMediaMode.Gif => UiText.Get("GIF · região"),
-            _ => _captureLauncherMode switch
-            {
-                CaptureLauncherMode.ActiveMonitor => "Monitor",
-                CaptureLauncherMode.Window => UiText.Get("Janela"),
-                CaptureLauncherMode.Scrolling => UiText.Get("Captura longa"),
-                _ => UiText.Get("Região")
-            }
-        };
-        CaptureNewButtonText.Text = UiText.Get("Novo");
-        CaptureSelectionSummaryText.Text = UiText.Format($"{selection} · pronta");
+        CaptureScrollingModeButton.IsEnabled = _captureMediaMode != CaptureMediaMode.Video;
+        CaptureScrollingModeButton.Opacity = CaptureScrollingModeButton.IsEnabled ? 1 : 0.45;
+        if (_captureMediaMode == CaptureMediaMode.Video) SyncVideoTargetControls();
+        UpdateCaptureSelectionSummary();
         CaptureRecordingCard.Visibility = Visibility.Collapsed;
         CaptureRecordingCompactCard.Visibility = _captureMediaMode == CaptureMediaMode.Image
             ? Visibility.Collapsed
@@ -2277,6 +2284,51 @@ public partial class MainWindow : Window
         {
             LabMotion.PlayEntrance(CaptureRecordingCompactCard);
         }
+    }
+
+    // The visible launcher mode is the source of truth. Hidden legacy controls
+    // are mirrors; they must never silently override the destination on New.
+    internal RecordingTargetKind SelectedVideoTargetKind => _captureLauncherMode switch
+    {
+        CaptureLauncherMode.ActiveMonitor => RecordingTargetKind.Monitor,
+        CaptureLauncherMode.Region => RecordingTargetKind.Region,
+        CaptureLauncherMode.Window => RecordingTargetKind.Window,
+        _ => throw new InvalidOperationException(UiText.Get("O destino do vídeo não é válido."))
+    };
+
+    private void SyncVideoTargetControls()
+    {
+        var kind = SelectedVideoTargetKind;
+        var updating = _updatingCaptureRecordingCompact;
+        _updatingCaptureRecordingCompact = true;
+        try
+        {
+            SelectComboByTag(RecordingTargetBox, kind.ToString());
+            SelectComboByTag(CaptureCompactTargetBox, kind.ToString());
+            CaptureMonitorModeButton.IsChecked = kind == RecordingTargetKind.Monitor;
+            CaptureRegionModeButton.IsChecked = kind == RecordingTargetKind.Region;
+            CaptureWindowModeButton.IsChecked = kind == RecordingTargetKind.Window;
+        }
+        finally { _updatingCaptureRecordingCompact = updating; }
+    }
+
+    private void UpdateCaptureSelectionSummary()
+    {
+        var area = _captureLauncherMode switch
+        {
+            CaptureLauncherMode.ActiveMonitor => UiText.Get("Monitor"),
+            CaptureLauncherMode.Window => UiText.Get("Janela"),
+            CaptureLauncherMode.Scrolling => UiText.Get("Captura longa"),
+            _ => UiText.Get("Região")
+        };
+        var selection = _captureMediaMode switch
+        {
+            CaptureMediaMode.Video => UiText.Get("Vídeo MP4") + " · " + area,
+            CaptureMediaMode.Gif => UiText.Get("GIF · região"),
+            _ => area
+        };
+        CaptureNewButtonText.Text = UiText.Get("Novo");
+        CaptureSelectionSummaryText.Text = UiText.Format($"{selection} · pronta");
     }
 
     private ScreenHelpHighlighter? _captureHelpHighlight;
@@ -2665,23 +2717,14 @@ public partial class MainWindow : Window
             ShowAppDialog(settingsError, UiText.Get("Gravação"), MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
+        var targetKind = SelectedVideoTargetKind;
         await _settingsStore.SaveAsync(_settings);
 
         try
         {
-            RecordingTarget? target;
-            if (SelectedTag(RecordingTargetBox, "Monitor").Equals(
-                    "Window",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                Hide();
-                await Task.Delay(250);
-                target = _captureService.WindowUnderCursorTarget();
-            }
-            else
-            {
-                target = ResolveRecordingTarget(UiText.Get("Selecione a região do vídeo"));
-            }
+            Hide();
+            await Task.Delay(250);
+            var target = ResolveRecordingTarget(targetKind);
             if (target is null)
             {
                 ShowFromTray();
@@ -2862,15 +2905,13 @@ public partial class MainWindow : Window
         }
     }
 
-    private RecordingTarget? ResolveRecordingTarget(string regionPurpose)
+    private RecordingTarget? ResolveRecordingTarget(RecordingTargetKind kind) => kind switch
     {
-        var selected = SelectedTag(RecordingTargetBox, "Monitor");
-        if (selected.Equals("Region", StringComparison.OrdinalIgnoreCase))
-        {
-            return _captureService.SelectRecordingRegion(this, regionPurpose);
-        }
-        return _captureService.ActiveMonitorTarget();
-    }
+        RecordingTargetKind.Monitor => _captureService.ActiveMonitorTarget(),
+        RecordingTargetKind.Region => _captureService.SelectRecordingRegion(this, UiText.Get("Selecione a região do vídeo")),
+        RecordingTargetKind.Window => _captureService.SelectRecordingWindow(this, UiText.Get("Clique na janela que deseja gravar")),
+        _ => throw new InvalidOperationException(UiText.Get("O destino do vídeo não é válido."))
+    };
 
     private static int ParseSelectedInt(ComboBox box, int fallback) =>
         int.TryParse(SelectedTag(box, fallback.ToString()), out var value)

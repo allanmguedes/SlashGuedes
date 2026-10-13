@@ -1729,5 +1729,9 @@
   "Ui.A8F446DAE550A094": "Não foi possível alterar o diagnóstico adicional. Verifique a permissão da pasta de dados.",
   "Ui.BC4BB91ABFE4BDAC": "A coleta adicional foi ativada ao iniciar o app.",
   "Ui.05390A8792CE25E7": "{0} gravação interrompida: arquivo parcial preservado na pasta escolhida, com final .recording.mp4. Pode estar incompleto.",
-  "Ui.2E1627A6D19206C9": "{0} gravações interrompidas: arquivos parciais preservados nas pastas escolhidas, com final .recording.mp4. Podem estar incompletos."
+  "Ui.2E1627A6D19206C9": "{0} gravações interrompidas: arquivos parciais preservados nas pastas escolhidas, com final .recording.mp4. Podem estar incompletos.",
+  "Ui.1E099A9BA9DA740F": "O destino do vídeo não é válido.",
+  "Ui.54D62538A67C1E9A": "Clique na janela que deseja gravar",
+  "Ui.D892E6DAE522779D": "A janela selecionada não é válida. Escolha outra janela.",
+  "Ui.1CFC14C1AFD1071D": "Selecione uma região dentro de um único monitor."
 }

@@ -1729,5 +1729,9 @@
   "Ui.A8F446DAE550A094": "No se pudo cambiar el diagnóstico adicional. Comprueba los permisos de la carpeta de datos.",
   "Ui.BC4BB91ABFE4BDAC": "El diagnóstico adicional se activó al iniciar la aplicación.",
   "Ui.05390A8792CE25E7": "{0} grabación interrumpida: archivo parcial conservado en la carpeta elegida, terminado en .recording.mp4. Puede estar incompleto.",
-  "Ui.2E1627A6D19206C9": "{0} grabaciones interrumpidas: archivos parciales conservados en las carpetas elegidas, terminados en .recording.mp4. Pueden estar incompletos."
+  "Ui.2E1627A6D19206C9": "{0} grabaciones interrumpidas: archivos parciales conservados en las carpetas elegidas, terminados en .recording.mp4. Pueden estar incompletos.",
+  "Ui.1E099A9BA9DA740F": "El destino del vídeo no es válido.",
+  "Ui.54D62538A67C1E9A": "Haz clic en la ventana que quieres grabar",
+  "Ui.D892E6DAE522779D": "La ventana seleccionada no es válida. Elige otra ventana.",
+  "Ui.1CFC14C1AFD1071D": "Selecciona una región dentro de un único monitor."
 }

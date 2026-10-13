@@ -51,6 +51,15 @@ jobs:
           $process = Start-Process $exe.FullName -ArgumentList "--shortcuts-workspace-smoke `"$output`"" -WindowStyle Hidden -PassThru
           if (-not $process.WaitForExit(180000)) { $process.Kill(); throw 'WPF timeout' }
           if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'WPF failed' }
+      - name: Recording destination clicks and crop configuration
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem src/SlashText/bin -Recurse -Filter SlashDesk.exe | Select-Object -First 1
+          $output = Join-Path $PWD 'ocr-evidence/recording-targets'
+          $process = Start-Process $exe.FullName -ArgumentList "--recording-targets-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Recording target WPF timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Recording target WPF failed' }
+          Get-Content "$output/result.txt"
       - name: Recording audio toolbar and settings
         shell: pwsh
         run: |

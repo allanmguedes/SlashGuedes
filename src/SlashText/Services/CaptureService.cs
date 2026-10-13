@@ -88,7 +88,11 @@ public sealed class CaptureService
 
     public Rectangle? WindowUnderCursorBounds()
     {
-        var window = WindowUnderCursorHandle();
+        return WindowBounds(WindowUnderCursorHandle());
+    }
+
+    private static Rectangle? WindowBounds(IntPtr window)
+    {
         if (window == IntPtr.Zero)
         {
             return null;
@@ -129,7 +133,7 @@ public sealed class CaptureService
     public RecordingTarget? WindowUnderCursorTarget()
     {
         var handle = WindowUnderCursorHandle();
-        var bounds = WindowUnderCursorBounds();
+        var bounds = WindowBounds(handle);
         return handle == IntPtr.Zero || bounds is null
             ? null
             : new RecordingTarget(RecordingTargetKind.Window, bounds.Value, handle);
@@ -152,6 +156,33 @@ public sealed class CaptureService
             RecordingTargetKind.Region,
             bounds,
             DisplayDeviceName: screen.DeviceName);
+    }
+
+    public RecordingTarget? SelectRecordingWindow(Window? owner, string purpose)
+    {
+        var selector = new RegionSelectionWindow(purpose, RecordingWindowAtPoint);
+        if (owner is not null) selector.Owner = owner;
+        return selector.ShowDialog() == true ? selector.SelectedWindowTarget : null;
+    }
+
+    private static RecordingTarget? RecordingWindowAtPoint(System.Drawing.Point point)
+    {
+        RecordingTarget? target = null;
+        EnumWindows((window, _) =>
+        {
+            if (!IsWindowVisible(window) || IsIconic(window)) return true;
+            GetWindowThreadProcessId(window, out var process);
+            // The selection sheet and any SlashDesk controls are not recording targets.
+            if (process == Environment.ProcessId) return true;
+            var bounds = WindowBounds(window);
+            if (bounds is null || bounds.Value.Width < 2 || bounds.Value.Height < 2 || !bounds.Value.Contains(point)) return true;
+            var kind = new StringBuilder(128); GetClassName(window, kind, kind.Capacity);
+            // Clicking desktop/taskbar must not look like selecting a normal window.
+            if (kind.ToString() is "Progman" or "WorkerW" or "Shell_TrayWnd" or "Shell_SecondaryTrayWnd") return true;
+            target = new(RecordingTargetKind.Window, bounds.Value, window);
+            return false;
+        }, IntPtr.Zero);
+        return target;
     }
 
     public Bitmap? SelectAndEditRegion(
@@ -1099,6 +1130,19 @@ public sealed class CaptureService
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetAncestor(IntPtr window, uint flags);
+
+    private delegate bool EnumWindowsCallback(IntPtr window, IntPtr parameter);
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr parameter);
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr window);
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsIconic(IntPtr window);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetClassName(IntPtr window, StringBuilder name, int maximum);
 
     [DllImport("user32.dll")]
     private static extern bool GetWindowRect(IntPtr window, out NativeRect rect);

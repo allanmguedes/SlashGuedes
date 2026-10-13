@@ -820,7 +820,7 @@
                                                                   Style="{StaticResource Lab.Combo}">
                                                             <ComboBoxItem Content="{DynamicResource Ui.47DA5014B08C047F}" Tag="Monitor"/>
                                                             <ComboBoxItem Content="{DynamicResource Ui.1433152B0C58A9B9}" Tag="Region"/>
-                                                            <ComboBoxItem Content="{DynamicResource Ui.3AA73FB2BD385293}" Tag="Window"/>
+                                                            <ComboBoxItem Content="{DynamicResource Ui.28014EF3525228E8}" Tag="Window"/>
                                                         </ComboBox>
                                                     </StackPanel>
                                                     <StackPanel Grid.Column="2">
@@ -931,7 +931,7 @@
                                             Style="{StaticResource Lab.Combo}" SelectionChanged="CaptureCompactRecording_OnChanged">
                                     <ComboBoxItem Content="{DynamicResource Ui.47DA5014B08C047F}" Tag="Monitor"/>
                                     <ComboBoxItem Content="{DynamicResource Ui.1433152B0C58A9B9}" Tag="Region"/>
-                                    <ComboBoxItem Content="{DynamicResource Ui.3AA73FB2BD385293}" Tag="Window"/>
+                                    <ComboBoxItem Content="{DynamicResource Ui.28014EF3525228E8}" Tag="Window"/>
                                   </ComboBox>
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">

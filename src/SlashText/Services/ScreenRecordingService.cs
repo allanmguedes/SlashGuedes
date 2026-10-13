@@ -519,20 +519,32 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
         RecordingSettings settings,
         string libraryLogPath)
     {
+        if (!Enum.IsDefined(target.Kind) || target.Bounds.Width < 2 || target.Bounds.Height < 2)
+            throw new InvalidOperationException(UiText.Get("O destino do vídeo não é válido."));
+        if (target.Kind == RecordingTargetKind.Window && target.WindowHandle == IntPtr.Zero)
+            throw new InvalidOperationException(UiText.Get("A janela selecionada não é válida. Escolha outra janela."));
         RecordingPresetCatalog.Normalize(settings);
         RecordingSourceBase source;
-        if (target.Kind == RecordingTargetKind.Window && target.WindowHandle != IntPtr.Zero)
+        if (target.Kind == RecordingTargetKind.Window)
         {
             source = new WindowRecordingSource(target.WindowHandle);
         }
         else
         {
-            var display = string.IsNullOrWhiteSpace(target.DisplayDeviceName)
-                ? new DisplayRecordingSource(DisplayRecordingSource.MainMonitor)
-                : new DisplayRecordingSource(target.DisplayDeviceName);
+            var deviceName = target.DisplayDeviceName;
+            var screen = System.Windows.Forms.Screen.FromRectangle(target.Bounds);
             if (target.Kind == RecordingTargetKind.Region)
             {
-                var screen = System.Windows.Forms.Screen.FromRectangle(target.Bounds);
+                if (!screen.Bounds.Contains(target.Bounds) ||
+                    (!string.IsNullOrWhiteSpace(deviceName) && !string.Equals(deviceName, screen.DeviceName, StringComparison.OrdinalIgnoreCase)))
+                    throw new InvalidOperationException(UiText.Get("Selecione uma região dentro de um único monitor."));
+                deviceName = screen.DeviceName;
+            }
+            var display = string.IsNullOrWhiteSpace(deviceName)
+                ? new DisplayRecordingSource(DisplayRecordingSource.MainMonitor)
+                : new DisplayRecordingSource(deviceName);
+            if (target.Kind == RecordingTargetKind.Region)
+            {
                 display.SourceRect = new ScreenRect(
                     Math.Max(0, target.Bounds.Left - screen.Bounds.Left),
                     Math.Max(0, target.Bounds.Top - screen.Bounds.Top),

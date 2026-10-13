@@ -1729,5 +1729,9 @@
   "Ui.A8F446DAE550A094": "Could not change additional diagnostics. Check the data folder permissions.",
   "Ui.BC4BB91ABFE4BDAC": "Additional diagnostics were enabled when the app started.",
   "Ui.05390A8792CE25E7": "{0} interrupted recording: partial file preserved in the chosen folder, ending in .recording.mp4. It may be incomplete.",
-  "Ui.2E1627A6D19206C9": "{0} interrupted recordings: partial files preserved in the chosen folders, ending in .recording.mp4. They may be incomplete."
+  "Ui.2E1627A6D19206C9": "{0} interrupted recordings: partial files preserved in the chosen folders, ending in .recording.mp4. They may be incomplete.",
+  "Ui.1E099A9BA9DA740F": "The video target is invalid.",
+  "Ui.54D62538A67C1E9A": "Click the window you want to record",
+  "Ui.D892E6DAE522779D": "The selected window is invalid. Choose another window.",
+  "Ui.1CFC14C1AFD1071D": "Select a region within a single monitor."
 }

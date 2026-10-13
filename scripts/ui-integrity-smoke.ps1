@@ -394,14 +394,15 @@ if (-not $gif.Contains('GifBitmapEncoder') -or
     throw 'Correções críticas de GIF ou MP4 incompletas.'
 }
 
-$windowTargetIndex = $code.LastIndexOf('target = _captureService.WindowUnderCursorTarget();')
+$windowTargetIndex = $code.LastIndexOf('var target = ResolveRecordingTarget(targetKind);')
 $hideBeforeWindowIndex = if ($windowTargetIndex -ge 0) {
     $code.LastIndexOf('Hide();', $windowTargetIndex)
 } else {
     -1
 }
 if ($hideBeforeWindowIndex -lt 0 -or
-    $windowTargetIndex - $hideBeforeWindowIndex -gt 300) {
+    $windowTargetIndex - $hideBeforeWindowIndex -gt 300 -or
+    -not $code.Contains('RecordingTargetKind.Window => _captureService.SelectRecordingWindow(this')) {
     throw 'A seleção de janela MP4 deve ocorrer após ocultar o SlashDesk.'
 }
 
