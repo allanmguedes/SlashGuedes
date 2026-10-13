@@ -59,7 +59,7 @@ public sealed class GifRecordingResult : IDisposable
 {
     private readonly IReadOnlyList<System.Drawing.Bitmap>? _memoryFrames;
     private readonly IReadOnlyList<string>? _framePaths;
-    private readonly string? _temporaryDirectory;
+    private readonly Services.TemporarySession? _temporarySession;
 
     public GifRecordingResult(
         IReadOnlyList<System.Drawing.Bitmap> frames,
@@ -79,14 +79,14 @@ public sealed class GifRecordingResult : IDisposable
 
     internal GifRecordingResult(
         IReadOnlyList<string> framePaths,
-        string temporaryDirectory,
         int fps,
         Rectangle bounds,
         IReadOnlyList<int> frameDelaysCentiseconds,
-        GifCaptureMetrics metrics)
+        GifCaptureMetrics metrics,
+        Services.TemporarySession temporarySession)
     {
         _framePaths = framePaths;
-        _temporaryDirectory = temporaryDirectory;
+        _temporarySession = temporarySession;
         Fps = fps;
         Bounds = bounds;
         FrameDelaysCentiseconds = frameDelaysCentiseconds;
@@ -125,18 +125,6 @@ public sealed class GifRecordingResult : IDisposable
                 frame.Dispose();
             }
         }
-        if (!string.IsNullOrWhiteSpace(_temporaryDirectory))
-        {
-            try
-            {
-                Directory.Delete(_temporaryDirectory, recursive: true);
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
-        }
+        _temporarySession?.Dispose();
     }
 }

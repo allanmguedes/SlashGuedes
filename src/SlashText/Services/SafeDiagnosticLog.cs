@@ -1,53 +1,26 @@
-using System.Text.Json;
 using System.IO;
 
 namespace SlashText.Services;
 
 public static class SafeDiagnosticLog
 {
-    private static readonly object Gate = new();
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
+    internal static bool EnabledAtLaunch => string.Equals(Environment.GetEnvironmentVariable("SLASHDESK_DIAGNOSTICS"), "1", StringComparison.Ordinal);
     public static bool Enabled =>
-        string.Equals(Environment.GetEnvironmentVariable("SLASHDESK_DIAGNOSTICS"), "1", StringComparison.Ordinal) ||
+        EnabledAtLaunch ||
         File.Exists(Path.Combine(AppPaths.LogsDirectory, "diagnostics.enabled"));
+
+    internal static void SetEnabled(bool enabled)
+    {
+        using var pin = LocalFileBoundary.PinDirectory(AppPaths.LogsDirectory, create: true);
+        var path = Path.Combine(AppPaths.LogsDirectory, "diagnostics.enabled");
+        if (enabled) { using var file = LocalFileBoundary.OpenFile(path, create: true, exclusive: true); file.SetLength(0); }
+        else if (File.Exists(path)) { using (LocalFileBoundary.OpenFile(path, exclusive: true)) { } File.Delete(path); }
+    }
 
     public static void Write(string eventType, IReadOnlyDictionary<string, object?>? fields = null)
     {
-        if (!Enabled)
-        {
-            return;
-        }
-        try
-        {
-            Directory.CreateDirectory(AppPaths.LogsDirectory);
-            var record = new Dictionary<string, object?>
-            {
-                ["timestampUtc"] = DateTimeOffset.UtcNow,
-                ["eventType"] = eventType,
-                ["threadId"] = Environment.CurrentManagedThreadId
-            };
-            if (fields is not null)
-            {
-                foreach (var field in fields)
-                {
-                    record[field.Key] = field.Value;
-                }
-            }
-            var line = JsonSerializer.Serialize(record, JsonOptions) + Environment.NewLine;
-            lock (Gate)
-            {
-                File.AppendAllText(
-                    Path.Combine(AppPaths.LogsDirectory, $"functional-{DateTime.UtcNow:yyyyMMdd}.jsonl"),
-                    line);
-            }
-        }
-        catch
-        {
-            // Diagnóstico opcional nunca pode interromper expansão ou captura.
-        }
+        if (!Enabled) return;
+        try { DiagnosticPolicy.Append(true, eventType, fields ?? new Dictionary<string, object?>()); }
+        catch { /* Optional diagnostics never interrupt expansion or capture. */ }
     }
 }

@@ -147,6 +147,27 @@ jobs:
           path: statistics-evidence/
           if-no-files-found: warn
 
+      - name: Local retention real OCR and Settings controls
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem src/SlashText/bin -Recurse -Filter SlashDesk.exe | Select-Object -First 1
+          if (-not $exe) { throw 'Build executable not found' }
+          $output = Join-Path $PWD 'retention-evidence'
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList "--retention-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(120000)) { $process.Kill(); throw 'Retention smoke timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Retention smoke failed' }
+          if (-not (Test-Path "$output/result.txt")) { throw 'Retention smoke produced no result' }
+          Get-Content "$output/result.txt"
+
+      - name: Upload synthetic retention evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: SlashDesk-retention-controls-evidence
+          path: retention-evidence/
+          retention-days: 7
+          if-no-files-found: warn
+
       - name: Settings real WPF and emoji backup transactions
         shell: pwsh
         run: |

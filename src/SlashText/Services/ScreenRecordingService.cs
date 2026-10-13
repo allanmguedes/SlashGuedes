@@ -137,7 +137,8 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
             _recordingId,
             target,
             settings,
-            EncoderPolicy);
+            EncoderPolicy,
+            _workingPath);
         EnqueueNative("recording.start", () => StartCore(target, settings));
         PublishProgress("Inicializando MP4");
         return completion.Task;
@@ -401,6 +402,8 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
         TaskCompletionSource<string>? completion;
         string finalPath;
         string workingPath;
+        Guid recordingId;
+        var completed = false;
         lock (_gate)
         {
             _state = ScreenRecordingState.Finalizing;
@@ -409,6 +412,7 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
             completion = _completion;
             finalPath = _path;
             workingPath = _workingPath;
+            recordingId = _recordingId;
         }
         _clock.Stop();
         DetachBackend(backend);
@@ -454,6 +458,7 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
             var moveStarted = Stopwatch.StartNew();
             Log("recording.temporary-move-enter");
             File.Move(recordedPath, finalPath);
+            completed = true;
             Log("recording.temporary-move-return",
                 ("durationMs", moveStarted.Elapsed.TotalMilliseconds));
             lock (_gate)
@@ -482,7 +487,7 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
         finally
         {
             ReleaseUnresolvedStop();
-            AppDiagnosticLog.MarkRecordingEnded();
+            AppDiagnosticLog.MarkRecordingEnded(recordingId, completed);
         }
     }
 
@@ -595,9 +600,10 @@ public sealed class ScreenRecordingService : IRecordingController, IDisposable
             },
             LogOptions = new LogOptions
             {
-                IsLogEnabled = true,
+                // Native logs can contain paths/device identifiers and bypass minimization.
+                IsLogEnabled = false,
                 LogFilePath = libraryLogPath,
-                LogSeverityLevel = LogLevel.Trace
+                LogSeverityLevel = LogLevel.Error
             }
         };
     }

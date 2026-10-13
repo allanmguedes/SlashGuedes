@@ -356,7 +356,7 @@ if ($recording.Contains('CleanupRecorder') -or
     -not $recording.Contains('Interlocked.CompareExchange(ref _finalizationClaimed, 1, 0)') -or
     -not $recording.Contains('IsHardwareEncodingEnabled = true') -or
     -not $recording.Contains('IsFixedFramerate = false') -or
-    -not $recording.Contains('IsLogEnabled = true')) {
+    -not $recording.Contains('IsLogEnabled = false')) {
     throw 'Ciclo de finalização MP4 inseguro ou dependente de aceleração de hardware.'
 }
 

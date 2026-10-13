@@ -66,8 +66,8 @@ internal static class CaptureOcrSmoke
             catch (OperationCanceledException) { }
         }
         // Worker inputs/results have been removed even after cancellation.
-        var jobs = Path.Combine(Path.GetTempPath(), "SlashDesk-OCR");
-        Require(!Directory.Exists(jobs) || Directory.GetDirectories(jobs).Length == 0, "No capture or text left in OCR temporary jobs");
+        var jobs = TemporarySession.Root;
+        Require(!Directory.Exists(jobs) || Directory.GetDirectories(jobs, "ocr-*").Length == 0, "No capture or text left in OCR temporary jobs");
 
         using var fixture = Fixture("SlashDesk\nExtração local de texto\nTeste em português e inglês", false, 18, "Segoe UI");
         foreach (var theme in new[] { "Light", "Dark", "System" })

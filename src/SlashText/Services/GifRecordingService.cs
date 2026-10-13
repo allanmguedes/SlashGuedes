@@ -67,11 +67,8 @@ public sealed class GifRecordingService
         var recordingId = session.RecordingId;
         var interval = TimeSpan.FromSeconds(1d / settings.GifFps);
         var defaultDelay = Math.Max(2, (int)Math.Round(100d / settings.GifFps));
-        var temporaryDirectory = Path.Combine(
-            Path.GetTempPath(),
-            "SlashDesk",
-            $"gif-{recordingId:N}");
-        Directory.CreateDirectory(temporaryDirectory);
+        var temporarySession = TemporarySession.Create("gif");
+        var temporaryDirectory = temporarySession.DirectoryPath;
         var framePaths = new List<string>();
         var delays = new List<int>();
         var channel = Channel.CreateBounded<CapturedFrame>(new BoundedChannelOptions(QueueCapacity)
@@ -263,15 +260,15 @@ public sealed class GifRecordingService
                 ("durationMs", session.Elapsed.TotalMilliseconds));
             return new GifRecordingResult(
                 framePaths,
-                temporaryDirectory,
                 settings.GifFps,
                 bounds,
                 delays,
-                metrics);
+                metrics,
+                temporarySession);
         }
         catch (Exception exception)
         {
-            DeleteDirectory(temporaryDirectory);
+            temporarySession.Dispose();
             AppDiagnosticLog.WriteException("gif.capture-failed", exception);
             throw;
         }
@@ -614,13 +611,6 @@ public sealed class GifRecordingService
     private static void TryDelete(string path)
     {
         try { File.Delete(path); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
-    }
-
-    private static void DeleteDirectory(string path)
-    {
-        try { Directory.Delete(path, recursive: true); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
     }

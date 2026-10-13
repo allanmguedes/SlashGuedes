@@ -1721,5 +1721,13 @@
   "Ui.76DD412132B12719": "Afterward, SlashDesk restores the previous content, including an empty clipboard. A new copy made during expansion is preserved.",
   "Ui.F0B46DA5554A7581": "Copying a capture, OCR result or code block follows Windows history and synchronization preferences.",
   "Ui.AEBBCA1138E3C8AE": "Other apps can observe the clipboard. This protection does not delete existing history entries or guarantee absolute secrecy.",
-  "Ui.8F466C539051C665": "Temporary expansions stay out of Windows history and synchronization. Copied captures and OCR follow Windows preferences."
+  "Ui.8F466C539051C665": "Temporary expansions stay out of Windows history and synchronization. Copied captures and OCR follow Windows preferences.",
+  "Ui.2BA99C26D9E9F0C9": "Additional diagnostics",
+  "Ui.AAE212515005BDEE": "Records technical steps without text, images or paths. Off by default.",
+  "Ui.602D916E3E55C429": "Local logs: up to 7 days and 10 MiB in total. Temporary OCR and GIF sessions are removed when finished or, after an interruption, once they are no longer in use.",
+  "Ui.9585C7698AB00B3F": "Interrupted MP4 files are preserved in the folder chosen for recording. This cleanup does not delete backups, saved captures or OCR models.",
+  "Ui.A8F446DAE550A094": "Could not change additional diagnostics. Check the data folder permissions.",
+  "Ui.BC4BB91ABFE4BDAC": "Additional diagnostics were enabled when the app started.",
+  "Ui.05390A8792CE25E7": "{0} interrupted recording: partial file preserved in the chosen folder, ending in .recording.mp4. It may be incomplete.",
+  "Ui.2E1627A6D19206C9": "{0} interrupted recordings: partial files preserved in the chosen folders, ending in .recording.mp4. They may be incomplete."
 }

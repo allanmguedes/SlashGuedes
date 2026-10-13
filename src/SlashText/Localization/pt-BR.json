@@ -1721,5 +1721,13 @@
   "Ui.76DD412132B12719": "Ao terminar, o SlashDesk restaura o conteúdo anterior, inclusive uma área de transferência vazia. Uma nova cópia feita durante a expansão é preservada.",
   "Ui.F0B46DA5554A7581": "Copiar uma captura, um resultado de OCR ou um bloco de código segue as preferências de histórico e sincronização do Windows.",
   "Ui.AEBBCA1138E3C8AE": "Outros aplicativos podem observar a área de transferência. A proteção não apaga itens já registrados nem garante sigilo absoluto.",
-  "Ui.8F466C539051C665": "Expansões temporárias ficam fora do histórico e da sincronização do Windows. Capturas e OCR copiados seguem as preferências do Windows."
+  "Ui.8F466C539051C665": "Expansões temporárias ficam fora do histórico e da sincronização do Windows. Capturas e OCR copiados seguem as preferências do Windows.",
+  "Ui.2BA99C26D9E9F0C9": "Diagnóstico adicional",
+  "Ui.AAE212515005BDEE": "Registra etapas técnicas, sem textos, imagens ou caminhos. Desativado por padrão.",
+  "Ui.602D916E3E55C429": "Logs locais: até 7 dias e 10 MiB no total. Sessões temporárias de OCR e GIF são removidas ao terminar ou, após uma interrupção, quando não estiverem mais em uso.",
+  "Ui.9585C7698AB00B3F": "MP4 interrompidos são preservados na pasta escolhida para a gravação. Backups, capturas salvas e modelos do OCR não são apagados por essa limpeza.",
+  "Ui.A8F446DAE550A094": "Não foi possível alterar o diagnóstico adicional. Verifique a permissão da pasta de dados.",
+  "Ui.BC4BB91ABFE4BDAC": "A coleta adicional foi ativada ao iniciar o app.",
+  "Ui.05390A8792CE25E7": "{0} gravação interrompida: arquivo parcial preservado na pasta escolhida, com final .recording.mp4. Pode estar incompleto.",
+  "Ui.2E1627A6D19206C9": "{0} gravações interrompidas: arquivos parciais preservados nas pastas escolhidas, com final .recording.mp4. Podem estar incompletos."
 }

@@ -42,6 +42,14 @@ public partial class MainWindow
 
     private void RefreshSettingsPresentation()
     {
+        SettingsDiagnosticsCheckBox.IsChecked = SafeDiagnosticLog.Enabled;
+        SettingsDiagnosticsCheckBox.IsEnabled = !SafeDiagnosticLog.EnabledAtLaunch;
+        SettingsDiagnosticsCheckBox.ToolTip = SafeDiagnosticLog.EnabledAtLaunch ? UiText.Get("A coleta adicional foi ativada ao iniciar o app.") : null;
+        var interrupted = RecordingRecovery.InterruptedCount();
+        SettingsRecordingRecoveryNotice.Visibility = interrupted > 0 ? Visibility.Visible : Visibility.Collapsed;
+        SettingsRecordingRecoveryText.Text = interrupted == 1
+            ? UiText.Format($"{interrupted} gravação interrompida: arquivo parcial preservado na pasta escolhida, com final .recording.mp4. Pode estar incompleto.")
+            : UiText.Format($"{interrupted} gravações interrompidas: arquivos parciais preservados nas pastas escolhidas, com final .recording.mp4. Podem estar incompletos.");
         SettingsDataPathText.Text = AppPaths.DataDirectory;
         SettingsDataPathText.ToolTip = AppPaths.DataDirectory;
         SettingsVersionText.Text = UiText.Format($"Versão atual: {ProductVersion()}");
@@ -52,6 +60,16 @@ public partial class MainWindow
             button.SetResourceReference(Button.BorderBrushProperty, selected ? "Lab.accent" : "Lab.line");
             button.SetResourceReference(Button.BackgroundProperty, selected ? "Lab.tint" : "Lab.shell");
             AutomationProperties.SetHelpText(button, selected ? UiText.Get("Tema selecionado") : UiText.Get("Selecionar este tema"));
+        }
+    }
+
+    private void SettingsDiagnostics_OnClick(object sender, RoutedEventArgs e)
+    {
+        try { SafeDiagnosticLog.SetEnabled(SettingsDiagnosticsCheckBox.IsChecked == true); }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            SettingsDiagnosticsCheckBox.IsChecked = SafeDiagnosticLog.Enabled;
+            ShowSettingsDialog(UiText.Get("Não foi possível alterar o diagnóstico adicional. Verifique a permissão da pasta de dados."), "SlashDesk", image: MessageBoxImage.Warning);
         }
     }
 

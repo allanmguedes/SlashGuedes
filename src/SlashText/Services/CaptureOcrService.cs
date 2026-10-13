@@ -31,8 +31,8 @@ public sealed class CaptureOcrService
         cancellation.ThrowIfCancellationRequested();
         if ((long)snapshot.Width * snapshot.Height > MaxPixels)
             throw new InvalidOperationException(UiText.Get("A região é muito grande. Selecione um trecho menor para extrair texto."));
-        var folder = Path.Combine(Path.GetTempPath(), "SlashDesk-OCR", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(folder);
+        using var session = TemporarySession.Create("ocr");
+        var folder = session.DirectoryPath;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, timeout.Token);
         using var process = new Process();
@@ -71,7 +71,7 @@ public sealed class CaptureOcrService
         finally
         {
             // No images or recognized text are retained in the capture history or diagnostic log.
-            if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true);
+            // The held session lease performs bounded, nonrecursive cleanup on disposal.
         }
     }
 
@@ -83,6 +83,7 @@ public sealed class CaptureOcrService
         if (args.Length is not (3 or 4 or 5) || args[0] != "--capture-ocr-worker") return 2;
         try
         {
+            using var lease = TemporarySession.AttachWorker(args[1], args[2]);
             using var original = new Bitmap(args[1]);
             if ((long)original.Width * original.Height > MaxPixels) return 3;
             var options = (args.Length == 5 ? JsonSerializer.Deserialize<CaptureOcrSettings>(args[4]) : null)?.Normalize() ?? new();

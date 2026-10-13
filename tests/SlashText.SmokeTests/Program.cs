@@ -6,6 +6,18 @@ using System.IO.Compression;
 using System.Diagnostics;
 using ScreenRecorderLib;
 
+if (args.Length == 2 && args[0] == "--retention-worker")
+{
+    RetentionPrivacyChecks.Worker(args[1]);
+    return;
+}
+if (args.Length == 2 && args[0] == "--retention-smoke")
+{
+    Directory.CreateDirectory(args[1]);
+    await RetentionPrivacyChecks.RunAsync(args[1]);
+    return;
+}
+
 if (args.Length == 1 && args[0] == "--clipboard-payload-smoke")
 {
     var clipboardRoot = Path.Combine(Path.GetTempPath(), "slashdesk-clipboard-payload-" + Guid.NewGuid().ToString("N"));
@@ -23,6 +35,9 @@ if (args.Length == 2 && args[0] == "--clipboard-native-isolated")
     Environment.Exit(ClipboardNativeChecks.RunIsolated(args[1]));
     return;
 }
+
+var root = Path.Combine(Path.GetTempPath(), $"slashtext-smoke-{Guid.NewGuid():N}");
+AppPaths.Initialize(new AppDataEnvironment(DistributionMode.Portable, Path.Combine(root, "initial-app"), root, isCapturePilot: true));
 
 var engine = new TemplateEngine();
 var reference = new DateTimeOffset(2026, 7, 27, 14, 35, 0, TimeSpan.FromHours(-3));
@@ -434,7 +449,6 @@ Require(
     captureMenuClamped.Bounds.Right == 1908,
     "menu Capturar permanece inteiro na área útil junto à borda direita");
 
-var root = Path.Combine(Path.GetTempPath(), $"slashtext-smoke-{Guid.NewGuid():N}");
 var snippetsFile = Path.Combine(root, "snippets.md");
 var backups = Path.Combine(root, "backups");
 try
@@ -444,6 +458,7 @@ try
     Directory.CreateDirectory(root);
     await CaptureHistoryTrustChecks.RunAsync(root);
     await ExternalInputBudgetChecks.RunAsync(root);
+    await RetentionPrivacyChecks.RunAsync(root);
     ClipboardPrivacyChecks.Run(root);
     await ClipboardNativeChecks.RunChildAsync(root);
     Exception? workbenchFailure = null;
@@ -1327,9 +1342,9 @@ try
         !recorderOptions.VideoEncoderOptions.IsThrottlingDisabled &&
         recorderOptions.VideoEncoderOptions.Encoder is H264VideoEncoder h264 &&
         h264.BitrateMode == H264BitrateControlMode.Quality &&
-        recorderOptions.LogOptions.IsLogEnabled &&
-        recorderOptions.LogOptions.LogSeverityLevel == LogLevel.Trace,
-        "MP4 prefere hardware com fallback Media Foundation, sem quadros fixos e com log nativo");
+        !recorderOptions.LogOptions.IsLogEnabled &&
+        recorderOptions.LogOptions.LogSeverityLevel == LogLevel.Error,
+        "MP4 prefere hardware com fallback Media Foundation, sem quadros fixos e sem persistir log nativo");
     var mp4TechnicalValues = new Dictionary<string, (int Bitrate, int Quality)>
     {
         ["Baixa"] = (2_500_000, 55),

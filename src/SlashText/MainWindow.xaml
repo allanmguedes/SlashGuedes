@@ -1583,6 +1583,13 @@
     <TextBlock Text="{DynamicResource Ui.08D81D21FE999F42}" Style="{StaticResource Lab.Metadata}" Margin="0,12,0,0"/>
     <Border Background="{DynamicResource Lab.shell}" CornerRadius="6" Padding="16" Margin="0,15,0,15"><TextBlock x:Name="SettingsDataPathText" Style="{StaticResource Lab.Text}" TextWrapping="Wrap" FontFamily="{StaticResource Lab.MonoFont}"/></Border>
     <TextBlock Text="{DynamicResource Ui.F914C373AA96E125}" Style="{StaticResource Lab.Metadata}" Margin="0,0,0,14"/>
+    <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+     <StackPanel Margin="0,0,12,0"><TextBlock Text="{DynamicResource Ui.2BA99C26D9E9F0C9}" Style="{StaticResource Lab.Text}"/><TextBlock Text="{DynamicResource Ui.AAE212515005BDEE}" Style="{StaticResource Lab.Metadata}" Margin="0,4,0,0"/></StackPanel>
+     <CheckBox x:Name="SettingsDiagnosticsCheckBox" Grid.Column="1" Style="{StaticResource Lab.Accent.Switch}" VerticalAlignment="Center" Content="{DynamicResource Ui.F47DFDE9CB6FD44E}" AutomationProperties.Name="{DynamicResource Ui.2BA99C26D9E9F0C9}" Click="SettingsDiagnostics_OnClick"/>
+    </Grid>
+    <TextBlock Text="{DynamicResource Ui.602D916E3E55C429}" Style="{StaticResource Lab.Metadata}" Margin="0,0,0,10"/>
+    <TextBlock Text="{DynamicResource Ui.9585C7698AB00B3F}" Style="{StaticResource Lab.Metadata}" Margin="0,0,0,14"/>
+    <Border x:Name="SettingsRecordingRecoveryNotice" Visibility="Collapsed" Background="{DynamicResource Lab.tint}" CornerRadius="6" Padding="12" Margin="0,0,0,14"><TextBlock x:Name="SettingsRecordingRecoveryText" Style="{StaticResource Lab.Text}" TextWrapping="Wrap"/></Border>
     <Button Style="{StaticResource Lab.Button}" Content="{DynamicResource Ui.6F1B8E02790AC195}" HorizontalAlignment="Left" Click="OpenSettingsData_OnClick"/>
    </StackPanel></Border>
   </Grid>

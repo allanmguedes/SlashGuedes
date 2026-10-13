@@ -1721,5 +1721,13 @@
   "Ui.76DD412132B12719": "Al terminar, SlashDesk restaura el contenido anterior, incluso un portapapeles vacío. Se preserva cualquier nueva copia realizada durante la expansión.",
   "Ui.F0B46DA5554A7581": "Copiar una captura, un resultado de OCR o un bloque de código sigue las preferencias de historial y sincronización de Windows.",
   "Ui.AEBBCA1138E3C8AE": "Otras aplicaciones pueden observar el portapapeles. Esta protección no elimina elementos ya registrados ni garantiza confidencialidad absoluta.",
-  "Ui.8F466C539051C665": "Las expansiones temporales quedan fuera del historial y la sincronización de Windows. Las capturas y el OCR copiados siguen las preferencias de Windows."
+  "Ui.8F466C539051C665": "Las expansiones temporales quedan fuera del historial y la sincronización de Windows. Las capturas y el OCR copiados siguen las preferencias de Windows.",
+  "Ui.2BA99C26D9E9F0C9": "Diagnóstico adicional",
+  "Ui.AAE212515005BDEE": "Registra etapas técnicas, sin textos, imágenes ni rutas. Desactivado por defecto.",
+  "Ui.602D916E3E55C429": "Registros locales: hasta 7 días y 10 MiB en total. Las sesiones temporales de OCR y GIF se eliminan al terminar o, tras una interrupción, cuando ya no estén en uso.",
+  "Ui.9585C7698AB00B3F": "Los MP4 interrumpidos se conservan en la carpeta elegida para la grabación. Esta limpieza no elimina copias de seguridad, capturas guardadas ni modelos de OCR.",
+  "Ui.A8F446DAE550A094": "No se pudo cambiar el diagnóstico adicional. Comprueba los permisos de la carpeta de datos.",
+  "Ui.BC4BB91ABFE4BDAC": "El diagnóstico adicional se activó al iniciar la aplicación.",
+  "Ui.05390A8792CE25E7": "{0} grabación interrumpida: archivo parcial conservado en la carpeta elegida, terminado en .recording.mp4. Puede estar incompleto.",
+  "Ui.2E1627A6D19206C9": "{0} grabaciones interrumpidas: archivos parciales conservados en las carpetas elegidas, terminados en .recording.mp4. Pueden estar incompletos."
 }
