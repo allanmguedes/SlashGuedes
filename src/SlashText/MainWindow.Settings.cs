@@ -101,7 +101,7 @@ public partial class MainWindow
     private async Task RunSettingsMaintenanceAsync(string message, Func<Task> action, bool cancellable = false)
     {
         if (_settingsOperationInProgress || _shortcutOperationInProgress) throw new InvalidOperationException(UiText.Get("Aguarde a operação em andamento."));
-        if (_recordingControl is not null || _gifRecordingSession is not null || _activeUpdateCancellation is not null)
+        if (_recordingOperation is not null || _recordingControl is not null || _gifRecordingSession is not null || _activeUpdateCancellation is not null)
             throw new InvalidOperationException(UiText.Get("Finalize a gravação ou atualização antes da manutenção."));
         using var capture = _captureGate.TryEnter();
         using var expansion = _expansionRequestGate.TryEnter();

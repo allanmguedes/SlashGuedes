@@ -1779,5 +1779,9 @@
   "Ui.E5F2741BB5C5188C": "As contagens pendentes estão nesta sessão. Tentaremos salvá-las no próximo uso de atalho ou acento. Se o app fechar antes disso, elas poderão ser perdidas.",
   "Ui.45FF316998EF9CC1": "Preferências de captura não salvas. A ação foi interrompida.",
   "Ui.EBDA786D6992CA01": "Não foi possível salvar as preferências de captura",
-  "Ui.D793C68D913AF60D": "Não foi possível salvar as preferências de captura. Os ajustes anteriores foram mantidos e a captura ou gravação não foi iniciada. Verifique o acesso à pasta de dados, ajuste as opções e tente novamente."
+  "Ui.D793C68D913AF60D": "Não foi possível salvar as preferências de captura. Os ajustes anteriores foram mantidos e a captura ou gravação não foi iniciada. Verifique o acesso à pasta de dados, ajuste as opções e tente novamente.",
+  "Ui.1CF5EE24ADC407BF": "Já existe uma captura ou gravação em andamento.",
+  "Ui.F2EB0F4B354596CA": "Preparando gravação…",
+  "Ui.49D8D781CC69A426": "Preparação da gravação cancelada.",
+  "Ui.FF8E288671C302E9": "Cancelar preparação"
 }

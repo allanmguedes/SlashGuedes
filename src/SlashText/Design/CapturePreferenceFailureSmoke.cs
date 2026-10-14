@@ -40,6 +40,7 @@ internal static class CapturePreferenceFailureSmoke
                 settings.Capture.OutputDirectoryTemplate = Path.Combine(root, "synthetic-captures");
                 await store.SaveAsync(settings);
                 var window = new MainWindow(captureEvidence: true);
+                var captureGate = Field<SingleFlightGate>(window, "_captureGate");
                 var windowStore = Field<JsonFileStore<AppSettings>>(window, "_settingsStore");
                 Set(window, "_settings", await windowStore.LoadAsync());
                 Invoke(window, "LoadCaptureSettings");
@@ -116,7 +117,7 @@ internal static class CapturePreferenceFailureSmoke
                         using (var locked = File.Open(AppPaths.SettingsFile, FileMode.Open, FileAccess.Read, FileShare.Read))
                         {
                             Invoke(window, handler, window, new RoutedEventArgs());
-                            await UntilAsync(() => dialogs > oldDialogs);
+                            await UntilAsync(() => dialogs > oldDialogs && !captureGate.IsActive);
                             Require(ReferenceEquals(Field<AppSettings>(window, "_settings").Capture, previous) &&
                                 Control<TextBox>(window, "CaptureFileNameBox").Text == previous.FileNameTemplate, "memory and controls roll back " + label);
                             var after = await File.ReadAllBytesAsync(AppPaths.SettingsFile);
@@ -127,7 +128,7 @@ internal static class CapturePreferenceFailureSmoke
                         }
                         Control<TextBox>(window, "CaptureFileNameBox").Text = desiredName;
                         Invoke(window, handler, window, new RoutedEventArgs());
-                        await UntilAsync(() => continuations.Contains(signal));
+                        await UntilAsync(() => continuations.Contains(signal) && !captureGate.IsActive);
                         var fresh = new JsonFileStore<AppSettings>(AppPaths.SettingsFile);
                         var reopened = await fresh.LoadAsync();
                         Require(!fresh.IsProtected && reopened.Capture.FileNameTemplate == desiredName, "retry persists via real fresh reader " + label);
@@ -172,7 +173,7 @@ internal static class CapturePreferenceFailureSmoke
                     {
                         Control<TextBox>(window, "CaptureFileNameBox").Text = "readonly-candidate";
                         Invoke(window, "SaveCaptureSettings_OnClick", window, new RoutedEventArgs());
-                        await UntilAsync(() => dialogs > oldReadOnlyDialogs);
+                        await UntilAsync(() => dialogs > oldReadOnlyDialogs && !captureGate.IsActive);
                         Require(Field<AppSettings>(window, "_settings").Capture.FileNameTemplate != "readonly-candidate", "read-only failure remains local " + language + theme);
                     }
                     finally { File.SetAttributes(AppPaths.SettingsFile, FileAttributes.Normal); }
@@ -193,7 +194,7 @@ internal static class CapturePreferenceFailureSmoke
                         desiredName = "session-only-" + media;
                         Control<TextBox>(window, "CaptureFileNameBox").Text = desiredName;
                         Invoke(window, handler, window, new RoutedEventArgs());
-                        await UntilAsync(() => continuations.Contains(signal));
+                        await UntilAsync(() => continuations.Contains(signal) && !captureGate.IsActive);
                         Require(windowStore.IsProtected && await File.ReadAllTextAsync(AppPaths.SettingsFile) == "{invalid" && Field<AppSettings>(window, "_settings").Capture.FileNameTemplate == desiredName,
                             "protected reads retain session-only capture and original " + handler + language + theme);
                         Require(Control<TextBlock>(window, "StatusText").Text == UiText.Get("Preferências protegidas: ajustes desta sessão não serão salvos."),

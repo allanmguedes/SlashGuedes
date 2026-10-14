@@ -394,7 +394,7 @@ if (-not $gif.Contains('GifBitmapEncoder') -or
     throw 'Correções críticas de GIF ou MP4 incompletas.'
 }
 
-$windowTargetIndex = $code.LastIndexOf('var target = ResolveRecordingTarget(targetKind);')
+$windowTargetIndex = $code.LastIndexOf('var target = ResolveRecordingTarget(targetKind, operation.Token);')
 $hideBeforeWindowIndex = if ($windowTargetIndex -ge 0) {
     $code.LastIndexOf('Hide();', $windowTargetIndex)
 } else {

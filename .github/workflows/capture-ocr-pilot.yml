@@ -69,6 +69,15 @@ jobs:
           if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Capture preference UI timeout' }
           if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Capture preference UI failed' }
           Get-Content "$output/result.txt"
+      - name: Recording reservation and cancellation in real WPF commands
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem src/SlashText/bin -Recurse -Filter SlashDesk.exe | Select-Object -First 1
+          $output = Join-Path $PWD 'ocr-evidence/recording-operation-compiled'
+          $process = Start-Process $exe.FullName -ArgumentList "--recording-operation-ui-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Recording reservation UI timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Recording reservation UI failed' }
+          Get-Content "$output/result.txt"
       - name: Recording destination clicks and crop configuration
         shell: pwsh
         run: |
@@ -168,6 +177,15 @@ jobs:
           $process = Start-Process $exe -ArgumentList "--capture-preference-ui-smoke `"$output`"" -WindowStyle Hidden -PassThru
           if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Published capture preference UI timeout' }
           if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Published capture preference UI failed' }
+          Get-Content "$output/result.txt"
+      - name: Recording reservation inside published EXE
+        shell: pwsh
+        run: |
+          $output = Join-Path $PWD 'ocr-evidence/recording-operation-published'
+          $exe = (Resolve-Path publish-ocr/SlashDesk.exe).Path
+          $process = Start-Process $exe -ArgumentList "--recording-operation-ui-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Published recording reservation UI timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Published recording reservation UI failed' }
           Get-Content "$output/result.txt"
       - name: Package isolated pilot and verify startup
         shell: pwsh

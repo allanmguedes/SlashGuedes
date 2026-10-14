@@ -20,7 +20,15 @@ public partial class MainWindow
             _quickAccentTrayToggle.Enabled = !_settingsOperationInProgress && !_shortcutOperationInProgress && !_quickAccentTraySaving && !_settingsStore.IsProtected;
         }
         foreach (Forms.ToolStripMenuItem group in menu.Items.OfType<Forms.ToolStripMenuItem>())
-            if (group.Name is "Captures" or "Recordings" or "Shortcuts") group.Enabled = !_settingsOperationInProgress && !_shortcutOperationInProgress;
+        {
+            if (group.Name is "Captures" or "Shortcuts") group.Enabled = !_settingsOperationInProgress && !_shortcutOperationInProgress && (group.Name != "Captures" || !_captureGate.IsActive);
+            if (group.Name == "Recordings")
+            {
+                group.Enabled = CanUseRecordingInterface && !_settingsOperationInProgress && !_shortcutOperationInProgress;
+                foreach (Forms.ToolStripMenuItem item in group.DropDownItems.OfType<Forms.ToolStripMenuItem>())
+                    item.Enabled = item.Name == "CancelPreparation" ? _recordingOperation is { Phase: RecordingOperationPhase.Preparing } : !_captureGate.IsActive;
+            }
+        }
     }
 
     internal void OpenQuickAccentFromTray()
@@ -112,6 +120,9 @@ public partial class MainWindow
             null,
             (_, _) => Dispatcher.BeginInvoke(new Action(() =>
                 StartGifRecording_OnClick(this, new RoutedEventArgs()))));
+        var cancelPreparation = new Forms.ToolStripMenuItem(UiText.Get("Cancelar preparação")) { Name = "CancelPreparation", Tag = "X" };
+        cancelPreparation.Click += (_, _) => Dispatcher.BeginInvoke(new Action(CancelRecordingPreparation));
+        recordingsMenu.DropDownItems.Add(cancelPreparation);
 
         var shortcutsMenu = new Forms.ToolStripMenuItem(UiText.Get("Atalhos")) { Name = "Shortcuts" };
         shortcutsMenu.DropDownItems.Add(

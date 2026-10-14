@@ -147,17 +147,21 @@ public sealed class CaptureService
             : new RecordingTarget(RecordingTargetKind.Window, bounds.Value, handle);
     }
 
-    public RecordingTarget? SelectRecordingRegion(Window? owner, string purpose)
+    public RecordingTarget? SelectRecordingRegion(Window? owner, string purpose, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var selector = new RegionSelectionWindow(purpose);
+        using var cancellation = new RecordingWindowCancellation(selector, cancellationToken);
         if (owner is not null)
         {
             selector.Owner = owner;
         }
         if (selector.ShowDialog() != true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             return null;
         }
+        cancellationToken.ThrowIfCancellationRequested();
         var bounds = selector.SelectedBounds;
         var screen = System.Windows.Forms.Screen.FromRectangle(bounds);
         return new RecordingTarget(
@@ -166,11 +170,15 @@ public sealed class CaptureService
             DisplayDeviceName: screen.DeviceName);
     }
 
-    public RecordingTarget? SelectRecordingWindow(Window? owner, string purpose)
+    public RecordingTarget? SelectRecordingWindow(Window? owner, string purpose, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var selector = new RegionSelectionWindow(purpose, RecordingWindowAtPoint);
+        using var cancellation = new RecordingWindowCancellation(selector, cancellationToken);
         if (owner is not null) selector.Owner = owner;
-        return selector.ShowDialog() == true ? selector.SelectedWindowTarget : null;
+        var accepted = selector.ShowDialog() == true;
+        cancellationToken.ThrowIfCancellationRequested();
+        return accepted ? selector.SelectedWindowTarget : null;
     }
 
     private static RecordingTarget? RecordingWindowAtPoint(System.Drawing.Point point)

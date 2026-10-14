@@ -2041,6 +2041,8 @@ public partial class MainWindow : Window
 
     private async void SaveCaptureSettings_OnClick(object sender, RoutedEventArgs e)
     {
+        using var lease = TryReserveCaptureCommand();
+        if (lease is null) return;
         if (!await PrepareCapturePreferencesAsync(UiText.Get("Configuração de captura"))) return;
         ConfigureCaptureShortcuts();
         ShowCapturePreferencesSavedStatus();
@@ -2244,9 +2246,15 @@ public partial class MainWindow : Window
                 return;
         }
 
+        using var lease = TryReserveCaptureCommand();
+        if (lease is null) return;
         if (!await PrepareCapturePreferencesAsync(UiText.Get("Regra de captura"))) return;
+        if (!CanUseRecordingInterface) return;
         ConfigureCaptureShortcuts();
         if (CapturePreparationForEvidence is { } evidence) { evidence("image"); return; }
+        // Existing image handlers reserve synchronously before their first await.
+        // Transfer on the UI thread without an await or modal call between leases.
+        lease.Dispose();
         switch (_captureLauncherMode)
         {
             case CaptureLauncherMode.ActiveMonitor:
@@ -2370,6 +2378,8 @@ public partial class MainWindow : Window
 
     private async void FocusCaptureRule_OnClick(object sender, RoutedEventArgs e)
     {
+        using var lease = TryReserveCaptureCommand();
+        if (lease is null) return;
         if (_settingsOperationInProgress || _servicesDisposed || _restoreRecoveryBlocked) return;
         var previous = _settings.Capture;
         if (!TryReadCaptureSettings(out var currentError))
@@ -2417,11 +2427,12 @@ public partial class MainWindow : Window
 
     private async Task RunScrollingCaptureAsync(bool invokedByShortcut)
     {
+        if (!CanUseRecordingInterface || _settingsOperationInProgress) return;
         using var captureLease = _captureGate.TryEnter();
         if (captureLease is null)
         {
             SafeDiagnosticLog.Write("capture.ignored_busy");
-            StatusText.Text = UiText.Get("Já existe uma captura em andamento");
+            StatusText.Text = UiText.Get("Já existe uma captura ou gravação em andamento.");
             return;
         }
 
@@ -2559,10 +2570,11 @@ public partial class MainWindow : Window
         CaptureShortcutAction action,
         bool invokedByShortcut)
     {
+        if (!CanUseRecordingInterface || _settingsOperationInProgress) return;
         using var captureLease = _captureGate.TryEnter();
         if (captureLease is null)
         {
-            StatusText.Text = UiText.Get("Já existe uma captura em andamento");
+            StatusText.Text = UiText.Get("Já existe uma captura ou gravação em andamento.");
             return;
         }
 
@@ -2716,25 +2728,27 @@ public partial class MainWindow : Window
     }
 
     private async void StartMp4Recording_OnClick(object sender, RoutedEventArgs e)
-    {
-        if (_settingsOperationInProgress) return;
-        if (_recordingControl is not null || _recordingService?.IsRecording == true)
-        {
-            _recordingControl?.Activate();
-            return;
-        }
-        if (!await PrepareCapturePreferencesAsync(UiText.Get("Gravação"))) return;
-        var targetKind = SelectedVideoTargetKind;
-        ConfigureCaptureShortcuts();
-        if (CapturePreparationForEvidence is { } evidence) { evidence("mp4"); return; }
+        => await RunRecordingOperationAsync("MP4", RunMp4RecordingAsync);
 
+    private async Task RunMp4RecordingAsync(RecordingOperation operation)
+    {
         try
         {
+            var targetKind = SelectedVideoTargetKind;
+            if (!await PrepareCapturePreferencesAsync(UiText.Get("Gravação"), operation.Token)) return;
+            CheckRecordingOperation(operation);
+            var capture = _settings.Capture;
+            ConfigureCaptureShortcuts();
+            if (RecordingPipelineForEvidence is { } pipeline) { await pipeline("MP4", operation); CheckRecordingOperation(operation); return; }
+            if (CapturePreparationForEvidence is { } evidence) { evidence("mp4"); return; }
+            operation.InterfaceHidden = true;
             Hide();
-            await Task.Delay(250);
-            var target = ResolveRecordingTarget(targetKind);
+            await Task.Delay(250, operation.Token);
+            CheckRecordingOperation(operation);
+            var target = ResolveRecordingTarget(targetKind, operation.Token);
             if (target is null)
             {
+                operation.Cancel();
                 ShowFromTray();
                 return;
             }
@@ -2743,36 +2757,46 @@ public partial class MainWindow : Window
             {
                 Hide();
             }
-            await Task.Delay(180);
-            _recordingService = new ScreenRecordingService();
-            _recordingService.RecordingFailed += (_, message) =>
-                _ = Dispatcher.BeginInvoke(() => StatusText.Text = message);
-            var previousAudio = _settings.Capture.Recording.Audio.Copy();
-            _recordingControl = new RecordingControlWindow(_recordingService, "MP4", _settings.Capture.Recording);
-            _recordingControl.Show();
-            var shouldStart = await _recordingControl.WaitForStartAsync();
+            await Task.Delay(180, operation.Token);
+            CheckRecordingOperation(operation);
+            var recorder = new ScreenRecordingService();
+            _recordingService = recorder;
+            recorder.RecordingFailed += (_, message) =>
+            {
+                if (!Dispatcher.HasShutdownStarted)
+                    _ = Dispatcher.BeginInvoke(() => { if (CanUseRecordingInterface && ReferenceEquals(_recordingOperation, operation)) StatusText.Text = message; });
+            };
+            var previousAudio = capture.Recording.Audio.Copy();
+            var control = new RecordingControlWindow(recorder, "MP4", capture.Recording);
+            _recordingControl = control;
+            using var cancellation = WatchPreparedRecordingControl(control, operation);
+            control.Show();
+            var shouldStart = await control.WaitForStartAsync();
+            CheckRecordingOperation(operation);
             if (shouldStart)
             {
-                shouldStart = await TrySaveCapturePreferencesAsync(_settings.Capture, previousAudio, ClosePreparedMp4Recording);
-                shouldStart = shouldStart && _recordingControl?.IsVisible == true;
+                shouldStart = await TrySaveCapturePreferencesCoreAsync(capture, previousAudio, ClosePreparedMp4Recording, operation.Token);
+                CheckRecordingOperation(operation);
+                shouldStart = shouldStart && control.IsVisible;
             }
             if (!shouldStart || _recordingControl is null)
             {
                 if (_recordingControl is not null || _recordingService is not null) ClosePreparedMp4Recording();
                 return;
             }
-            _recordingControl.BeginRecording();
-            var completion = _recordingService.StartAsync(
+            CheckRecordingOperation(operation);
+            operation.MarkRecording();
+            control.BeginRecording();
+            var completion = recorder.StartAsync(
                 target,
-                _settings.Capture,
-                _settings.Capture.Recording);
+                capture,
+                capture.Recording);
             var path = await completion;
-            var elapsed = _recordingService.Elapsed;
-            var completedRecordingId = _recordingService.RecordingId.ToString("N");
-            _recordingControl.Close();
-            _recordingControl = null;
-            _recordingService.Dispose();
-            _recordingService = null;
+            CheckRecordingOperation(operation);
+            operation.MarkFinalizing();
+            var elapsed = recorder.Elapsed;
+            var completedRecordingId = recorder.RecordingId.ToString("N");
+            CleanupRecordingResources();
             AppDiagnosticLog.Write("recording.interface-restored",
                 ("recordingId", completedRecordingId), ("media", "MP4"), ("result", "success"));
             await _captureService.AddMediaRecordAsync(new CaptureRecord
@@ -2785,17 +2809,18 @@ public partial class MainWindow : Window
                 Height = target.Bounds.Height,
                 DurationSeconds = elapsed.TotalSeconds
             });
+            CheckRecordingOperation(operation);
             ShowFromTray();
             StatusText.Text = UiText.Format($"Vídeo salvo: {Path.GetFileName(path)}");
             RefreshCaptureHistory();
         }
+        catch (OperationCanceledException) when (operation.Token.IsCancellationRequested || !CanUseRecordingInterface) { throw; }
         catch (Exception exception)
         {
+            if (!CanUseRecordingInterface) return;
+            operation.Token.ThrowIfCancellationRequested();
             var failedRecordingId = _recordingService?.RecordingId.ToString("N") ?? "unknown";
-            _recordingControl?.Close();
-            _recordingControl = null;
-            _recordingService?.Dispose();
-            _recordingService = null;
+            CleanupRecordingResources();
             ShowFromTray();
             AppDiagnosticLog.Write("recording.interface-restored",
                 ("recordingId", failedRecordingId), ("media", "MP4"), ("result", "failure"));
@@ -2810,37 +2835,37 @@ public partial class MainWindow : Window
     }
 
     private async void StartGifRecording_OnClick(object sender, RoutedEventArgs e)
-    {
-        if (_settingsOperationInProgress) return;
-        if (_recordingControl is not null)
-        {
-            _recordingControl.Activate();
-            return;
-        }
-        if (!await PrepareCapturePreferencesAsync("GIF")) return;
-        ConfigureCaptureShortcuts();
-        if (CapturePreparationForEvidence is { } evidence) { evidence("gif"); return; }
-        var target = _captureService.SelectRecordingRegion(this, UiText.Get("Selecione a região do GIF"));
-        if (target is null)
-        {
-            return;
-        }
+        => await RunRecordingOperationAsync("GIF", RunGifRecordingAsync);
 
+    private async Task RunGifRecordingAsync(RecordingOperation operation)
+    {
         try
         {
+            if (!await PrepareCapturePreferencesAsync("GIF", operation.Token)) return;
+            CheckRecordingOperation(operation);
+            var capture = _settings.Capture;
+            ConfigureCaptureShortcuts();
+            if (RecordingPipelineForEvidence is { } pipeline) { await pipeline("GIF", operation); CheckRecordingOperation(operation); return; }
+            if (CapturePreparationForEvidence is { } evidence) { evidence("gif"); return; }
+            var target = _captureService.SelectRecordingRegion(this, UiText.Get("Selecione a região do GIF"), operation.Token);
+            CheckRecordingOperation(operation);
+            if (target is null) { operation.Cancel(); return; }
+            operation.InterfaceHidden = true;
             Hide();
-            await Task.Delay(180);
-            _gifRecordingSession = _gifRecordingService.StartRecording(
+            await Task.Delay(180, operation.Token);
+            CheckRecordingOperation(operation);
+            operation.MarkRecording();
+            var session = _gifRecordingService.StartRecording(
                 target.Bounds,
-                _settings.Capture.Recording);
-            _recordingControl = new RecordingControlWindow(_gifRecordingSession, "GIF");
+                capture.Recording);
+            _gifRecordingSession = session;
+            _recordingControl = new RecordingControlWindow(session, "GIF");
             _recordingControl.Show();
-            using var recording = await _gifRecordingSession.Completion;
-            var completedRecordingId = _gifRecordingSession.RecordingId.ToString("N");
-            _recordingControl.Close();
-            _recordingControl = null;
-            _gifRecordingSession.Dispose();
-            _gifRecordingSession = null;
+            using var recording = await session.Completion;
+            CheckRecordingOperation(operation);
+            operation.MarkFinalizing();
+            var completedRecordingId = session.RecordingId.ToString("N");
+            CleanupRecordingResources();
             ShowFromTray();
             AppDiagnosticLog.Write("recording.interface-restored",
                 ("recordingId", completedRecordingId), ("media", "GIF"), ("result", "captured"));
@@ -2854,16 +2879,21 @@ public partial class MainWindow : Window
                     MessageBoxImage.Information);
             }
             var preview = new GifPreviewWindow(recording) { Owner = this };
+            using var previewCancellation = new RecordingWindowCancellation(preview, operation.Token);
             if (preview.ShowDialog() != true)
             {
+                CheckRecordingOperation(operation);
                 StatusText.Text = UiText.Get("GIF descartado");
                 return;
             }
+            CheckRecordingOperation(operation);
             var path = await _gifRecordingService.SaveAsync(
                 recording,
-                _settings.Capture,
+                capture,
                 target.Type,
-                _settings.Capture.Recording.GifQuality);
+                capture.Recording.GifQuality,
+                operation.Token);
+            CheckRecordingOperation(operation);
             await _captureService.AddMediaRecordAsync(new CaptureRecord
             {
                 CreatedAt = DateTimeOffset.Now,
@@ -2874,16 +2904,15 @@ public partial class MainWindow : Window
                 Height = recording.Height,
                 DurationSeconds = recording.Duration.TotalSeconds
             });
+            CheckRecordingOperation(operation);
             StatusText.Text = UiText.Format($"GIF salvo: {Path.GetFileName(path)}");
             RefreshCaptureHistory();
         }
+        catch (OperationCanceledException) when (operation.Token.IsCancellationRequested || !CanUseRecordingInterface) { throw; }
         catch (OperationCanceledException)
         {
             var cancelledRecordingId = _gifRecordingSession?.RecordingId.ToString("N") ?? "unknown";
-            _recordingControl?.Close();
-            _recordingControl = null;
-            _gifRecordingSession?.Dispose();
-            _gifRecordingSession = null;
+            CleanupRecordingResources();
             ShowFromTray();
             AppDiagnosticLog.Write("recording.interface-restored",
                 ("recordingId", cancelledRecordingId), ("media", "GIF"), ("result", "cancelled"));
@@ -2891,11 +2920,10 @@ public partial class MainWindow : Window
         }
         catch (Exception exception)
         {
+            if (!CanUseRecordingInterface) return;
+            operation.Token.ThrowIfCancellationRequested();
             var failedRecordingId = _gifRecordingSession?.RecordingId.ToString("N") ?? "unknown";
-            _recordingControl?.Close();
-            _recordingControl = null;
-            _gifRecordingSession?.Dispose();
-            _gifRecordingSession = null;
+            CleanupRecordingResources();
             ShowFromTray();
             AppDiagnosticLog.Write("recording.interface-restored",
                 ("recordingId", failedRecordingId), ("media", "GIF"), ("result", "failure"));
@@ -2907,11 +2935,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private RecordingTarget? ResolveRecordingTarget(RecordingTargetKind kind) => kind switch
+    private RecordingTarget? ResolveRecordingTarget(RecordingTargetKind kind, CancellationToken cancellationToken = default) => kind switch
     {
         RecordingTargetKind.Monitor => _captureService.ActiveMonitorTarget(),
-        RecordingTargetKind.Region => _captureService.SelectRecordingRegion(this, UiText.Get("Selecione a região do vídeo")),
-        RecordingTargetKind.Window => _captureService.SelectRecordingWindow(this, UiText.Get("Clique na janela que deseja gravar")),
+        RecordingTargetKind.Region => _captureService.SelectRecordingRegion(this, UiText.Get("Selecione a região do vídeo"), cancellationToken),
+        RecordingTargetKind.Window => _captureService.SelectRecordingWindow(this, UiText.Get("Clique na janela que deseja gravar"), cancellationToken),
         _ => throw new InvalidOperationException(UiText.Get("O destino do vídeo não é válido."))
     };
 
@@ -3834,6 +3862,8 @@ public partial class MainWindow : Window
 
     private async void DeleteHistoryItem_OnClick(object sender, RoutedEventArgs e)
     {
+        using var lease = TryReserveCaptureCommand();
+        if (lease is null) return;
         if (_captureService.IsHistoryProtected) { ReviewStorage_OnClick(sender, e); return; }
         if (sender is not Button { Tag: CaptureRecord record })
         {
@@ -3860,6 +3890,8 @@ public partial class MainWindow : Window
 
     private async void CleanCaptureHistory_OnClick(object sender, RoutedEventArgs e)
     {
+        using var lease = TryReserveCaptureCommand();
+        if (lease is null) return;
         if (_captureService.IsHistoryProtected) { ReviewStorage_OnClick(sender, e); return; }
         var days = ParseSelectedInt(CaptureRetentionBox, 90);
         if (days <= 0)
@@ -4046,6 +4078,8 @@ public partial class MainWindow : Window
 
     private async Task DownloadAndApplyUpdateAsync(ReleaseInfo release)
     {
+        using var lease = TryReserveCaptureCommand();
+        if (lease is null) return;
         var progressWindow = new UpdateProgressWindow { Owner = this };
         _activeUpdateCancellation = progressWindow.Cancellation;
         progressWindow.Show();
@@ -4302,6 +4336,8 @@ public partial class MainWindow : Window
 
     private void MainWindow_OnClosing(object? sender, CancelEventArgs e)
     {
+        if (_servicesDisposed) return;
+        if (_recordingExitPending) { e.Cancel = true; return; }
         if (_restoreRecoveryBlocked) { _pendingCaptureEdit?.TrySetResult(null); DisposeServices(); return; }
         if (_settingsOperationInProgress) { e.Cancel = true; _exitRequested = false; StatusText.Text = UiText.Get("Aguarde a manutenção em andamento antes de sair."); return; }
         if (!_exitRequested && _settings.CloseToTray)
@@ -4321,6 +4357,15 @@ public partial class MainWindow : Window
         if (CaptureInlineEditor.HasUnsavedChanges && ShowAppDialog(UiText.Get("Há alterações de imagem não salvas. Sair sem salvar?"), UiText.Get("Editor de imagem"),
                 MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
         { e.Cancel = true; _exitRequested = false; return; }
+        if (_recordingOperation is { Phase: RecordingOperationPhase.Preparing } operation)
+        {
+            e.Cancel = true;
+            _recordingExitPending = true;
+            _exitRequested = true;
+            operation.Cancel();
+            _ = CloseAfterRecordingPreparationAsync(operation);
+            return;
+        }
         _pendingCaptureEdit?.TrySetResult(null);
         DisposeServices();
     }
@@ -4333,6 +4378,7 @@ public partial class MainWindow : Window
 
     private void ShowFromTray()
     {
+        if (!CanUseRecordingInterface) return;
         Show();
         WindowState = WindowState.Normal;
         Activate();
@@ -4352,6 +4398,7 @@ public partial class MainWindow : Window
         }
 
         _servicesDisposed = true;
+        _recordingOperation?.Cancel();
         _captureImageLoadCancellation?.Cancel();
         _captureThumbnailCancellation?.Cancel();
         StopQuickAccentStatusMonitor();
@@ -4365,9 +4412,7 @@ public partial class MainWindow : Window
         _quickAccentService.Dispose();
         _captureShortcuts.Triggered -= CaptureShortcuts_OnTriggered;
         _captureShortcuts.Dispose();
-        _recordingControl?.Close();
-        _recordingService?.Dispose();
-        _gifRecordingSession?.Dispose();
+        CleanupRecordingResources();
         CaptureInlineEditor.Dispose();
         _suggestionWindow.Close();
         _quickAccentWindow.Close();

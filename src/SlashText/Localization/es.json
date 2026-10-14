@@ -1779,5 +1779,9 @@
   "Ui.E5F2741BB5C5188C": "Los recuentos pendientes se conservan en esta sesión. Intentaremos guardarlos la próxima vez que uses un atajo o acento. Si cierras la aplicación antes, podrían perderse.",
   "Ui.45FF316998EF9CC1": "Las preferencias de captura no se guardaron. La acción se detuvo.",
   "Ui.EBDA786D6992CA01": "No se pudieron guardar las preferencias de captura",
-  "Ui.D793C68D913AF60D": "No se pudieron guardar las preferencias de captura. Se mantuvieron los ajustes anteriores y la captura o grabación no se inició. Comprueba el acceso a la carpeta de datos, ajusta las opciones e inténtalo de nuevo."
+  "Ui.D793C68D913AF60D": "No se pudieron guardar las preferencias de captura. Se mantuvieron los ajustes anteriores y la captura o grabación no se inició. Comprueba el acceso a la carpeta de datos, ajusta las opciones e inténtalo de nuevo.",
+  "Ui.1CF5EE24ADC407BF": "Ya hay una captura o grabación en curso.",
+  "Ui.F2EB0F4B354596CA": "Preparando grabación…",
+  "Ui.49D8D781CC69A426": "Preparación de la grabación cancelada.",
+  "Ui.FF8E288671C302E9": "Cancelar preparación"
 }

@@ -20,7 +20,11 @@ internal static class RetentionPrivacyChecks
         File.WriteAllText(Path.Combine(gif.DirectoryPath, "000000.png"), "synthetic GIF pixels");
         var partial = Path.Combine(path, ".crash.recording.mp4"); File.WriteAllText(partial, "synthetic incomplete MP4");
         RecordingRecovery.Start(Guid.NewGuid(), partial);
-        File.WriteAllLines(Path.Combine(path, "ready.txt"), [ocr.DirectoryPath, gif.DirectoryPath]);
+        // Publish readiness only after the writer has closed; File.Exists alone
+        // cannot distinguish an in-progress WriteAllLines from a completed signal.
+        var readyTemporary = Path.Combine(path, "ready.tmp");
+        File.WriteAllLines(readyTemporary, [ocr.DirectoryPath, gif.DirectoryPath]);
+        File.Move(readyTemporary, Path.Combine(path, "ready.txt"));
         Thread.Sleep(Timeout.Infinite);
     }
 

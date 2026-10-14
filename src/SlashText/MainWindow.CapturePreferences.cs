@@ -11,7 +11,7 @@ public partial class MainWindow
     // select real windows, capture pixels or open recording devices.
     internal Action<string>? CapturePreparationForEvidence { get; set; }
 
-    private async Task<bool> PrepareCapturePreferencesAsync(string validationTitle)
+    private async Task<bool> PrepareCapturePreferencesAsync(string validationTitle, CancellationToken cancellationToken = default)
     {
         if (_settingsOperationInProgress || _servicesDisposed || _restoreRecoveryBlocked) return false;
         var previous = _settings.Capture;
@@ -20,22 +20,37 @@ public partial class MainWindow
             ShowAppDialog(error, validationTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
-        return await TrySaveCapturePreferencesAsync(previous);
+        return await TrySaveCapturePreferencesCoreAsync(previous, null, null, cancellationToken);
     }
 
-    private async Task<bool> TrySaveCapturePreferencesAsync(CaptureSettings previous,
+    private Task<bool> TrySaveCapturePreferencesAsync(CaptureSettings previous,
         RecordingAudioSettings? previousAudio = null, Action? beforeFailureFeedback = null)
+        => TrySaveCapturePreferencesCoreAsync(previous, previousAudio, beforeFailureFeedback, CancellationToken.None);
+
+    private async Task<bool> TrySaveCapturePreferencesCoreAsync(CaptureSettings previous,
+        RecordingAudioSettings? previousAudio, Action? beforeFailureFeedback, CancellationToken cancellationToken)
     {
         try
         {
             // Protected reads deliberately permit session-only capture settings.
-            await SavePreferencesAsync();
+            await SavePreferencesWithCancellationAsync(cancellationToken);
+            if (!CanUseRecordingInterface) return false;
+            cancellationToken.ThrowIfCancellationRequested();
             return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            if (previousAudio is not null) previous.Recording.Audio = previousAudio;
+            _settings.Capture = previous;
+            if (CanUseRecordingInterface) LoadCaptureSettings();
+            throw;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             if (previousAudio is not null) previous.Recording.Audio = previousAudio;
             _settings.Capture = previous;
+            if (!CanUseRecordingInterface) return false;
+            cancellationToken.ThrowIfCancellationRequested();
             beforeFailureFeedback?.Invoke();
             LoadCaptureSettings();
             SafeDiagnosticLog.Write("capture.settings.save_failed", new Dictionary<string, object?> { ["exceptionType"] = error.GetType().Name });
@@ -57,10 +72,7 @@ public partial class MainWindow
 
     private void ClosePreparedMp4Recording()
     {
-        _recordingControl?.Close();
-        _recordingControl = null;
-        _recordingService?.Dispose();
-        _recordingService = null;
+        CleanupRecordingResources();
         ShowFromTray();
     }
 }

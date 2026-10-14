@@ -7,15 +7,18 @@ namespace SlashText;
 
 public partial class MainWindow
 {
-    private async Task SavePreferencesAsync()
+    private Task SavePreferencesAsync() => SavePreferencesWithCancellationAsync(CancellationToken.None);
+
+    private async Task SavePreferencesWithCancellationAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (_settingsStore.IsProtected)
         {
             RefreshStorageProtection();
             StatusText.Text = UiText.Get("Preferências protegidas: ajustes desta sessão não serão salvos.");
             return;
         }
-        await _settingsStore.SaveAsync(_settings);
+        await _settingsStore.SaveAsync(_settings, cancellationToken);
     }
 
     private void RefreshStorageProtection()
