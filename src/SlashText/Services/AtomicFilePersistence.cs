@@ -40,10 +40,12 @@ internal static class AtomicFilePersistence
         ArgumentNullException.ThrowIfNull(write);
 
         var fullPath = Path.GetFullPath(path);
+        RestoreRecovery.ThrowIfProtected(fullPath);
         var gate = PathGates.GetOrAdd(fullPath, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(cancellationToken);
         try
         {
+            RestoreRecovery.ThrowIfProtected(fullPath);
             var directory = Path.GetDirectoryName(fullPath)
                 ?? throw new InvalidOperationException(UiText.Get("O arquivo não possui uma pasta válida."));
             Directory.CreateDirectory(directory);
@@ -67,6 +69,7 @@ internal static class AtomicFilePersistence
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
+                RestoreRecovery.ThrowIfProtected(fullPath);
                 if (File.Exists(fullPath))
                 {
                     File.Replace(temporary, fullPath, null, ignoreMetadataErrors: true);

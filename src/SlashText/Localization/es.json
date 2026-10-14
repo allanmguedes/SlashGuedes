@@ -1733,5 +1733,14 @@
   "Ui.1E099A9BA9DA740F": "El destino del vídeo no es válido.",
   "Ui.54D62538A67C1E9A": "Haz clic en la ventana que quieres grabar",
   "Ui.D892E6DAE522779D": "La ventana seleccionada no es válida. Elige otra ventana.",
-  "Ui.1CFC14C1AFD1071D": "Selecciona una región dentro de un único monitor."
+  "Ui.1CFC14C1AFD1071D": "Selecciona una región dentro de un único monitor.",
+  "Ui.1C28C67C0A4AB965": "La restauración necesita recuperación. Se conservará el material de recuperación disponible. Cierra SlashDesk y vuelve a abrirlo para intentarlo de nuevo; no modifiques ni elimines la carpeta de copias de seguridad.",
+  "Ui.065FC3071A1C21E8": "SlashDesk se cerrará para impedir cambios en datos parcialmente restaurados. Se conservará el material de recuperación disponible. Vuelve a abrir la aplicación para intentar recuperar los datos anteriores. No modifiques ni elimines la carpeta de copias de seguridad.",
+  "Ui.5B4BA7EE453A1334": "Se deshizo una restauración interrumpida antes de cargar la aplicación. Se restablecieron los datos anteriores; la copia de seguridad previa sigue disponible.",
+  "Ui.56E0097CE39DAFD3": "Recuperación pendiente",
+  "Ui.681CAA98BC8740A3": "Datos anteriores restablecidos",
+  "Ui.296B0939BDD650B2": "Abrir carpeta de copias de seguridad",
+  "Ui.7CC8A650B4E06684": "Cerrar SlashDesk",
+  "Ui.229D22CE656C9BAD": "SlashDesk se cerrará para impedir cambios en datos cuya restauración no se ha confirmado. Se conservará el material de recuperación disponible. Los cambios sin guardar pueden perderse. Vuelve a abrir la aplicación para intentar recuperar los datos anteriores. No modifiques ni elimines la carpeta de copias de seguridad.",
+  "Ui.465FEB3CE2FFF399": "Restaurar esta copia de seguridad reemplazará los datos incluidos, incluidos Mis emojis cuando estén presentes. Se creará una copia de seguridad previa antes de continuar. Guarda tus ediciones de imagen antes de continuar: si la recuperación queda pendiente, SlashDesk tendrá que cerrarse."
 }

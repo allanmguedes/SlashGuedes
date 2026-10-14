@@ -66,6 +66,7 @@ internal sealed class CaptureHistoryStore
         IReadOnlyList<CaptureRecord> records,
         CancellationToken cancellationToken = default)
     {
+        RestoreRecovery.ThrowIfProtected(_path);
         var directory = Path.GetDirectoryName(_path) ?? AppPaths.DataDirectory;
         Directory.CreateDirectory(directory);
         var temporary = Path.Combine(directory, $".capture-history-{Guid.NewGuid():N}.tmp");
@@ -77,6 +78,7 @@ internal sealed class CaptureHistoryStore
                 await stream.FlushAsync(cancellationToken);
                 stream.Flush(flushToDisk: true);
             }
+            RestoreRecovery.ThrowIfProtected(_path);
             File.Move(temporary, _path, overwrite: true);
         }
         finally

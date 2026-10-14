@@ -58,6 +58,7 @@ public partial class MainWindow : Window
     private bool _showMostUsed;
     private bool _exitRequested;
     private bool _servicesDisposed;
+    private bool _restoreRecoveryBlocked;
     private bool _initialized;
     private bool _snippetStorageAvailable = true;
     private bool _updatingQuickAccentSets;
@@ -470,6 +471,7 @@ public partial class MainWindow : Window
     {
         Dispatcher.BeginInvoke(new Action(async () =>
         {
+            if (_restoreRecoveryBlocked || _servicesDisposed) return;
             await _usageService.RecordQuickAccentAsync(e.Character);
             _quickAccentService.SetUsage(_usageService.QuickAccentCharacterCounts());
             if (QuickAccentView.Visibility == Visibility.Visible) UpdateQuickAccentPreviewSelection();
@@ -481,6 +483,7 @@ public partial class MainWindow : Window
     {
         Dispatcher.BeginInvoke(new Action(() =>
         {
+            if (_restoreRecoveryBlocked || _servicesDisposed) return;
             if (!_settings.ShowSuggestions)
             {
                 _suggestionWindow.Hide();
@@ -503,6 +506,7 @@ public partial class MainWindow : Window
     {
         Dispatcher.BeginInvoke(new Action(async () =>
         {
+            if (_restoreRecoveryBlocked || _servicesDisposed) return;
             using var expansionLease = _expansionRequestGate.TryEnter();
             if (expansionLease is null)
             {
@@ -1561,7 +1565,7 @@ public partial class MainWindow : Window
         };
         if (picker.ShowDialog(this) != true ||
             ShowSettingsDialog(
-                UiText.Get("Restaurar este backup substituirá os dados incluídos nele, inclusive Meus emojis quando presentes. Um backup de segurança será criado antes de continuar."),
+                UiText.Get("Restaurar este backup substituirá os dados incluídos nele, inclusive Meus emojis quando presentes. Um backup de segurança será criado antes de continuar. Salve suas edições de imagem antes de continuar: se a recuperação ficar pendente, o SlashDesk precisará fechar."),
                 UiText.Get("Restaurar backup"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning, UiText.Get("Restaurar backup")) != MessageBoxResult.Yes)
@@ -1602,6 +1606,28 @@ public partial class MainWindow : Window
                 MessageBoxImage.Information);
             SettingsOperationText.Text = UiText.Get("Backup restaurado. Reabra o app para aplicar todas as preferências.");
             }, cancellable: true);
+        }
+        catch (RestoreRecoveryRequiredException)
+        {
+            _restoreRecoveryBlocked = true;
+            _settingsOperationInProgress = true;
+            _shortcutOperationInProgress = true;
+            ((FrameworkElement)Content).IsEnabled = false;
+            _keyboardHook.Dispose(); _quickAccentService.Enabled = false;
+            StopUpdateMonitor(); _captureShortcuts.Dispose();
+            _suggestionWindow.Hide(); _quickAccentWindow.Hide();
+            var dialog = RestoreRecoveryDialog.Create(blocked: true);
+            dialog.Owner = this; dialog.EnableBackdrop(); dialog.ShowDialog();
+            try
+            {
+                if (dialog.Choice == MessageBoxResult.Yes)
+                    Process.Start(new ProcessStartInfo(AppPaths.BackupsDirectory) { UseShellExecute = true });
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+            {
+                // Close safely even when Explorer cannot open the preserved material.
+            }
+            finally { _exitRequested = true; Close(); }
         }
         catch (OperationCanceledException)
         {
@@ -2142,6 +2168,7 @@ public partial class MainWindow : Window
         object? sender,
         CaptureShortcutEventArgs e)
     {
+        if (_restoreRecoveryBlocked || _servicesDisposed) return;
         if (e.Action == CaptureShortcutAction.Scrolling)
         {
             _ = RunScrollingCaptureAsync(invokedByShortcut: true);
@@ -4297,6 +4324,7 @@ public partial class MainWindow : Window
 
     private void MainWindow_OnClosing(object? sender, CancelEventArgs e)
     {
+        if (_restoreRecoveryBlocked) { _pendingCaptureEdit?.TrySetResult(null); DisposeServices(); return; }
         if (_settingsOperationInProgress) { e.Cancel = true; _exitRequested = false; StatusText.Text = UiText.Get("Aguarde a manutenção em andamento antes de sair."); return; }
         if (!_exitRequested && _settings.CloseToTray)
         {

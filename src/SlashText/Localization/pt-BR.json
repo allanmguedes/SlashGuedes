@@ -1733,5 +1733,14 @@
   "Ui.1E099A9BA9DA740F": "O destino do vídeo não é válido.",
   "Ui.54D62538A67C1E9A": "Clique na janela que deseja gravar",
   "Ui.D892E6DAE522779D": "A janela selecionada não é válida. Escolha outra janela.",
-  "Ui.1CFC14C1AFD1071D": "Selecione uma região dentro de um único monitor."
+  "Ui.1CFC14C1AFD1071D": "Selecione uma região dentro de um único monitor.",
+  "Ui.1C28C67C0A4AB965": "A restauração precisa de recuperação. O material de recuperação disponível será mantido. Feche o SlashDesk e reabra para tentar novamente; não altere nem apague a pasta de backups.",
+  "Ui.065FC3071A1C21E8": "O SlashDesk será fechado para impedir alterações em dados parcialmente restaurados. O material de recuperação disponível será mantido. Reabra o app para tentar recuperar os dados anteriores. Não altere nem apague a pasta de backups.",
+  "Ui.5B4BA7EE453A1334": "Uma restauração interrompida foi desfeita antes de carregar o aplicativo. Os dados anteriores foram restabelecidos; o backup de segurança continua disponível.",
+  "Ui.56E0097CE39DAFD3": "Recuperação pendente",
+  "Ui.681CAA98BC8740A3": "Dados anteriores restabelecidos",
+  "Ui.296B0939BDD650B2": "Abrir pasta de backups",
+  "Ui.7CC8A650B4E06684": "Fechar SlashDesk",
+  "Ui.229D22CE656C9BAD": "O SlashDesk será fechado para impedir alterações em dados cuja restauração não foi confirmada. O material de recuperação disponível será mantido. Alterações não salvas podem ser perdidas. Reabra o app para tentar recuperar os dados anteriores. Não altere nem apague a pasta de backups.",
+  "Ui.465FEB3CE2FFF399": "Restaurar este backup substituirá os dados incluídos nele, inclusive Meus emojis quando presentes. Um backup de segurança será criado antes de continuar. Salve suas edições de imagem antes de continuar: se a recuperação ficar pendente, o SlashDesk precisará fechar."
 }

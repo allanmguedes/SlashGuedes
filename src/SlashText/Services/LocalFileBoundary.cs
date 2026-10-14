@@ -35,7 +35,7 @@ internal sealed class LocalFileBoundary : IDisposable
 
     private void Pin(string path)
     {
-        var handle = CreateFileW(path, 0, 3, IntPtr.Zero, 3, 0x02200000, IntPtr.Zero);
+        var handle = CreateFileW(NativePath(path), 0, 3, IntPtr.Zero, 3, 0x02200000, IntPtr.Zero);
         try
         {
             if (handle.IsInvalid || !GetFileInformationByHandle(handle, out var info) ||
@@ -47,10 +47,10 @@ internal sealed class LocalFileBoundary : IDisposable
     }
 
     // The caller holds a pinned parent. The returned stream owns its native handle.
-    internal static FileStream OpenFile(string path, bool create = false, bool exclusive = false, bool writable = true)
+    internal static FileStream OpenFile(string path, bool create = false, bool exclusive = false, bool writable = true, bool denyWrites = false)
     {
-        var handle = CreateFileW(path, writable ? 0xC0000000u : 0x80000000u,
-            exclusive ? 0u : 3u, IntPtr.Zero, create ? 4u : 3u, 0x00200000, IntPtr.Zero);
+        var handle = CreateFileW(NativePath(path), writable ? 0xC0000000u : 0x80000000u,
+            exclusive ? 0u : denyWrites ? 1u : 3u, IntPtr.Zero, create ? 4u : 3u, 0x00200000, IntPtr.Zero);
         try
         {
             if (handle.IsInvalid && Marshal.GetLastPInvokeError() == 2) throw new FileNotFoundException("Local file unavailable.");
@@ -66,6 +66,14 @@ internal sealed class LocalFileBoundary : IDisposable
     {
         for (var i = _directories.Count - 1; i >= 0; i--) _directories[i].Dispose();
         _directories.Clear();
+    }
+
+    private static string NativePath(string path)
+    {
+        var full = Path.GetFullPath(path);
+        if (full.Length < 3 || !char.IsAsciiLetter(full[0]) || full[1] != ':' || full[2] != '\\')
+            throw new IOException("Invalid local file.");
+        return @"\\?\" + full;
     }
 
     [StructLayout(LayoutKind.Sequential)]

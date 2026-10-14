@@ -6,6 +6,17 @@ using System.IO.Compression;
 using System.Diagnostics;
 using ScreenRecorderLib;
 
+if (args.Length == 4 && args[0] == "--restore-recovery-worker")
+{
+    RestoreRecoveryChecks.Worker(args);
+    return;
+}
+if (args.Length == 2 && args[0] == "--restore-recovery-smoke")
+{
+    Directory.CreateDirectory(args[1]);
+    await RestoreRecoveryChecks.RunAsync(args[1]);
+    return;
+}
 if (args.Length == 2 && args[0] == "--retention-worker")
 {
     RetentionPrivacyChecks.Worker(args[1]);
@@ -456,7 +467,8 @@ try
     // Exercise the real WPF preview and clipboard payload on an STA thread,
     // without changing the runner's system clipboard or opening production UI.
     Directory.CreateDirectory(root);
-    await CaptureHistoryTrustChecks.RunAsync(root);
+await CaptureHistoryTrustChecks.RunAsync(root);
+await RestoreRecoveryChecks.RunAsync(root);
     await ExternalInputBudgetChecks.RunAsync(root);
     await RetentionPrivacyChecks.RunAsync(root);
     ClipboardPrivacyChecks.Run(root);
@@ -1605,8 +1617,9 @@ try
         await RequireThrowsAsync<TimeoutException>(() => task, "timeout nativo controlado");
         Require(timeoutFactory.Backend.DisposeCalls == 0, "timeout não descarta Recorder durante callback nativo");
         timeoutFactory.Backend.CompleteLater();
+        // Timeout already publishes Failed; wait for the late callback's actual cleanup.
         await WaitUntilAsync(
-            () => lifecycle.State == ScreenRecordingState.Failed,
+            () => lifecycle.State == ScreenRecordingState.Failed && timeoutFactory.Backend.DisposeCalls >= 1,
             "callback tardio conclui limpeza");
         Require(timeoutFactory.Backend.DisposeCalls == 1, "callback tardio executa descarte único");
     }

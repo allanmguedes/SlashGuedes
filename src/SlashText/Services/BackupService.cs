@@ -39,6 +39,7 @@ public sealed class BackupService
     private readonly string _captureEmotesDirectory;
 
     internal Action<int, string>? BeforeRestoreApply { get; set; }
+    internal Action<string, int>? RestoreCheckpoint { get; set; }
 
     public BackupService(
         string? backupDirectory = null,
@@ -103,34 +104,22 @@ public sealed class BackupService
         using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: true);
         ValidateSnapshot(archive, cancellationToken);
         Directory.CreateDirectory(_backupDirectory);
-        var transactionId = Guid.NewGuid().ToString("N");
-        var stagingDirectory = Path.Combine(
-            _backupDirectory,
-            $".restore-staging-{transactionId}");
-        var rollbackDirectory = Path.Combine(
-            _backupDirectory,
-            $".restore-rollback-{transactionId}");
-
+        RestoreRecovery.ThrowIfProtected(_dataDirectory);
+        using var transaction = RestoreRecovery.Begin(_dataDirectory, _backupDirectory, _assetsDirectory, _captureEmotesDirectory);
+        transaction.Checkpoint = RestoreCheckpoint;
         try
         {
-            var plan = ExtractToStaging(archive, stagingDirectory, cancellationToken);
+            var plan = ExtractToStaging(archive, transaction.Staging, cancellationToken);
             if (CollectSources().Count > 0)
-            {
-                CreateSnapshot(
-                    $"SlashDesk-backup-before-restore-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.zip",
-                    skipWhenExisting: false, cancellationToken);
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-            ApplyStagedRestore(plan, stagingDirectory, rollbackDirectory, cancellationToken);
-            archive.Dispose(); file.Dispose();
-            Prune();
+                CreateSnapshot($"SlashDesk-backup-before-restore-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}.zip", false, cancellationToken);
+            transaction.Prepare(plan.Files, plan.IncludesAssets, plan.IncludesCaptureEmotes, cancellationToken);
+            transaction.Apply(BeforeRestoreApply, cancellationToken);
         }
-        finally
-        {
-            DeleteDirectoryIfExists(stagingDirectory);
-            DeleteDirectoryIfExists(rollbackDirectory);
-        }
+        catch { transaction.Abort(); throw; }
+        archive.Dispose(); file.Dispose();
+        // A pruning failure must not report the durable commit as an aborted restore.
+        try { Prune(); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException) { }
     }
 
     private RestorePlan ExtractToStaging(
@@ -238,144 +227,6 @@ public sealed class BackupService
         return new RestorePlan(restoredFiles, includesAssets, includesEmotes);
     }
 
-    private void ApplyStagedRestore(
-        RestorePlan plan,
-        string stagingDirectory,
-        string rollbackDirectory,
-        CancellationToken cancellationToken)
-    {
-        Directory.CreateDirectory(_dataDirectory);
-        Directory.CreateDirectory(rollbackDirectory);
-        var appliedFiles = new List<AppliedFile>();
-        AppliedDirectory? appliedAssets = null;
-        AppliedDirectory? appliedEmotes = null;
-        var step = 0;
-        try
-        {
-            foreach (var relative in plan.Files)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                BeforeRestoreApply?.Invoke(step++, relative);
-                cancellationToken.ThrowIfCancellationRequested();
-                var staged = ResolveWithin(stagingDirectory, relative);
-                var target = ResolveWithin(_dataDirectory, relative);
-                var rollback = ResolveWithin(rollbackDirectory, relative);
-                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                Directory.CreateDirectory(Path.GetDirectoryName(rollback)!);
-                var existed = File.Exists(target);
-                if (existed)
-                {
-                    File.Replace(
-                        staged,
-                        target,
-                        rollback,
-                        ignoreMetadataErrors: true);
-                }
-                else
-                {
-                    File.Move(staged, target);
-                }
-                appliedFiles.Add(new AppliedFile(target, rollback, existed));
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-            if (plan.IncludesAssets)
-            {
-                const string assetsLabel = "assets/";
-                BeforeRestoreApply?.Invoke(step++, assetsLabel);
-                cancellationToken.ThrowIfCancellationRequested();
-                var stagedAssets = Path.Combine(stagingDirectory, "assets");
-                Directory.CreateDirectory(stagedAssets);
-                var targetAssets = Path.GetFullPath(_assetsDirectory);
-                EnsureDirectoryWithinData(targetAssets);
-                var rollbackAssets = Path.Combine(rollbackDirectory, "assets");
-                var existed = Directory.Exists(targetAssets);
-                if (existed)
-                {
-                    Directory.Move(targetAssets, rollbackAssets);
-                }
-                try
-                {
-                    Directory.Move(stagedAssets, targetAssets);
-                    appliedAssets = new AppliedDirectory(
-                        targetAssets,
-                        rollbackAssets,
-                        existed);
-                }
-                catch
-                {
-                    if (existed &&
-                        !Directory.Exists(targetAssets) &&
-                        Directory.Exists(rollbackAssets))
-                    {
-                        Directory.Move(rollbackAssets, targetAssets);
-                    }
-                    throw;
-                }
-            }
-            cancellationToken.ThrowIfCancellationRequested();
-            if (plan.IncludesCaptureEmotes)
-            {
-                BeforeRestoreApply?.Invoke(step, "capture-emotes/");
-                cancellationToken.ThrowIfCancellationRequested();
-                var staged = Path.Combine(stagingDirectory, "capture-emotes");
-                Directory.CreateDirectory(staged);
-                var target = Path.GetFullPath(_captureEmotesDirectory);
-                EnsureDirectoryWithinData(target);
-                var rollback = Path.Combine(rollbackDirectory, "capture-emotes");
-                var existed = Directory.Exists(target);
-                if (existed) Directory.Move(target, rollback);
-                try
-                {
-                    Directory.Move(staged, target);
-                    appliedEmotes = new AppliedDirectory(target, rollback, existed);
-                }
-                catch
-                {
-                    if (existed && !Directory.Exists(target) && Directory.Exists(rollback)) Directory.Move(rollback, target);
-                    throw;
-                }
-            }
-            cancellationToken.ThrowIfCancellationRequested();
-        }
-        catch
-        {
-            if (appliedEmotes is not null)
-            {
-                DeleteDirectoryIfExists(appliedEmotes.Target);
-                if (appliedEmotes.Existed && Directory.Exists(appliedEmotes.Rollback))
-                    Directory.Move(appliedEmotes.Rollback, appliedEmotes.Target);
-            }
-            if (appliedAssets is not null)
-            {
-                DeleteDirectoryIfExists(appliedAssets.Target);
-                if (appliedAssets.Existed &&
-                    Directory.Exists(appliedAssets.Rollback))
-                {
-                    Directory.Move(
-                        appliedAssets.Rollback,
-                        appliedAssets.Target);
-                }
-            }
-
-            foreach (var applied in appliedFiles.AsEnumerable().Reverse())
-            {
-                if (File.Exists(applied.Target))
-                {
-                    File.Delete(applied.Target);
-                }
-                if (applied.Existed && File.Exists(applied.Rollback))
-                {
-                    File.Move(
-                        applied.Rollback,
-                        applied.Target,
-                        overwrite: true);
-                }
-            }
-            throw;
-        }
-    }
-
     private static bool ReadIncludesAssets(ZipArchive archive, CancellationToken cancellationToken)
     {
         var manifest = archive.Entries.Single(entry =>
@@ -473,6 +324,7 @@ public sealed class BackupService
 
     private string CreateSnapshot(string fileName, bool skipWhenExisting, CancellationToken cancellationToken = default)
     {
+        RestoreRecovery.ThrowIfProtected(_dataDirectory);
         cancellationToken.ThrowIfCancellationRequested();
         var sources = CollectSources();
         if (sources.Count == 0)
@@ -851,16 +703,6 @@ public sealed class BackupService
         IReadOnlyList<string> Files,
         bool IncludesAssets,
         bool IncludesCaptureEmotes);
-
-    private sealed record AppliedFile(
-        string Target,
-        string Rollback,
-        bool Existed);
-
-    private sealed record AppliedDirectory(
-        string Target,
-        string Rollback,
-        bool Existed);
 
     private sealed record BackupManifestFile(
         string Path,

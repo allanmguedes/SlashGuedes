@@ -86,6 +86,22 @@ jobs:
           if (-not $process.WaitForExit(180000)) { $process.Kill(); throw 'OCR timeout' }
           if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Portable OCR failed' }
           Get-Content "$output/result.txt"
+      - name: Restore recovery dialogs inside published EXE
+        shell: pwsh
+        run: |
+          $output = Join-Path $PWD 'ocr-evidence/restore-recovery'
+          $exe = (Resolve-Path publish-ocr/SlashDesk.exe).Path
+          $process = Start-Process $exe -ArgumentList "--restore-recovery-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Restore recovery UI timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Restore recovery UI failed' }
+          Get-Content "$output/result.txt"
+          foreach ($mode in @('recover', 'blocked')) {
+            $demo = Join-Path $output $mode
+            $process = Start-Process $exe -ArgumentList "--restore-recovery-demo-smoke $mode `"$demo`"" -WindowStyle Hidden -PassThru
+            if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Restore recovery demo timeout' }
+            if ($process.ExitCode -ne 0) { Get-Content "$demo/failure.txt" -ErrorAction SilentlyContinue; throw 'Restore recovery demo failed' }
+            Get-Content "$demo/resultado-$mode.txt"
+          }
       - name: Package isolated pilot and verify startup
         shell: pwsh
         run: |
