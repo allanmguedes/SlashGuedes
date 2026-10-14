@@ -6,6 +6,14 @@ using System.IO.Compression;
 using System.Diagnostics;
 using ScreenRecorderLib;
 
+if (args.Length == 2 && args[0] == "--usage-write-fixtures")
+{
+    SlashText.Design.UsageWriteFailureSmoke.CreateFixtures(args[1]); return;
+}
+if (args.Length == 2 && args[0] == "--usage-write-smoke")
+{
+    await UsageWriteFailureChecks.RunAsync(args[1]); return;
+}
 if (args.Length == 2 && args[0] == "--legacy-backups-fixtures")
 {
     SlashText.Design.LegacyBackupSmoke.CreateFixtures(args[1]); return;
@@ -73,6 +81,7 @@ if (args.Length == 2 && args[0] == "--clipboard-native-isolated")
 
 var root = Path.Combine(Path.GetTempPath(), $"slashtext-smoke-{Guid.NewGuid():N}");
 AppPaths.Initialize(new AppDataEnvironment(DistributionMode.Portable, Path.Combine(root, "initial-app"), root, isCapturePilot: true));
+await UsageWriteFailureChecks.RunAsync(Path.Combine(root, "usage-writes"));
 
 await ProtectedStorageChecks.RunAsync(Path.Combine(root, "protected-storage"));
 AppPaths.Initialize(new AppDataEnvironment(DistributionMode.Portable, Path.Combine(root, "initial-app"), root, isCapturePilot: true));

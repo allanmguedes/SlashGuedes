@@ -1450,7 +1450,7 @@
                                 <Button Grid.Column="1" x:Name="StatisticsHelpButton" Style="{StaticResource Lab.Button}" Padding="9" VerticalAlignment="Center" ToolTip="{DynamicResource Ui.EA4EA23DB3AC8B88}" AutomationProperties.Name="{DynamicResource Ui.EA4EA23DB3AC8B88}" Click="OpenStatisticsHelp_OnClick"><lab:LabIcon Kind="CircleHelp" Width="18" Height="18"/></Button>
                             </Grid>
                             <Border x:Name="StatisticsErrorPanel" Style="{StaticResource Lab.Card}" BorderBrush="{DynamicResource Lab.error}" Visibility="Collapsed" Margin="0,0,0,20">
-                                <TextBlock Text="{DynamicResource Ui.0129D6D2BC41D700}" Style="{StaticResource Lab.Text}" AutomationProperties.LiveSetting="Polite"/>
+                                <TextBlock x:Name="StatisticsErrorDescription" Text="{DynamicResource Ui.0129D6D2BC41D700}" Style="{StaticResource Lab.Text}" AutomationProperties.LiveSetting="Polite"/>
                             </Border>
                             <UniformGrid x:Name="StatisticsMetricsGrid" Columns="4" Margin="-8,0,-8,12">
                                 <Border Style="{StaticResource Lab.Stats.MetricCard}"><StackPanel>

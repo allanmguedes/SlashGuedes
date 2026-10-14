@@ -1772,5 +1772,9 @@
   "Ui.82C1F4E5F3900BB3": "SlashDesk — Piloto de datos protegidos 3.3.0 · #116",
   "Ui.F81DACCDE3DCE569": "Las copias antiguas de atajos (.md) se conservan hasta que las elimines. Para recuperar una versión, usa Importar atajos → SlashDesk.",
   "Ui.0190ED0532972D1D": "Se conservan hasta siete ZIP generados por la aplicación. Las copias antiguas de atajos (.md) permanecen en la carpeta hasta su eliminación manual; para recuperarlas, usa Importar atajos → SlashDesk.",
-  "Ui.C453DF22EE31F380": "SlashDesk — Piloto de copias antiguas 3.3.0 · #119"
+  "Ui.C453DF22EE31F380": "SlashDesk — Piloto de copias antiguas 3.3.0 · #119",
+  "Ui.3D2F65FA16079528": "Acento insertado",
+  "Ui.2D0E4B6878DA648D": "Las estadísticas aún no se han guardado.",
+  "Ui.FFFD14A004118F72": "Los recuentos de esta sesión aún no se han guardado.",
+  "Ui.E5F2741BB5C5188C": "Los recuentos pendientes se conservan en esta sesión. Intentaremos guardarlos la próxima vez que uses un atajo o acento. Si cierras la aplicación antes, podrían perderse."
 }

@@ -45,6 +45,8 @@ internal static class DiagnosticPolicy
         "history.item-corrupt",
         "quick-accent.settings.save_failed",
         "quick-accent.start_failed",
+        "usage.save.pending",
+        "usage.update.failed",
         "recording.audio-change-failed",
         "recording.audio-devices-failed",
         "recording.audio-muted",

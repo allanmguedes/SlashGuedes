@@ -472,10 +472,9 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(new Action(async () =>
         {
             if (_restoreRecoveryBlocked || _servicesDisposed) return;
-            await _usageService.RecordQuickAccentAsync(e.Character);
-            _quickAccentService.SetUsage(_usageService.QuickAccentCharacterCounts());
-            if (QuickAccentView.Visibility == Visibility.Visible) UpdateQuickAccentPreviewSelection();
-            RefreshStatistics();
+            var saved = await TryUpdateAuxiliaryUsageAsync(() => _usageService.RecordQuickAccentAsync(e.Character));
+            if (_servicesDisposed || _restoreRecoveryBlocked) return;
+            StatusText.Text = UiText.Get("Acento inserido") + AuxiliaryUsageStatusSuffix(saved);
         }));
     }
 
@@ -514,6 +513,7 @@ public partial class MainWindow : Window
                 StatusText.Text = UiText.Get("Outra expansão ainda está em andamento");
                 return;
             }
+            int inserted;
             try
             {
                 SafeDiagnosticLog.Write("expansion.started", new Dictionary<string, object?>
@@ -541,23 +541,17 @@ public partial class MainWindow : Window
                     values = form.Values;
                 }
 
-                var inserted = await _expansionService.ExpandAsync(
+                inserted = await _expansionService.ExpandAsync(
                     e.Snippet,
                     values,
                     e.TargetWindow,
                     e.TypedCharacterCount,
                     CancellationToken.None);
-                await _usageService.RecordAsync(e.Snippet, inserted);
-                RefreshStatistics();
-                StatusText.Text = UiText.Format($"{e.Snippet.Trigger} inserido");
-                SafeDiagnosticLog.Write("expansion.completed", new Dictionary<string, object?>
-                {
-                    ["insertedCharacterCount"] = inserted
-                });
             }
             catch (ExpansionBusyException)
             {
                 StatusText.Text = UiText.Get("Outra expansão ainda está em andamento");
+                return;
             }
             catch (Exception exception)
             {
@@ -572,11 +566,13 @@ public partial class MainWindow : Window
                     UiText.Get("Não foi possível inserir o texto"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
+                return;
             }
             finally
             {
                 _keyboardHook.ResetBuffer(BufferResetReason.ExpansionFinished);
             }
+            await CompleteSuccessfulExpansionAsync(e.Snippet, inserted);
         }));
     }
 

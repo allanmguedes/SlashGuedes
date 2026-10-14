@@ -51,6 +51,15 @@ jobs:
           $process = Start-Process $exe.FullName -ArgumentList "--shortcuts-workspace-smoke `"$output`"" -WindowStyle Hidden -PassThru
           if (-not $process.WaitForExit(180000)) { $process.Kill(); throw 'WPF timeout' }
           if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'WPF failed' }
+      - name: Usage write failures in real WPF consumers
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem src/SlashText/bin -Recurse -Filter SlashDesk.exe | Select-Object -First 1
+          $output = Join-Path $PWD 'ocr-evidence/usage-writes-compiled'
+          $process = Start-Process $exe.FullName -ArgumentList "--usage-write-ui-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Usage UI timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Usage UI failed' }
+          Get-Content "$output/result.txt"
       - name: Recording destination clicks and crop configuration
         shell: pwsh
         run: |
@@ -132,6 +141,15 @@ jobs:
           $process = Start-Process $exe -ArgumentList "--legacy-backups-smoke `"$output`"" -WindowStyle Hidden -PassThru
           if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Legacy backup UI timeout' }
           if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Legacy backup UI failed' }
+          Get-Content "$output/result.txt"
+      - name: Usage write failures inside published EXE
+        shell: pwsh
+        run: |
+          $output = Join-Path $PWD 'ocr-evidence/usage-writes-published'
+          $exe = (Resolve-Path publish-ocr/SlashDesk.exe).Path
+          $process = Start-Process $exe -ArgumentList "--usage-write-ui-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Published usage UI timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Published usage UI failed' }
           Get-Content "$output/result.txt"
       - name: Package isolated pilot and verify startup
         shell: pwsh

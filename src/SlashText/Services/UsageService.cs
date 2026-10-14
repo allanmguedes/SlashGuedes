@@ -20,6 +20,9 @@ public sealed class UsageService
     public IReadOnlyList<UsageRecord> Records => _records;
     public QuickAccentUsageRecord QuickAccent => _quickAccent;
     public bool IsAvailable { get; private set; } = true;
+    // Failed writes remain in this session's snapshot; the next use retries the
+    // whole snapshot, without replaying or counting prior insertions again.
+    public bool HasPendingChanges { get; private set; }
 
     public UsageService(string? usageFile = null)
     {
@@ -38,6 +41,7 @@ public sealed class UsageService
     private async Task LoadCoreAsync()
     {
         IsAvailable = true;
+        HasPendingChanges = false;
         _records.Clear();
         _quickAccent = new QuickAccentUsageRecord();
         if (!File.Exists(_usageFile))
@@ -97,7 +101,8 @@ public sealed class UsageService
             record.Count++;
             record.LastUsedAt = DateTimeOffset.Now;
             record.CharactersSaved += Math.Max(0, insertedCharacters - snippet.Trigger.Length);
-            await SaveAsync();
+            HasPendingChanges = true;
+            await SavePendingAsync();
         }
         finally
         {
@@ -123,7 +128,8 @@ public sealed class UsageService
             var key = character.ToString();
             _quickAccent.Characters[key] =
                 _quickAccent.Characters.GetValueOrDefault(key) + 1;
-            await SaveAsync();
+            HasPendingChanges = true;
+            await SavePendingAsync();
         }
         finally
         {
@@ -152,4 +158,19 @@ public sealed class UsageService
             Snippets = _records.ToList(),
             QuickAccent = _quickAccent
         });
+
+    private async Task SavePendingAsync()
+    {
+        try
+        {
+            await SaveAsync();
+            HasPendingChanges = false;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // Counter persistence is auxiliary. Keep the original file and pending
+            // in-memory counts; never undo/repeat the already successful insertion.
+            AppDiagnosticLog.WriteException("usage.save.pending", error);
+        }
+    }
 }

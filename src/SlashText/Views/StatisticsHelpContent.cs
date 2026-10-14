@@ -17,7 +17,7 @@ public static class StatisticsHelpContent
             [UiText.Get("O favorito é o caractere com mais inserções registradas. Empates seguem a ordenação existente."), UiText.Get("Os demais caracteres aparecem com suas contagens, até oito no total."), UiText.Get("Cliques na prévia de teste não contam como uso global.")],
             UiText.Get("Sem uso, a tela mostra zero e orientações para começar."), "QuickAccentFavoriteText", Demo: "statistics-accents"),
         new("privacy", UiText.Get("DADOS LOCAIS"), UiText.Get("Privacidade e indisponibilidade"), "ShieldCheck", UiText.Get("A leitura das contagens não altera os dados."),
-            [UiText.Get("As estatísticas permanecem locais, sem envio e sem registrar o conteúdo digitado."), UiText.Get("Se o arquivo de uso não puder ser lido, os dados afetados aparecem como indisponíveis, sem apresentar zeros como sucesso."), UiText.Get("Falhas de estatísticas não impedem o uso dos demais recursos.")],
+            [UiText.Get("As estatísticas permanecem locais, sem envio e sem registrar o conteúdo digitado."), UiText.Get("Se o arquivo de uso não puder ser lido, os dados afetados aparecem como indisponíveis, sem apresentar zeros como sucesso."), UiText.Get("Falhas de estatísticas não impedem o uso dos demais recursos."), UiText.Get("As contagens pendentes estão nesta sessão. Tentaremos salvá-las no próximo uso de atalho ou acento. Se o app fechar antes disso, elas poderão ser perdidas.")],
             UiText.Get("Não há mudança de formato ou caminho dos arquivos existentes."), "StatisticsPrivacyCard", Demo: "statistics-privacy")
     ]);
 }

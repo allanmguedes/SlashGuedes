@@ -1772,5 +1772,9 @@
   "Ui.82C1F4E5F3900BB3": "SlashDesk — Piloto Dados protegidos 3.3.0 · #116",
   "Ui.F81DACCDE3DCE569": "Backups antigos de atalhos (.md) são preservados até você removê-los. Para recuperar uma versão, use Importar atalhos → SlashDesk.",
   "Ui.0190ED0532972D1D": "São mantidos até sete ZIPs gerados pelo app. Backups antigos de atalhos (.md) ficam preservados na pasta até remoção manual; para recuperar, use Importar atalhos → SlashDesk.",
-  "Ui.C453DF22EE31F380": "SlashDesk — Piloto Backups antigos 3.3.0 · #119"
+  "Ui.C453DF22EE31F380": "SlashDesk — Piloto Backups antigos 3.3.0 · #119",
+  "Ui.3D2F65FA16079528": "Acento inserido",
+  "Ui.2D0E4B6878DA648D": "Estatísticas ainda não salvas.",
+  "Ui.FFFD14A004118F72": "Contagens desta sessão ainda não salvas.",
+  "Ui.E5F2741BB5C5188C": "As contagens pendentes estão nesta sessão. Tentaremos salvá-las no próximo uso de atalho ou acento. Se o app fechar antes disso, elas poderão ser perdidas."
 }

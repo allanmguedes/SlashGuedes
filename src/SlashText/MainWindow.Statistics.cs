@@ -37,9 +37,13 @@ public partial class MainWindow
         SetStatisticsValue(TimeSavedText, UiText.Get("Tempo economizado estimado"), available ? $"{Math.Ceiling(characters / 200d):N0} min" : "—");
         SetStatisticsValue(AverageCharactersText, UiText.Get("Média de caracteres por expansão"), available ? total == 0 ? "0" : $"{characters / (double)total:N0}" : "—", metric: false);
         SetStatisticsValue(QuickAccentTotalText, UiText.Get("Acentos inseridos"), available ? _usageService.QuickAccent.Count.ToString("N0") : "—");
-        StatisticsErrorPanel.Visibility = available ? Visibility.Collapsed : Visibility.Visible;
-        StatisticsStatusText.Text = available ? UiText.Get("Contagens locais, atualizadas com o uso.") : UiText.Get("Contagens de atalhos e acentos indisponíveis.");
-        StatisticsStatusText.SetResourceReference(TextBlock.ForegroundProperty, available ? "Lab.muted" : "Lab.error");
+        var pending = available && _usageService.HasPendingChanges;
+        StatisticsErrorPanel.Visibility = available && !pending ? Visibility.Collapsed : Visibility.Visible;
+        if (pending) StatisticsErrorDescription.Text = UiText.Get("As contagens pendentes estão nesta sessão. Tentaremos salvá-las no próximo uso de atalho ou acento. Se o app fechar antes disso, elas poderão ser perdidas.");
+        else StatisticsErrorDescription.SetResourceReference(TextBlock.TextProperty, "Ui.0129D6D2BC41D700");
+        StatisticsStatusText.Text = UiText.Get(!available ? "Contagens de atalhos e acentos indisponíveis."
+            : pending ? "Contagens desta sessão ainda não salvas." : "Contagens locais, atualizadas com o uso.");
+        StatisticsStatusText.SetResourceReference(TextBlock.ForegroundProperty, available && !pending ? "Lab.muted" : "Lab.error");
 
         var captures = _captureService.History;
         SetStatisticsValue(CaptureTotalText, UiText.Get("Capturas no histórico local"), captures.Count.ToString("N0"));
@@ -83,6 +87,37 @@ public partial class MainWindow
             }
         RefreshMostUsed();
     }
+
+    private async Task<bool> TryUpdateAuxiliaryUsageAsync(Func<Task> record)
+    {
+        try
+        {
+            await record();
+            if (_servicesDisposed || _restoreRecoveryBlocked) return false;
+            _quickAccentService.SetUsage(_usageService.QuickAccentCharacterCounts());
+            if (QuickAccentView.Visibility == Visibility.Visible) UpdateQuickAccentPreviewSelection();
+            RefreshStatistics();
+            return _usageService.IsAvailable && !_usageService.HasPendingChanges;
+        }
+        catch (Exception error)
+        {
+            // Local auxiliary boundary only: do not turn a successful insertion
+            // into a failure or change global Dispatcher exception handling.
+            AppDiagnosticLog.WriteException("usage.update.failed", error);
+            return false;
+        }
+    }
+
+    private async Task CompleteSuccessfulExpansionAsync(Snippet snippet, int inserted)
+    {
+        SafeDiagnosticLog.Write("expansion.completed", new Dictionary<string, object?> { ["insertedCharacterCount"] = inserted });
+        var saved = await TryUpdateAuxiliaryUsageAsync(() => _usageService.RecordAsync(snippet, inserted));
+        if (_servicesDisposed || _restoreRecoveryBlocked) return;
+        StatusText.Text = UiText.Format($"{snippet.Trigger} inserido") + AuxiliaryUsageStatusSuffix(saved);
+    }
+
+    private string AuxiliaryUsageStatusSuffix(bool saved) => saved ? "" : " · " + UiText.Get(_usageService.HasPendingChanges
+        ? "Estatísticas ainda não salvas." : "Contagens de atalhos e acentos indisponíveis.");
 
     private void SetStatisticsValue(TextBlock text, string label, string value, bool metric = true)
     {
