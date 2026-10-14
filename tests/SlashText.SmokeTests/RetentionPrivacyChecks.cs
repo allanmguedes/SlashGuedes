@@ -108,9 +108,21 @@ internal static class RetentionPrivacyChecks
                 Initialize(childRoot);
                 Check(TemporarySession.CleanupOrphans(DateTimeOffset.UtcNow.AddDays(1)) == 0 && folders.All(Directory.Exists), "live subprocess protected");
                 using var sharedWorker = TemporarySession.AttachWorker(Path.Combine(folders[0], "region.png"), Path.Combine(folders[0], "result.json"));
+                var childStartedTicks = child.StartTime.ToUniversalTime().Ticks;
                 child.Kill(); await child.WaitForExitAsync();
                 Check(TemporarySession.CleanupOrphans() == 0, "startup grace protects delayed worker attachment");
-                Check(TemporarySession.CleanupOrphans(DateTimeOffset.UtcNow.AddMinutes(3)) == 1 && Directory.Exists(folders[0]), "dead parent with live worker lease preserved");
+                var removedWhileLeased = 0;
+                var cleanupClock = Stopwatch.StartNew();
+                do
+                {
+                    removedWhileLeased += TemporarySession.CleanupOrphans(DateTimeOffset.UtcNow.AddMinutes(3));
+                    if (!Directory.Exists(folders[0])) throw new InvalidOperationException("Retention: live worker lease was not preserved.");
+                    if (removedWhileLeased == 0) await Task.Delay(50);
+                } while (removedWhileLeased == 0 && cleanupClock.Elapsed < TimeSpan.FromSeconds(5));
+                // Cleanup intentionally retains files temporarily occupied by Windows/AV.
+                // Retry the eligible GIF, but require the OCR worker's folder on every sweep.
+                Check(removedWhileLeased == 1 && Directory.Exists(folders[0]),
+                    $"dead parent with live worker lease preserved (removed={removedWhileLeased}; ownerExited={TemporarySession.OwnerHasExited(child.Id, childStartedTicks)})");
                 sharedWorker.Dispose();
                 File.SetAttributes(Path.Combine(folders[0], "region.png"), FileAttributes.ReadOnly);
                 Check(TemporarySession.CleanupOrphans(DateTimeOffset.UtcNow.AddMinutes(3)) == 0 && Directory.Exists(folders[0]), "delete-denied orphan retained without crashing");

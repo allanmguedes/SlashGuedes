@@ -1742,5 +1742,7 @@
   "Ui.296B0939BDD650B2": "Abrir carpeta de copias de seguridad",
   "Ui.7CC8A650B4E06684": "Cerrar SlashDesk",
   "Ui.229D22CE656C9BAD": "SlashDesk se cerrará para impedir cambios en datos cuya restauración no se ha confirmado. Se conservará el material de recuperación disponible. Los cambios sin guardar pueden perderse. Vuelve a abrir la aplicación para intentar recuperar los datos anteriores. No modifiques ni elimines la carpeta de copias de seguridad.",
-  "Ui.465FEB3CE2FFF399": "Restaurar esta copia de seguridad reemplazará los datos incluidos, incluidos Mis emojis cuando estén presentes. Se creará una copia de seguridad previa antes de continuar. Guarda tus ediciones de imagen antes de continuar: si la recuperación queda pendiente, SlashDesk tendrá que cerrarse."
+  "Ui.465FEB3CE2FFF399": "Restaurar esta copia de seguridad reemplazará los datos incluidos, incluidos Mis emojis cuando estén presentes. Se creará una copia de seguridad previa antes de continuar. Guarda tus ediciones de imagen antes de continuar: si la recuperación queda pendiente, SlashDesk tendrá que cerrarse.",
+  "Ui.F7032321F558AA49": "El archivo '{0}' del respaldo contiene datos incompatibles. Los datos actuales no se han modificado.",
+  "Ui.351A439526F035DC": "SlashDesk — Piloto de respaldos 3.3.0 · #117"
 }

@@ -1742,5 +1742,7 @@
   "Ui.296B0939BDD650B2": "Open backups folder",
   "Ui.7CC8A650B4E06684": "Close SlashDesk",
   "Ui.229D22CE656C9BAD": "SlashDesk will close to prevent changes to data whose restore was not confirmed. Available recovery material will be kept. Unsaved changes may be lost. Reopen the app to try to recover the previous data. Do not change or delete the backups folder.",
-  "Ui.465FEB3CE2FFF399": "Restoring this backup will replace the data it includes, including My emojis when present. A safety backup will be created before continuing. Save your image edits before continuing: if recovery remains pending, SlashDesk will need to close."
+  "Ui.465FEB3CE2FFF399": "Restoring this backup will replace the data it includes, including My emojis when present. A safety backup will be created before continuing. Save your image edits before continuing: if recovery remains pending, SlashDesk will need to close.",
+  "Ui.F7032321F558AA49": "The backup file '{0}' contains incompatible data. Your current data has not been changed.",
+  "Ui.351A439526F035DC": "SlashDesk — Backups Pilot 3.3.0 · #117"
 }

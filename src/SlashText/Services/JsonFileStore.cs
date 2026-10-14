@@ -19,6 +19,10 @@ public sealed class JsonFileStore<T> where T : new()
         _path = path;
     }
 
+    // Restore validates without invoking the loader's corrupt-file preservation/default fallback.
+    internal static T ReadRequired(JsonElement element) => element.Deserialize<T>(Options)
+        ?? throw new InvalidDataException("Invalid stored JSON value.");
+
     public async Task<T> LoadAsync(CancellationToken cancellationToken = default)
     {
         if (!File.Exists(_path))

@@ -102,6 +102,19 @@ jobs:
             if ($process.ExitCode -ne 0) { Get-Content "$demo/failure.txt" -ErrorAction SilentlyContinue; throw 'Restore recovery demo failed' }
             Get-Content "$demo/resultado-$mode.txt"
           }
+      - name: Backup compatibility inside published EXE
+        shell: pwsh
+        run: |
+          $fixtures = Join-Path $PWD 'ocr-evidence/backup-compatibility-fixtures'
+          $fixtureExe = Get-ChildItem tests/SlashText.SmokeTests/bin -Recurse -Filter SlashText.SmokeTests.exe | Select-Object -First 1
+          & $fixtureExe.FullName --backup-compatibility-fixtures $fixtures
+          if ($LASTEXITCODE -ne 0) { throw 'Backup fixture generation failed' }
+          $output = Join-Path $PWD 'ocr-evidence/backup-compatibility'
+          $exe = (Resolve-Path publish-ocr/SlashDesk.exe).Path
+          $process = Start-Process $exe -ArgumentList "--backup-compatibility-smoke `"$output`" `"$fixtures`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Backup compatibility UI timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Backup compatibility UI failed' }
+          Get-Content "$output/result.txt"
       - name: Package isolated pilot and verify startup
         shell: pwsh
         run: |

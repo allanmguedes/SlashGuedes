@@ -3,7 +3,6 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace SlashText.Services;
 
@@ -208,22 +207,40 @@ public sealed class BackupService
         {
             var historyPath = ResolveWithin(stagingDirectory,
                 restoredFiles.Single(p => p.Equals("capture-history.json", StringComparison.OrdinalIgnoreCase)));
-            using var historyFile = File.OpenRead(historyPath);
-            using var historyInput = new BoundedInputStream(historyFile, BackupInputBudget.MetadataBytes, cancellationToken);
-            var history = JsonNode.Parse(historyInput) as JsonArray
-                ?? throw new InvalidDataException(UiText.Get("O histórico do backup não é válido."));
-            foreach (var item in history.OfType<JsonObject>())
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                foreach (var key in item.Select(p => p.Key).Where(k => k.Equals("requiresFileApproval", StringComparison.OrdinalIgnoreCase)).ToArray())
-                    item.Remove(key);
-                item["requiresFileApproval"] = true;
+                using var historyFile = File.OpenRead(historyPath);
+                using var historyInput = new BoundedInputStream(historyFile, BackupInputBudget.MetadataBytes, cancellationToken);
+                using var history = JsonDocument.Parse(historyInput);
+                if (history.RootElement.ValueKind != JsonValueKind.Array)
+                    throw new InvalidDataException(UiText.Get("O histórico do backup não é válido."));
+                var transformed = historyPath + ".untrusted";
+                using (var output = File.Create(transformed))
+                using (var writer = new Utf8JsonWriter(output, new JsonWriterOptions { Indented = true }))
+                {
+                    writer.WriteStartArray();
+                    foreach (var item in history.RootElement.EnumerateArray())
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (item.ValueKind != JsonValueKind.Object) { item.WriteTo(writer); continue; }
+                        writer.WriteStartObject();
+                        foreach (var property in item.EnumerateObject())
+                            if (!property.Name.Equals("requiresFileApproval", StringComparison.OrdinalIgnoreCase)) property.WriteTo(writer);
+                        writer.WriteBoolean("requiresFileApproval", true); writer.WriteEndObject();
+                    }
+                    writer.WriteEndArray(); writer.Flush(); output.Flush(flushToDisk: true);
+                }
+                // Archive bytes were integrity-checked. Only this local trust decision is rewritten.
+                historyInput.Dispose(); historyFile.Dispose();
+                cancellationToken.ThrowIfCancellationRequested(); File.Move(transformed, historyPath, overwrite: true);
             }
-            // Transform staging only: validation used original bytes; rollback keeps the prior history intact.
-            historyInput.Dispose(); historyFile.Dispose();
-            cancellationToken.ThrowIfCancellationRequested();
-            File.WriteAllText(historyPath, history.ToJsonString(ManifestOptions));
+            catch (Exception error) when (error is JsonException or InvalidDataException or ArgumentException)
+            {
+                throw BackupContentValidator.IncompatibleFile("capture-history.json");
+            }
         }
+        // Validate the bytes actually applied, including the established local history trust transform.
+        BackupContentValidator.Validate(stagingDirectory, restoredFiles, cancellationToken);
         return new RestorePlan(restoredFiles, includesAssets, includesEmotes);
     }
 

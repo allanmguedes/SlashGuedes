@@ -35,8 +35,12 @@ public sealed partial class SnippetMarkdownRepository
         }
 
         var markdown = await File.ReadAllTextAsync(_filePath, cancellationToken);
-        var snippets = Parse(markdown);
+        return ReadRequired(markdown, cancellationToken);
+    }
 
+    internal static List<Snippet> ReadRequired(string markdown, CancellationToken cancellationToken = default, bool forRestore = false)
+    {
+        var snippets = Parse(markdown, cancellationToken, strict: forRestore);
         if (markdown.Contains("<!-- slashtext:", StringComparison.OrdinalIgnoreCase) &&
             snippets.Count == 0)
         {
@@ -87,7 +91,7 @@ public sealed partial class SnippetMarkdownRepository
         return Parse(markdown, token, external: true);
     }
 
-    private static List<Snippet> Parse(string markdown, CancellationToken token = default, bool external = false)
+    private static List<Snippet> Parse(string markdown, CancellationToken token = default, bool external = false, bool strict = false)
     {
         var normalized = markdown.TrimStart('\uFEFF').Replace("\r\n", "\n").Replace('\r', '\n');
         var lines = normalized.Split('\n');
@@ -100,6 +104,8 @@ public sealed partial class SnippetMarkdownRepository
             var heading = HeadingPattern().Match(lines[index]);
             if (!heading.Success)
             {
+                if (strict && lines[index].TrimStart().StartsWith("<!-- slashtext:", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Unparsed shortcut metadata.");
                 continue;
             }
 
@@ -141,6 +147,12 @@ public sealed partial class SnippetMarkdownRepository
             SnippetMetadata metadata;
             try
             {
+                if (strict)
+                {
+                    using var document = JsonDocument.Parse(metadataJson);
+                    BackupContentValidator.RequireUniqueMembers(document.RootElement, token);
+                    BackupContentValidator.RequireTypedMembers(document.RootElement, typeof(SnippetMetadata), token);
+                }
                 metadata = JsonSerializer.Deserialize<SnippetMetadata>(metadataJson, JsonOptions)
                     ?? throw new JsonException("Metadados vazios.");
             }

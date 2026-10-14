@@ -1742,5 +1742,7 @@
   "Ui.296B0939BDD650B2": "Abrir pasta de backups",
   "Ui.7CC8A650B4E06684": "Fechar SlashDesk",
   "Ui.229D22CE656C9BAD": "O SlashDesk será fechado para impedir alterações em dados cuja restauração não foi confirmada. O material de recuperação disponível será mantido. Alterações não salvas podem ser perdidas. Reabra o app para tentar recuperar os dados anteriores. Não altere nem apague a pasta de backups.",
-  "Ui.465FEB3CE2FFF399": "Restaurar este backup substituirá os dados incluídos nele, inclusive Meus emojis quando presentes. Um backup de segurança será criado antes de continuar. Salve suas edições de imagem antes de continuar: se a recuperação ficar pendente, o SlashDesk precisará fechar."
+  "Ui.465FEB3CE2FFF399": "Restaurar este backup substituirá os dados incluídos nele, inclusive Meus emojis quando presentes. Um backup de segurança será criado antes de continuar. Salve suas edições de imagem antes de continuar: se a recuperação ficar pendente, o SlashDesk precisará fechar.",
+  "Ui.F7032321F558AA49": "O arquivo '{0}' do backup contém dados incompatíveis. Os dados atuais não foram alterados.",
+  "Ui.351A439526F035DC": "SlashDesk — Piloto Backups 3.3.0 · #117"
 }

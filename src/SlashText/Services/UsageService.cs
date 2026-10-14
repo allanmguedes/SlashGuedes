@@ -49,21 +49,7 @@ public sealed class UsageService
         {
             var json = await File.ReadAllTextAsync(_usageFile);
             using var document = JsonDocument.Parse(json);
-            if (document.RootElement.ValueKind == JsonValueKind.Array)
-            {
-                _records.AddRange(
-                    JsonSerializer.Deserialize<List<UsageRecord>>(json, ReadOptions) ?? []);
-                RejectNullRecords();
-                return;
-            }
-
-            var snapshot = JsonSerializer.Deserialize<UsageSnapshot>(json, ReadOptions);
-            if (snapshot is null)
-            {
-                IsAvailable = false;
-                return;
-            }
-
+            var snapshot = ReadRequired(document.RootElement);
             _records.AddRange(snapshot.Snippets ?? []);
             _quickAccent = snapshot.QuickAccent ?? new QuickAccentUsageRecord();
             _quickAccent.Characters ??= new Dictionary<string, long>(StringComparer.Ordinal);
@@ -84,6 +70,14 @@ public sealed class UsageService
             IsAvailable = false;
             // An unreadable usage file must not stop the other modules.
         }
+    }
+
+    internal static UsageSnapshot ReadRequired(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.Array)
+            return new UsageSnapshot { Snippets = element.Deserialize<List<UsageRecord>>(ReadOptions)
+                ?? throw new JsonException("Invalid usage records.") };
+        return element.Deserialize<UsageSnapshot>(ReadOptions) ?? throw new JsonException("Invalid usage snapshot.");
     }
 
     public async Task RecordAsync(Snippet snippet, int insertedCharacters)

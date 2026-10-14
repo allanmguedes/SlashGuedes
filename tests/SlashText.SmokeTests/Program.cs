@@ -6,6 +6,14 @@ using System.IO.Compression;
 using System.Diagnostics;
 using ScreenRecorderLib;
 
+if (args.Length == 2 && args[0] == "--backup-compatibility-smoke")
+{
+    await BackupCompatibilityChecks.RunAsync(args[1]); return;
+}
+if (args.Length == 2 && args[0] == "--backup-compatibility-fixtures")
+{
+    BackupCompatibilityChecks.CreatePilotFixtures(args[1]); return;
+}
 if (args.Length == 4 && args[0] == "--restore-recovery-worker")
 {
     RestoreRecoveryChecks.Worker(args);
@@ -149,13 +157,17 @@ using (var quickAccentDelay = new QuickAccentDelayController())
     var activation = new TaskCompletionSource(
         TaskCreationOptions.RunContinuationsAsynchronously);
     var activationClock = Stopwatch.StartNew();
-    quickAccentDelay.Schedule(60, () => activation.TrySetResult());
-    await Task.Delay(15);
-    Require(!activation.Task.IsCompleted, "Acento Rápido não abre antes do atraso");
+    long activatedAtTicks = 0;
+    quickAccentDelay.Schedule(60, () =>
+    {
+        Interlocked.Exchange(ref activatedAtTicks, activationClock.Elapsed.Ticks);
+        activation.TrySetResult();
+    });
     await activation.Task.WaitAsync(TimeSpan.FromSeconds(2));
+    // Measure the callback itself. A delayed Task.Delay observer is not evidence of early activation.
     Require(
-        activationClock.Elapsed >= TimeSpan.FromMilliseconds(35),
-        "Acento Rápido abre após o temporizador independente");
+        TimeSpan.FromTicks(Interlocked.Read(ref activatedAtTicks)) >= TimeSpan.FromMilliseconds(35),
+        "Acento Rápido não abre antes do atraso, medido no callback com a tolerância existente");
 
     var cancelledCount = 0;
     quickAccentDelay.Schedule(80, () => Interlocked.Increment(ref cancelledCount));
@@ -469,6 +481,7 @@ try
     Directory.CreateDirectory(root);
 await CaptureHistoryTrustChecks.RunAsync(root);
 await RestoreRecoveryChecks.RunAsync(root);
+await BackupCompatibilityChecks.RunAsync(root);
     await ExternalInputBudgetChecks.RunAsync(root);
     await RetentionPrivacyChecks.RunAsync(root);
     ClipboardPrivacyChecks.Run(root);
