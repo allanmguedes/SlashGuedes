@@ -1,4 +1,5 @@
 using System.IO;
+using System.Globalization;
 using System.IO.Compression;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -8,7 +9,7 @@ namespace SlashText.Services;
 
 public sealed class BackupService
 {
-    private const int RetentionDays = 7;
+    private const int RetainedSnapshots = 7;
     private const int CurrentSchemaVersion = 2;
     private const int MaximumRestoreEntries = 10_000;
     private const long MaximumRestoreEntryBytes = 256L * 1024 * 1024;
@@ -83,7 +84,8 @@ public sealed class BackupService
     public IReadOnlyList<FileInfo> ListSnapshots() =>
         Directory.Exists(_backupDirectory)
             ? new DirectoryInfo(_backupDirectory)
-                .GetFiles("SlashDesk-backup-*.zip")
+                .GetFiles("*.zip")
+                .Where(item => IsManagedSnapshotName(item.Name) && (item.Attributes & FileAttributes.ReparsePoint) == 0)
                 .OrderByDescending(item => item.LastWriteTimeUtc)
                 .ToList()
             : [];
@@ -685,22 +687,32 @@ public sealed class BackupService
     private static string NormalizeArchivePath(string path) =>
         path.Replace('\\', '/');
 
+    // Only names emitted by the current writer or the historical SlashText daily writer
+    // belong to automatic retention. Unknown files remain available for explicit recovery.
+    internal static bool IsManagedSnapshotName(string name)
+    {
+        if (!Path.GetExtension(name).Equals(".zip", StringComparison.OrdinalIgnoreCase)) return false;
+        var stem = Path.GetFileNameWithoutExtension(name);
+        var historical = stem.StartsWith("SlashText-backup-", StringComparison.OrdinalIgnoreCase);
+        var prefix = historical ? "SlashText-backup-" : "SlashDesk-backup-";
+        if (!stem.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
+        var suffix = stem[prefix.Length..];
+        if (DateTime.TryParseExact(suffix, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)) return true;
+        if (historical) return false; // The historical writer generated daily snapshots only.
+        if (suffix.StartsWith("manual-", StringComparison.OrdinalIgnoreCase))
+            return DateTime.TryParseExact(suffix[7..], "yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+        if (!suffix.StartsWith("before-restore-", StringComparison.OrdinalIgnoreCase)) return false;
+        var parts = suffix[15..].Split('-');
+        return parts.Length == 4 && Guid.TryParseExact(parts[3], "N", out _) &&
+            DateTime.TryParseExact(string.Join("-", parts.Take(3)), "yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+    }
+
     private void Prune()
     {
-        foreach (var backup in new DirectoryInfo(_backupDirectory)
-                     .GetFiles("*-backup-*.zip")
-                     .OrderByDescending(item => item.LastWriteTimeUtc)
-                     .Skip(RetentionDays))
-        {
-            backup.Delete();
-        }
-
-        foreach (var legacy in Directory.EnumerateFiles(
-                     _backupDirectory,
-                     "snippets-*.md"))
-        {
-            File.Delete(legacy);
-        }
+        foreach (var backup in ListSnapshots().Skip(RetainedSnapshots)) backup.Delete();
+        // Historical snippets-*.md may be the sole surviving version. Current writers no
+        // longer produce them: keep the finite legacy set until an explicit user deletion.
+        // Do not read, normalize, deduplicate, convert, or include references in new ZIPs.
     }
 
     private sealed record BackupSource(

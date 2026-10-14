@@ -1769,5 +1769,8 @@
   "Ui.C462112BAB27FB5D": "Redefinir as preferências para os valores padrão? Seus atalhos, estatísticas e arquivos de captura não serão alterados. O arquivo original completo continuará guardado na pasta de dados.",
   "Ui.E340BB728DF27DFB": "Recuperar",
   "Ui.C54FABD99E6202B6": "Redefinir",
-  "Ui.82C1F4E5F3900BB3": "SlashDesk — Piloto Dados protegidos 3.3.0 · #116"
+  "Ui.82C1F4E5F3900BB3": "SlashDesk — Piloto Dados protegidos 3.3.0 · #116",
+  "Ui.F81DACCDE3DCE569": "Backups antigos de atalhos (.md) são preservados até você removê-los. Para recuperar uma versão, use Importar atalhos → SlashDesk.",
+  "Ui.0190ED0532972D1D": "São mantidos até sete ZIPs gerados pelo app. Backups antigos de atalhos (.md) ficam preservados na pasta até remoção manual; para recuperar, use Importar atalhos → SlashDesk.",
+  "Ui.C453DF22EE31F380": "SlashDesk — Piloto Backups antigos 3.3.0 · #119"
 }

@@ -46,6 +46,10 @@ public static class AppPaths
     public static bool IsLanguagesPilot => IsCapturePilot &&
         (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetCustomAttributes<AssemblyMetadataAttribute>()
         .Any(item => item.Key == "SlashDeskLanguagesPilot" && item.Value == "true");
+    public static bool IsLegacyBackupsPilot => IsCapturePilot &&
+        (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())
+        .GetCustomAttributes<AssemblyMetadataAttribute>()
+        .Any(item => item.Key == "SlashDeskLegacyBackupsPilot" && item.Value == "true");
     public static bool IsProtectedStoragePilot => IsCapturePilot &&
         (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())
         .GetCustomAttributes<AssemblyMetadataAttribute>()

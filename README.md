@@ -162,6 +162,8 @@ As capturas, GIFs e MP4 ficam no destino escolhido pelo usuário. O histórico g
 
 Na primeira execução portátil, uma `SlashDeskData` válida ao lado do executável tem prioridade. Se ela não existir, dados legados de `%LocalAppData%\SlashDesk` podem ser copiados por staging, validados e ativados sem apagar a origem antiga.
 
+A limpeza automática mantém os sete ZIPs mais recentes com nomes gerados pelo SlashDesk ou pelo antigo SlashText. Arquivos com nomes não reconhecidos ficam fora da limpeza. Os backups antigos `snippets-*.md` são preservados até remoção manual: o gravador atual não cria mais essas cópias, e elas podem conter versões únicas. Para recuperar uma versão, abra **Configurações → Importar atalhos → SlashDesk** e selecione o `.md` na pasta de backups. A importação permite revisar conflitos antes de confirmar.
+
 A restauração valida o backup antes de tocar nos dados ativos, aplica tudo em staging e executa rollback completo em caso de falha. Em **Configurações**, a ação **Analisar imagens** localiza arquivos sem referência e só permite removê-los após revisão, confirmação e criação de um novo backup.
 
 ## Atualizações seguras

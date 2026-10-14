@@ -16,6 +16,17 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         UiText.Apply(UiText.DefaultLanguage);
+        if (e.Args.Length == 2 && e.Args[0] == "--legacy-backups-smoke")
+        {
+            _helperMode = true; ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var output = Path.GetFullPath(e.Args[1]);
+            Dispatcher.BeginInvoke(new Action(async () =>
+            {
+                try { await Design.LegacyBackupSmoke.RunAsync(output); Shutdown(0); }
+                catch (Exception error) { Directory.CreateDirectory(output); File.WriteAllText(Path.Combine(output, "failure.txt"), error.ToString()); Shutdown(1); }
+            }));
+            return;
+        }
         if (e.Args.Length == 2 && e.Args[0] == "--protected-storage-smoke")
         {
             _helperMode = true; ShutdownMode = ShutdownMode.OnExplicitShutdown;

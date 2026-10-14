@@ -184,15 +184,15 @@ public partial class MainWindow : Window
             _settings.Capture.Recording ??= new RecordingSettings();
             if (AppPaths.IsCapturePilot)
             {
-                Title = AppPaths.IsProtectedStoragePilot ? UiText.Get("SlashDesk — Piloto Dados protegidos 3.3.0 · #116") : AppPaths.IsBackupCompatibilityPilot ? UiText.Get("SlashDesk — Piloto Backups 3.3.0 · #117") : AppPaths.IsLanguagesPilot ? UiText.Get("SlashDesk — Piloto Idiomas 3.3.0 · #82") : AppPaths.IsAuxiliaryPilot ? UiText.Get("SlashDesk — Piloto Interfaces auxiliares 3.3.0 · #69") : AppPaths.IsAboutPilot ? UiText.Get("SlashDesk — Piloto Sobre 3.3.0 · #68") : AppPaths.IsSettingsPilot ? UiText.Get("SlashDesk — Piloto Configurações 3.3.0 · #67") : AppPaths.IsStatisticsPilot ? UiText.Get("SlashDesk — Piloto Estatísticas 3.3.0 · #66") : AppPaths.IsQuickAccentPilot ? UiText.Get("SlashDesk — Piloto Acento Rápido 3.3.0 · #65") : AppPaths.IsCaptureOcrPilot ? UiText.Get("SlashDesk — Piloto Captura + OCR 3.3.0") : AppPaths.IsCaptureComplementsPilot ? UiText.Get("SlashDesk — Piloto Complementos da Captura 3.3.0 · #74") : AppPaths.IsShortcutsPilot ? UiText.Get("SlashDesk — Piloto Atalhos 3.3.0 · #64") : UiText.Get("SlashDesk — Piloto Captura 3.3.0 · #63");
-                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot && !AppPaths.IsLanguagesPilot && !AppPaths.IsBackupCompatibilityPilot && !AppPaths.IsProtectedStoragePilot)
+                Title = AppPaths.IsLegacyBackupsPilot ? UiText.Get("SlashDesk — Piloto Backups antigos 3.3.0 · #119") : AppPaths.IsProtectedStoragePilot ? UiText.Get("SlashDesk — Piloto Dados protegidos 3.3.0 · #116") : AppPaths.IsBackupCompatibilityPilot ? UiText.Get("SlashDesk — Piloto Backups 3.3.0 · #117") : AppPaths.IsLanguagesPilot ? UiText.Get("SlashDesk — Piloto Idiomas 3.3.0 · #82") : AppPaths.IsAuxiliaryPilot ? UiText.Get("SlashDesk — Piloto Interfaces auxiliares 3.3.0 · #69") : AppPaths.IsAboutPilot ? UiText.Get("SlashDesk — Piloto Sobre 3.3.0 · #68") : AppPaths.IsSettingsPilot ? UiText.Get("SlashDesk — Piloto Configurações 3.3.0 · #67") : AppPaths.IsStatisticsPilot ? UiText.Get("SlashDesk — Piloto Estatísticas 3.3.0 · #66") : AppPaths.IsQuickAccentPilot ? UiText.Get("SlashDesk — Piloto Acento Rápido 3.3.0 · #65") : AppPaths.IsCaptureOcrPilot ? UiText.Get("SlashDesk — Piloto Captura + OCR 3.3.0") : AppPaths.IsCaptureComplementsPilot ? UiText.Get("SlashDesk — Piloto Complementos da Captura 3.3.0 · #74") : AppPaths.IsShortcutsPilot ? UiText.Get("SlashDesk — Piloto Atalhos 3.3.0 · #64") : UiText.Get("SlashDesk — Piloto Captura 3.3.0 · #63");
+                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot && !AppPaths.IsLanguagesPilot && !AppPaths.IsBackupCompatibilityPilot && !AppPaths.IsProtectedStoragePilot && !AppPaths.IsLegacyBackupsPilot)
                 {
                     _settings.CheckUpdatesOnStartup = false;
                     _settings.StartWithWindows = false;
                 }
                 _settings.OnboardingCompleted = true;
-                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot && !AppPaths.IsLanguagesPilot && !AppPaths.IsBackupCompatibilityPilot && !AppPaths.IsProtectedStoragePilot) _settings.CloseToTray = false;
-                if (!File.Exists(AppPaths.SettingsFile) || _settingsStore.IsProtected || AppPaths.IsProtectedStoragePilot)
+                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot && !AppPaths.IsLanguagesPilot && !AppPaths.IsBackupCompatibilityPilot && !AppPaths.IsProtectedStoragePilot && !AppPaths.IsLegacyBackupsPilot) _settings.CloseToTray = false;
+                if (!File.Exists(AppPaths.SettingsFile) || _settingsStore.IsProtected || AppPaths.IsProtectedStoragePilot || AppPaths.IsLegacyBackupsPilot)
                     _settings.Capture.OutputDirectoryTemplate = Path.Combine(AppPaths.DataDirectory, "Capturas", "{year}", "{month}");
                 StartWithWindowsCheckBox.IsEnabled = false;
                 CheckUpdatesCheckBox.IsEnabled = false;
@@ -278,7 +278,7 @@ public partial class MainWindow : Window
                 "Atalhos globais de captura",
                 ConfigureCaptureShortcuts);
             RefreshCaptureHistory();
-            if (_settingsStore.IsProtected || _captureService.IsHistoryProtected || AppPaths.IsProtectedStoragePilot || AppPaths.IsLanguagesPilot || AppPaths.IsBackupCompatibilityPilot) ShowView(SettingsView, SettingsTabButton);
+            if (_settingsStore.IsProtected || _captureService.IsHistoryProtected || AppPaths.IsLegacyBackupsPilot || AppPaths.IsProtectedStoragePilot || AppPaths.IsLanguagesPilot || AppPaths.IsBackupCompatibilityPilot) ShowView(SettingsView, SettingsTabButton);
             else if (AppPaths.IsAuxiliaryPilot) ShowView(SettingsView, SettingsTabButton);
             else if (AppPaths.IsAboutPilot) ShowView(AboutView, AboutTabButton);
             else if (AppPaths.IsSettingsPilot) ShowView(SettingsView, SettingsTabButton);

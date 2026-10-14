@@ -6,6 +6,14 @@ using System.IO.Compression;
 using System.Diagnostics;
 using ScreenRecorderLib;
 
+if (args.Length == 2 && args[0] == "--legacy-backups-fixtures")
+{
+    SlashText.Design.LegacyBackupSmoke.CreateFixtures(args[1]); return;
+}
+if (args.Length == 2 && args[0] == "--legacy-backups-smoke")
+{
+    await LegacyBackupChecks.RunAsync(args[1]); return;
+}
 if (args.Length == 2 && args[0] == "--protected-storage-fixtures")
 {
     SlashText.Design.ProtectedStorageSmoke.CreateFixtures(args[1]); return;
@@ -68,6 +76,7 @@ AppPaths.Initialize(new AppDataEnvironment(DistributionMode.Portable, Path.Combi
 
 await ProtectedStorageChecks.RunAsync(Path.Combine(root, "protected-storage"));
 AppPaths.Initialize(new AppDataEnvironment(DistributionMode.Portable, Path.Combine(root, "initial-app"), root, isCapturePilot: true));
+await LegacyBackupChecks.RunAsync(Path.Combine(root, "legacy-backups"));
 var engine = new TemplateEngine();
 var reference = new DateTimeOffset(2026, 7, 27, 14, 35, 0, TimeSpan.FromHours(-3));
 var rendered = engine.Render(

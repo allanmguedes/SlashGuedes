@@ -43,6 +43,7 @@ public partial class MainWindow
     private void RefreshSettingsPresentation()
     {
         RefreshStorageProtection();
+        LegacyBackupPolicyText.Text = UiText.Get("Backups antigos de atalhos (.md) são preservados até você removê-los. Para recuperar uma versão, use Importar atalhos → SlashDesk.");
         SettingsDiagnosticsCheckBox.IsChecked = SafeDiagnosticLog.Enabled;
         SettingsDiagnosticsCheckBox.IsEnabled = !SafeDiagnosticLog.EnabledAtLaunch;
         SettingsDiagnosticsCheckBox.ToolTip = SafeDiagnosticLog.EnabledAtLaunch ? UiText.Get("A coleta adicional foi ativada ao iniciar o app.") : null;

@@ -1769,5 +1769,8 @@
   "Ui.C462112BAB27FB5D": "¿Restablecer las preferencias a sus valores predeterminados? Tus atajos, estadísticas y archivos de captura no cambiarán. El archivo original completo seguirá guardado en la carpeta de datos.",
   "Ui.E340BB728DF27DFB": "Recuperar",
   "Ui.C54FABD99E6202B6": "Restablecer",
-  "Ui.82C1F4E5F3900BB3": "SlashDesk — Piloto de datos protegidos 3.3.0 · #116"
+  "Ui.82C1F4E5F3900BB3": "SlashDesk — Piloto de datos protegidos 3.3.0 · #116",
+  "Ui.F81DACCDE3DCE569": "Las copias antiguas de atajos (.md) se conservan hasta que las elimines. Para recuperar una versión, usa Importar atajos → SlashDesk.",
+  "Ui.0190ED0532972D1D": "Se conservan hasta siete ZIP generados por la aplicación. Las copias antiguas de atajos (.md) permanecen en la carpeta hasta su eliminación manual; para recuperarlas, usa Importar atajos → SlashDesk.",
+  "Ui.C453DF22EE31F380": "SlashDesk — Piloto de copias antiguas 3.3.0 · #119"
 }
