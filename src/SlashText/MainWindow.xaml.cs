@@ -2041,21 +2041,9 @@ public partial class MainWindow : Window
 
     private async void SaveCaptureSettings_OnClick(object sender, RoutedEventArgs e)
     {
-        if (!TryReadCaptureSettings(out var error))
-        {
-            ShowAppDialog(
-                error,
-                UiText.Get("Configuração de captura"),
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-            return;
-        }
-
-        await SavePreferencesAsync();
+        if (!await PrepareCapturePreferencesAsync(UiText.Get("Configuração de captura"))) return;
         ConfigureCaptureShortcuts();
-        StatusText.Text = CaptureShortcutStatusText.Text.StartsWith("●", StringComparison.Ordinal)
-            ? UiText.Get("Configurações de captura salvas")
-            : UiText.Get("Configurações salvas. ") + CaptureShortcutStatusText.Text;
+        ShowCapturePreferencesSavedStatus();
     }
 
     private bool TryReadCaptureSettings(out string error)
@@ -2147,6 +2135,11 @@ public partial class MainWindow : Window
 
     private void ConfigureCaptureShortcuts()
     {
+        if (CapturePreparationForEvidence is { } evidence)
+        {
+            evidence("shortcuts");
+            return;
+        }
         var capture = _settings.Capture;
         var errors = _captureShortcuts.Configure(
             this,
@@ -2240,18 +2233,7 @@ public partial class MainWindow : Window
 
     private async void StartSelectedCapture_OnClick(object sender, RoutedEventArgs e)
     {
-        if (!TryReadCaptureSettings(out var error))
-        {
-            ShowAppDialog(
-                error,
-                UiText.Get("Regra de captura"),
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-            return;
-        }
-
-        await SavePreferencesAsync();
-        ConfigureCaptureShortcuts();
+        // Video/GIF own their preparation, including the preference save.
         switch (_captureMediaMode)
         {
             case CaptureMediaMode.Video:
@@ -2262,6 +2244,9 @@ public partial class MainWindow : Window
                 return;
         }
 
+        if (!await PrepareCapturePreferencesAsync(UiText.Get("Regra de captura"))) return;
+        ConfigureCaptureShortcuts();
+        if (CapturePreparationForEvidence is { } evidence) { evidence("image"); return; }
         switch (_captureLauncherMode)
         {
             case CaptureLauncherMode.ActiveMonitor:
@@ -2385,6 +2370,8 @@ public partial class MainWindow : Window
 
     private async void FocusCaptureRule_OnClick(object sender, RoutedEventArgs e)
     {
+        if (_settingsOperationInProgress || _servicesDisposed || _restoreRecoveryBlocked) return;
+        var previous = _settings.Capture;
         if (!TryReadCaptureSettings(out var currentError))
         {
             ShowAppDialog(currentError, UiText.Get("Configurações de captura"),
@@ -2400,16 +2387,15 @@ public partial class MainWindow : Window
         var accepted = ShowCaptureDialog(dialog);
         if (!accepted)
         {
+            _settings.Capture = previous;
             return;
         }
 
         _settings.Capture = dialog.Result;
-        await SavePreferencesAsync();
+        if (!await TrySaveCapturePreferencesAsync(previous)) return;
         LoadCaptureSettings();
         ConfigureCaptureShortcuts();
-        StatusText.Text = CaptureShortcutStatusText.Text.StartsWith("●", StringComparison.Ordinal)
-            ? UiText.Get("Configurações de captura salvas")
-            : UiText.Get("Configurações salvas. ") + CaptureShortcutStatusText.Text;
+        ShowCapturePreferencesSavedStatus();
     }
 
     private bool ShowCaptureDialog(Window dialog)
@@ -2737,13 +2723,10 @@ public partial class MainWindow : Window
             _recordingControl?.Activate();
             return;
         }
-        if (!TryReadCaptureSettings(out var settingsError))
-        {
-            ShowAppDialog(settingsError, UiText.Get("Gravação"), MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
+        if (!await PrepareCapturePreferencesAsync(UiText.Get("Gravação"))) return;
         var targetKind = SelectedVideoTargetKind;
-        await SavePreferencesAsync();
+        ConfigureCaptureShortcuts();
+        if (CapturePreparationForEvidence is { } evidence) { evidence("mp4"); return; }
 
         try
         {
@@ -2764,21 +2747,18 @@ public partial class MainWindow : Window
             _recordingService = new ScreenRecordingService();
             _recordingService.RecordingFailed += (_, message) =>
                 _ = Dispatcher.BeginInvoke(() => StatusText.Text = message);
+            var previousAudio = _settings.Capture.Recording.Audio.Copy();
             _recordingControl = new RecordingControlWindow(_recordingService, "MP4", _settings.Capture.Recording);
             _recordingControl.Show();
             var shouldStart = await _recordingControl.WaitForStartAsync();
             if (shouldStart)
             {
-                await SavePreferencesAsync();
-                shouldStart = _recordingControl.IsVisible;
+                shouldStart = await TrySaveCapturePreferencesAsync(_settings.Capture, previousAudio, ClosePreparedMp4Recording);
+                shouldStart = shouldStart && _recordingControl?.IsVisible == true;
             }
-            if (!shouldStart)
+            if (!shouldStart || _recordingControl is null)
             {
-                _recordingControl.Close();
-                _recordingControl = null;
-                _recordingService.Dispose();
-                _recordingService = null;
-                ShowFromTray();
+                if (_recordingControl is not null || _recordingService is not null) ClosePreparedMp4Recording();
                 return;
             }
             _recordingControl.BeginRecording();
@@ -2837,12 +2817,9 @@ public partial class MainWindow : Window
             _recordingControl.Activate();
             return;
         }
-        if (!TryReadCaptureSettings(out var settingsError))
-        {
-            ShowAppDialog(settingsError, "GIF", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-        await SavePreferencesAsync();
+        if (!await PrepareCapturePreferencesAsync("GIF")) return;
+        ConfigureCaptureShortcuts();
+        if (CapturePreparationForEvidence is { } evidence) { evidence("gif"); return; }
         var target = _captureService.SelectRecordingRegion(this, UiText.Get("Selecione a região do GIF"));
         if (target is null)
         {

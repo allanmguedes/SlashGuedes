@@ -21,6 +21,7 @@ internal static class DiagnosticPolicy
         "capture.failed",
         "capture.ignored_busy",
         "capture.started",
+        "capture.settings.save_failed",
         "capture.toolbar-positioned",
         "exception.app-domain",
         "exception.unobserved-task",

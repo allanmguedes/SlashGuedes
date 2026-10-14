@@ -1776,5 +1776,8 @@
   "Ui.3D2F65FA16079528": "Accent inserted",
   "Ui.2D0E4B6878DA648D": "Statistics not saved yet.",
   "Ui.FFFD14A004118F72": "Counts from this session have not been saved yet.",
-  "Ui.E5F2741BB5C5188C": "Pending counts are kept in this session. We will try to save them the next time you use a shortcut or accent. Closing the app before then may lose them."
+  "Ui.E5F2741BB5C5188C": "Pending counts are kept in this session. We will try to save them the next time you use a shortcut or accent. Closing the app before then may lose them.",
+  "Ui.45FF316998EF9CC1": "Capture preferences were not saved. The action was stopped.",
+  "Ui.EBDA786D6992CA01": "Could not save capture preferences",
+  "Ui.D793C68D913AF60D": "Capture preferences could not be saved. Previous settings were kept and capture or recording did not start. Check access to the data folder, adjust the options and try again."
 }
