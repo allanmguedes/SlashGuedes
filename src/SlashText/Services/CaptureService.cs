@@ -23,6 +23,14 @@ public sealed class CaptureService
     private readonly Dictionary<CaptureRecord, string> _fileApprovals = new();
 
     public IReadOnlyList<CaptureRecord> History => _history;
+    public bool IsHistoryProtected => _historyStore.IsProtected;
+    public bool CanRecoverHistory => _historyStore.CanRecover;
+    public StoredReadState HistoryReadState => _historyStore.ReadState;
+    public async Task RecoverHistoryAsync()
+    {
+        await _historyStore.RecoverAsync(_history);
+        await LoadAsync();
+    }
     public Func<Bitmap, CaptureAnnotationKind, Task<CaptureImageEditResult?>>? ImageEditor { get; set; }
     public string ResolveFilePath(CaptureRecord record)
     {
@@ -243,6 +251,7 @@ public sealed class CaptureService
 
     public async Task AddMediaRecordAsync(CaptureRecord record)
     {
+        if (IsHistoryProtected) return; // The completed recording file remains usable, without replacing partial history.
         record.RequiresFileApproval = false; // Called only for newly completed local recordings.
         record.PortableRelativePath ??=
             CapturePathResolver.CreatePortableRelativePath(record.FilePath, AppPaths.Current);
@@ -290,6 +299,7 @@ public sealed class CaptureService
         {
             if (File.Exists(temporary)) File.Delete(temporary);
         }
+        if (IsHistoryProtected) record = null; // Do not mutate a legible history row after saving an explicit edit.
         record ??= new CaptureRecord
         {
             RequiresFileApproval = false,
@@ -302,6 +312,7 @@ public sealed class CaptureService
         record.Height = bitmap.Height;
         if (record.RequiresFileApproval && CaptureHistoryFilePolicy.TryValidate(record, path, out var fingerprint))
             _fileApprovals[record] = fingerprint;
+        if (IsHistoryProtected) return record;
         _history.Remove(record);
         _history.Insert(0, record);
         if (_history.Count > 1000) _history.RemoveRange(1000, _history.Count - 1000);
@@ -311,6 +322,7 @@ public sealed class CaptureService
 
     public async Task<bool> DeleteAsync(string id, bool deleteFile)
     {
+        if (IsHistoryProtected) throw new IOException(UiText.Get("O histórico está protegido. Revise os dados em Configurações antes de remover entradas."));
         var record = _history.FirstOrDefault(item => item.Id == id);
         if (record is null)
         {
@@ -331,7 +343,7 @@ public sealed class CaptureService
 
     public async Task<int> CleanOlderThanAsync(int days, bool deleteFiles)
     {
-        if (days <= 0)
+        if (IsHistoryProtected || days <= 0)
         {
             return 0;
         }
@@ -880,6 +892,7 @@ public sealed class CaptureService
                 Width = output.Width,
                 Height = output.Height
             };
+            if (IsHistoryProtected) return record;
             _history.Insert(0, record);
             if (_history.Count > 1000)
             {

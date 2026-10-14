@@ -19,39 +19,54 @@ internal sealed class CaptureHistoryStore
         _path = path;
     }
 
-    public async Task<List<CaptureRecord>> LoadAsync(CancellationToken cancellationToken = default)
+    public StoredReadState ReadState { get; private set; } = StoredReadState.Missing;
+    public bool IsProtected => StoredReadProtection.Get(_path) is not null;
+    public bool CanRecover => StoredReadProtection.Get(_path)?.PreservedPath is not null;
+
+    public Task<List<CaptureRecord>> LoadAsync(CancellationToken cancellationToken = default) =>
+        AtomicFilePersistence.WithPathGateAsync(_path, () => LoadCoreAsync(cancellationToken), cancellationToken);
+
+    private async Task<List<CaptureRecord>> LoadCoreAsync(CancellationToken cancellationToken)
     {
-        if (!File.Exists(_path))
-        {
-            return [];
-        }
+        byte[]? bytes = null;
+        var records = new List<CaptureRecord>();
         try
         {
-            await using var stream = File.OpenRead(_path);
+            bytes = await StoredReadProtection.ReadAsync(_path, cancellationToken);
+            if (bytes is null) { ReadState = StoredReadState.Missing; return records; }
+            using var stream = new MemoryStream(bytes, writable: false);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-            if (document.RootElement.ValueKind != JsonValueKind.Array)
-            {
-                return [];
-            }
-            var records = new List<CaptureRecord>();
+            if (document.RootElement.ValueKind != JsonValueKind.Array) throw new JsonException("Invalid capture history.");
+            var partial = false;
+            var ids = new HashSet<string>(StringComparer.Ordinal);
             foreach (var element in document.RootElement.EnumerateArray())
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    var record = ReadRecord(element);
-                    if (record is not null) records.Add(record);
+                    BackupContentValidator.RequireUniqueMembers(element, cancellationToken);
+                    BackupContentValidator.RequireTypedMembers(element, typeof(CaptureRecord), cancellationToken);
+                    var record = ReadRecord(element) ?? throw new JsonException("Invalid capture record.");
+                    if (record.Width < 0 || record.Height < 0 ||
+                        !double.IsFinite(record.DurationSeconds) || record.DurationSeconds < 0)
+                        throw new JsonException("Invalid capture record.");
+                    // Keep every legible row. CaptureService assigns safe session IDs; the original stays protected.
+                    if (string.IsNullOrWhiteSpace(record.Id) || !ids.Add(record.Id)) partial = true;
+                    records.Add(record);
                 }
-                catch (JsonException exception)
-                {
-                    AppDiagnosticLog.WriteException("history.item-corrupt", exception);
-                }
+                catch (Exception error) when (error is JsonException or InvalidDataException) { partial = true; }
             }
+            ReadState = partial ? StoredReadState.Partial : StoredReadState.Valid;
+            if (partial) await StoredReadProtection.ProtectAsync(_path, ReadState, bytes);
+            else StoredReadProtection.Valid(_path);
             return records;
         }
-        catch (Exception exception) when (exception is JsonException or IOException)
+        catch (Exception error) when (error is JsonException or IOException or UnauthorizedAccessException)
         {
-            AppDiagnosticLog.WriteException("history.file-corrupt", exception);
-            return [];
+            ReadState = bytes is null ? StoredReadState.Unavailable : StoredReadState.Invalid;
+            await StoredReadProtection.ProtectAsync(_path, ReadState, bytes);
+            AppDiagnosticLog.Write("history.read.protected", ("state", ReadState.ToString()), ("exceptionType", error.GetType().Name));
+            return records;
         }
     }
 
@@ -72,31 +87,21 @@ internal sealed class CaptureHistoryStore
             ?? throw new JsonException("Invalid capture record.")).ToList();
     }
 
-    public async Task SaveAsync(
-        IReadOnlyList<CaptureRecord> records,
-        CancellationToken cancellationToken = default)
+    public Task SaveAsync(IReadOnlyList<CaptureRecord> records, CancellationToken cancellationToken = default) =>
+        AtomicFilePersistence.WriteAsync(_path,
+            (stream, token) => JsonSerializer.SerializeAsync(stream, records, Options, token), cancellationToken);
+
+    public async Task RecoverAsync(IReadOnlyList<CaptureRecord> records, CancellationToken cancellationToken = default)
     {
-        RestoreRecovery.ThrowIfProtected(_path);
-        var directory = Path.GetDirectoryName(_path) ?? AppPaths.DataDirectory;
-        Directory.CreateDirectory(directory);
-        var temporary = Path.Combine(directory, $".capture-history-{Guid.NewGuid():N}.tmp");
-        try
-        {
-            await using (var stream = File.Create(temporary))
-            {
-                await JsonSerializer.SerializeAsync(stream, records, Options, cancellationToken);
-                await stream.FlushAsync(cancellationToken);
-                stream.Flush(flushToDisk: true);
-            }
-            RestoreRecovery.ThrowIfProtected(_path);
-            File.Move(temporary, _path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
+        var replacement = ReadRequired(JsonSerializer.SerializeToElement(records, Options));
+        if (replacement.Any(r => string.IsNullOrWhiteSpace(r.Id) || r.Width < 0 || r.Height < 0 ||
+            !double.IsFinite(r.DurationSeconds) || r.DurationSeconds < 0) ||
+            replacement.Select(r => r.Id).Distinct(StringComparer.Ordinal).Count() != replacement.Count)
+            throw new InvalidDataException("Recovery requires a valid history list.");
+        var failure = StoredReadProtection.Get(_path) ?? throw new InvalidOperationException("No protected history to recover.");
+        await AtomicFilePersistence.WriteAsync(_path,
+            (stream, token) => JsonSerializer.SerializeAsync(stream, records, Options, token), cancellationToken, failure);
+        await LoadAsync(cancellationToken);
+        if (IsProtected) throw new IOException("Recovered history could not be read completely.");
     }
 }

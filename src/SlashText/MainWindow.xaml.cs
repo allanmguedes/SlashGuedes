@@ -184,15 +184,15 @@ public partial class MainWindow : Window
             _settings.Capture.Recording ??= new RecordingSettings();
             if (AppPaths.IsCapturePilot)
             {
-                Title = AppPaths.IsBackupCompatibilityPilot ? UiText.Get("SlashDesk — Piloto Backups 3.3.0 · #117") : AppPaths.IsLanguagesPilot ? UiText.Get("SlashDesk — Piloto Idiomas 3.3.0 · #82") : AppPaths.IsAuxiliaryPilot ? UiText.Get("SlashDesk — Piloto Interfaces auxiliares 3.3.0 · #69") : AppPaths.IsAboutPilot ? UiText.Get("SlashDesk — Piloto Sobre 3.3.0 · #68") : AppPaths.IsSettingsPilot ? UiText.Get("SlashDesk — Piloto Configurações 3.3.0 · #67") : AppPaths.IsStatisticsPilot ? UiText.Get("SlashDesk — Piloto Estatísticas 3.3.0 · #66") : AppPaths.IsQuickAccentPilot ? UiText.Get("SlashDesk — Piloto Acento Rápido 3.3.0 · #65") : AppPaths.IsCaptureOcrPilot ? UiText.Get("SlashDesk — Piloto Captura + OCR 3.3.0") : AppPaths.IsCaptureComplementsPilot ? UiText.Get("SlashDesk — Piloto Complementos da Captura 3.3.0 · #74") : AppPaths.IsShortcutsPilot ? UiText.Get("SlashDesk — Piloto Atalhos 3.3.0 · #64") : UiText.Get("SlashDesk — Piloto Captura 3.3.0 · #63");
-                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot && !AppPaths.IsLanguagesPilot && !AppPaths.IsBackupCompatibilityPilot)
+                Title = AppPaths.IsProtectedStoragePilot ? UiText.Get("SlashDesk — Piloto Dados protegidos 3.3.0 · #116") : AppPaths.IsBackupCompatibilityPilot ? UiText.Get("SlashDesk — Piloto Backups 3.3.0 · #117") : AppPaths.IsLanguagesPilot ? UiText.Get("SlashDesk — Piloto Idiomas 3.3.0 · #82") : AppPaths.IsAuxiliaryPilot ? UiText.Get("SlashDesk — Piloto Interfaces auxiliares 3.3.0 · #69") : AppPaths.IsAboutPilot ? UiText.Get("SlashDesk — Piloto Sobre 3.3.0 · #68") : AppPaths.IsSettingsPilot ? UiText.Get("SlashDesk — Piloto Configurações 3.3.0 · #67") : AppPaths.IsStatisticsPilot ? UiText.Get("SlashDesk — Piloto Estatísticas 3.3.0 · #66") : AppPaths.IsQuickAccentPilot ? UiText.Get("SlashDesk — Piloto Acento Rápido 3.3.0 · #65") : AppPaths.IsCaptureOcrPilot ? UiText.Get("SlashDesk — Piloto Captura + OCR 3.3.0") : AppPaths.IsCaptureComplementsPilot ? UiText.Get("SlashDesk — Piloto Complementos da Captura 3.3.0 · #74") : AppPaths.IsShortcutsPilot ? UiText.Get("SlashDesk — Piloto Atalhos 3.3.0 · #64") : UiText.Get("SlashDesk — Piloto Captura 3.3.0 · #63");
+                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot && !AppPaths.IsLanguagesPilot && !AppPaths.IsBackupCompatibilityPilot && !AppPaths.IsProtectedStoragePilot)
                 {
                     _settings.CheckUpdatesOnStartup = false;
                     _settings.StartWithWindows = false;
                 }
                 _settings.OnboardingCompleted = true;
-                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot && !AppPaths.IsLanguagesPilot && !AppPaths.IsBackupCompatibilityPilot) _settings.CloseToTray = false;
-                if (!File.Exists(AppPaths.SettingsFile))
+                if (!AppPaths.IsSettingsPilot && !AppPaths.IsAboutPilot && !AppPaths.IsAuxiliaryPilot && !AppPaths.IsLanguagesPilot && !AppPaths.IsBackupCompatibilityPilot && !AppPaths.IsProtectedStoragePilot) _settings.CloseToTray = false;
+                if (!File.Exists(AppPaths.SettingsFile) || _settingsStore.IsProtected || AppPaths.IsProtectedStoragePilot)
                     _settings.Capture.OutputDirectoryTemplate = Path.Combine(AppPaths.DataDirectory, "Capturas", "{year}", "{month}");
                 StartWithWindowsCheckBox.IsEnabled = false;
                 CheckUpdatesCheckBox.IsEnabled = false;
@@ -278,7 +278,7 @@ public partial class MainWindow : Window
                 "Atalhos globais de captura",
                 ConfigureCaptureShortcuts);
             RefreshCaptureHistory();
-            if (AppPaths.IsLanguagesPilot || AppPaths.IsBackupCompatibilityPilot) ShowView(SettingsView, SettingsTabButton);
+            if (_settingsStore.IsProtected || _captureService.IsHistoryProtected || AppPaths.IsProtectedStoragePilot || AppPaths.IsLanguagesPilot || AppPaths.IsBackupCompatibilityPilot) ShowView(SettingsView, SettingsTabButton);
             else if (AppPaths.IsAuxiliaryPilot) ShowView(SettingsView, SettingsTabButton);
             else if (AppPaths.IsAboutPilot) ShowView(AboutView, AboutTabButton);
             else if (AppPaths.IsSettingsPilot) ShowView(SettingsView, SettingsTabButton);
@@ -286,7 +286,7 @@ public partial class MainWindow : Window
             else if (AppPaths.IsQuickAccentPilot) ShowView(QuickAccentView, QuickAccentTabButton);
             else if (AppPaths.IsCapturePilot && !AppPaths.IsShortcutsPilot) ShowView(CaptureView, CaptureTabButton);
 
-            if (!_settings.OnboardingCompleted)
+            if (!_settingsStore.IsProtected && !_settings.OnboardingCompleted)
             {
                 await startup.RunAsync(
                     "Onboarding",
@@ -296,7 +296,7 @@ public partial class MainWindow : Window
                             new OnboardingWindow { Owner = this };
                         onboarding.ShowDialog();
                         _settings.OnboardingCompleted = true;
-                        await _settingsStore.SaveAsync(_settings);
+                        await SavePreferencesAsync();
                     });
             }
 
@@ -1207,6 +1207,7 @@ public partial class MainWindow : Window
             RefreshAboutPresentation(); UpdateAboutLayout(ActualWidth);
             if (AboutView.IsLoaded) LabMotion.PlayEntrance(AboutView);
         }
+        RefreshStorageProtection();
         if (ReferenceEquals(view, SettingsView))
         {
             RefreshSettingsPresentation(); UpdateSettingsLayout(ActualWidth);
@@ -1255,7 +1256,7 @@ public partial class MainWindow : Window
 
     private async void Settings_OnClick(object sender, RoutedEventArgs e)
     {
-        if (!_initialized || _settingsOperationInProgress) return;
+        if (!_initialized || _settingsOperationInProgress || _settingsStore.IsProtected) return;
         var previousClose = _settings.CloseToTray;
         var previousSuggestions = _settings.ShowSuggestions;
         var previousStart = _settings.StartWithWindows;
@@ -1273,7 +1274,7 @@ public partial class MainWindow : Window
             {
                 StartupService.SetEnabled(_settings.StartWithWindows);
             }
-            await _settingsStore.SaveAsync(_settings);
+            await SavePreferencesAsync();
 
             if (previousUpdateMonitoring != _settings.CheckUpdatesOnStartup)
             {
@@ -1594,6 +1595,7 @@ public partial class MainWindow : Window
             _keyboardHook.UpdateSnippets(_snippets);
             await _usageService.LoadAsync();
             await _captureService.LoadAsync();
+            RefreshStorageProtection();
             // Preserve edited pixels, but a restore must not retain authority to overwrite the old path.
             _captureWorkbenchPath = null; _captureWorkbenchRecord = null;
             RefreshCaptureHistory();
@@ -1693,7 +1695,7 @@ public partial class MainWindow : Window
         {
             ApplyTrayTheme(trayMenu);
         }
-        await _settingsStore.SaveAsync(_settings);
+        await SavePreferencesAsync();
         ShowView(SettingsView, SettingsTabButton);
         SettingsOperationText.Text = UiText.Get("Tema salvo.");
         }
@@ -2053,7 +2055,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        await _settingsStore.SaveAsync(_settings);
+        await SavePreferencesAsync();
         ConfigureCaptureShortcuts();
         StatusText.Text = CaptureShortcutStatusText.Text.StartsWith("●", StringComparison.Ordinal)
             ? UiText.Get("Configurações de captura salvas")
@@ -2252,7 +2254,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        await _settingsStore.SaveAsync(_settings);
+        await SavePreferencesAsync();
         ConfigureCaptureShortcuts();
         switch (_captureMediaMode)
         {
@@ -2406,7 +2408,7 @@ public partial class MainWindow : Window
         }
 
         _settings.Capture = dialog.Result;
-        await _settingsStore.SaveAsync(_settings);
+        await SavePreferencesAsync();
         LoadCaptureSettings();
         ConfigureCaptureShortcuts();
         StatusText.Text = CaptureShortcutStatusText.Text.StartsWith("●", StringComparison.Ordinal)
@@ -2745,7 +2747,7 @@ public partial class MainWindow : Window
             return;
         }
         var targetKind = SelectedVideoTargetKind;
-        await _settingsStore.SaveAsync(_settings);
+        await SavePreferencesAsync();
 
         try
         {
@@ -2771,7 +2773,7 @@ public partial class MainWindow : Window
             var shouldStart = await _recordingControl.WaitForStartAsync();
             if (shouldStart)
             {
-                await _settingsStore.SaveAsync(_settings);
+                await SavePreferencesAsync();
                 shouldStart = _recordingControl.IsVisible;
             }
             if (!shouldStart)
@@ -2844,7 +2846,7 @@ public partial class MainWindow : Window
             ShowAppDialog(settingsError, "GIF", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-        await _settingsStore.SaveAsync(_settings);
+        await SavePreferencesAsync();
         var target = _captureService.SelectRecordingRegion(this, UiText.Get("Selecione a região do GIF"));
         if (target is null)
         {
@@ -3516,6 +3518,7 @@ public partial class MainWindow : Window
             empty.SetResourceReference(Border.BorderBrushProperty, "Lab.line");
             CaptureHistoryPanel.Children.Add(empty);
         }
+        RefreshStorageProtection();
         CaptureHistoryStatusText.Text = filtered.Count > 40 ? UiText.Format($"40 de {filtered.Count:N0} · Ver todas") : filtered.Count.ToString("N0");
         Dispatcher.BeginInvoke(new Action(UpdateCaptureHistoryNavigationState));
     }
@@ -3858,6 +3861,7 @@ public partial class MainWindow : Window
 
     private async void DeleteHistoryItem_OnClick(object sender, RoutedEventArgs e)
     {
+        if (_captureService.IsHistoryProtected) { ReviewStorage_OnClick(sender, e); return; }
         if (sender is not Button { Tag: CaptureRecord record })
         {
             return;
@@ -3883,6 +3887,7 @@ public partial class MainWindow : Window
 
     private async void CleanCaptureHistory_OnClick(object sender, RoutedEventArgs e)
     {
+        if (_captureService.IsHistoryProtected) { ReviewStorage_OnClick(sender, e); return; }
         var days = ParseSelectedInt(CaptureRetentionBox, 90);
         if (days <= 0)
         {
@@ -3947,7 +3952,7 @@ public partial class MainWindow : Window
     private void StartUpdateMonitor()
     {
         StopUpdateMonitor();
-        if (AppPaths.IsCapturePilot || !_settings.CheckUpdatesOnStartup || _servicesDisposed)
+        if (_settingsStore.IsProtected || AppPaths.IsCapturePilot || !_settings.CheckUpdatesOnStartup || _servicesDisposed)
         {
             return;
         }

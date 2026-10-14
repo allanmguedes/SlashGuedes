@@ -115,6 +115,15 @@ jobs:
           if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Backup compatibility UI timeout' }
           if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Backup compatibility UI failed' }
           Get-Content "$output/result.txt"
+      - name: Protected storage inside published EXE
+        shell: pwsh
+        run: |
+          $output = Join-Path $PWD 'ocr-evidence/protected-storage'
+          $exe = (Resolve-Path publish-ocr/SlashDesk.exe).Path
+          $process = Start-Process $exe -ArgumentList "--protected-storage-smoke `"$output`"" -WindowStyle Hidden -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Protected storage UI timeout' }
+          if ($process.ExitCode -ne 0) { Get-Content "$output/failure.txt" -ErrorAction SilentlyContinue; throw 'Protected storage UI failed' }
+          Get-Content "$output/result.txt"
       - name: Package isolated pilot and verify startup
         shell: pwsh
         run: |

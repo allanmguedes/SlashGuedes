@@ -42,6 +42,7 @@ public partial class MainWindow
 
     private void RefreshSettingsPresentation()
     {
+        RefreshStorageProtection();
         SettingsDiagnosticsCheckBox.IsChecked = SafeDiagnosticLog.Enabled;
         SettingsDiagnosticsCheckBox.IsEnabled = !SafeDiagnosticLog.EnabledAtLaunch;
         SettingsDiagnosticsCheckBox.ToolTip = SafeDiagnosticLog.EnabledAtLaunch ? UiText.Get("A coleta adicional foi ativada ao iniciar o app.") : null;
@@ -154,7 +155,7 @@ public partial class MainWindow
         ShowView(SettingsView, SettingsTabButton); UpdateSettingsLayout(width);
     }
     internal async Task SaveSettingsPreferenceEvidenceAsync()
-    { await _settingsStore.SaveAsync(_settings); }
+    { await SavePreferencesAsync(); }
     internal async Task ApplySettingsControlsEvidenceAsync(string theme)
     {
         _initialized = true;

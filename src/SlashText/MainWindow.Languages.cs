@@ -37,7 +37,7 @@ public partial class MainWindow
         try
         {
             _settings.Language = UiText.Normalize(language);
-            await _settingsStore.SaveAsync(_settings);
+            await SavePreferencesAsync();
             ShowLanguageRestartNotice(_settings.Language != UiText.Language);
             SettingsOperationText.Text = UiText.Get("Preferência salva.");
             return true;

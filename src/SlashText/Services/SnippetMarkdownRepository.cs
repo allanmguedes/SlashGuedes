@@ -190,7 +190,7 @@ public sealed partial class SnippetMarkdownRepository
         return snippets;
     }
 
-    private static string Serialize(IEnumerable<Snippet> snippets)
+    internal static string Serialize(IEnumerable<Snippet> snippets)
     {
         var builder = new StringBuilder(Header);
         foreach (var snippet in snippets)

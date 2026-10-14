@@ -6,6 +6,14 @@ using System.IO.Compression;
 using System.Diagnostics;
 using ScreenRecorderLib;
 
+if (args.Length == 2 && args[0] == "--protected-storage-fixtures")
+{
+    SlashText.Design.ProtectedStorageSmoke.CreateFixtures(args[1]); return;
+}
+if (args.Length == 2 && args[0] == "--protected-storage-smoke")
+{
+    await ProtectedStorageChecks.RunAsync(args[1]); return;
+}
 if (args.Length == 2 && args[0] == "--backup-compatibility-smoke")
 {
     await BackupCompatibilityChecks.RunAsync(args[1]); return;
@@ -58,6 +66,8 @@ if (args.Length == 2 && args[0] == "--clipboard-native-isolated")
 var root = Path.Combine(Path.GetTempPath(), $"slashtext-smoke-{Guid.NewGuid():N}");
 AppPaths.Initialize(new AppDataEnvironment(DistributionMode.Portable, Path.Combine(root, "initial-app"), root, isCapturePilot: true));
 
+await ProtectedStorageChecks.RunAsync(Path.Combine(root, "protected-storage"));
+AppPaths.Initialize(new AppDataEnvironment(DistributionMode.Portable, Path.Combine(root, "initial-app"), root, isCapturePilot: true));
 var engine = new TemplateEngine();
 var reference = new DateTimeOffset(2026, 7, 27, 14, 35, 0, TimeSpan.FromHours(-3));
 var rendered = engine.Render(
@@ -1826,6 +1836,8 @@ await BackupCompatibilityChecks.RunAsync(root);
 
     var editedHistory = new CaptureService();
     await editedHistory.LoadAsync();
+    Require(editedHistory.IsHistoryProtected, "Partial history remains protected until explicit recovery");
+    await editedHistory.RecoverHistoryAsync();
     var originalPath = Path.Combine(movedCaptureDirectory, "original-do-editor.png");
     var editedPath = Path.Combine(movedCaptureDirectory, "copia-editada.png");
     using (var originalBitmap = new System.Drawing.Bitmap(80, 60))

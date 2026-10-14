@@ -79,7 +79,7 @@ internal static class BackupContentValidator
         return JsonDocument.Parse(bounded);
     }
 
-    private static void RequireSettingsMembers(object? value, CancellationToken token)
+    internal static void RequireSettingsMembers(object? value, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
         if (value is null) throw new InvalidDataException();

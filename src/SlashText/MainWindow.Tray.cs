@@ -17,7 +17,7 @@ public partial class MainWindow
         {
             _quickAccentTrayToggle.Text = _settings.QuickAccentEnabled ? UiText.Get("Inativar Acento Rápido") : UiText.Get("Ativar Acento Rápido");
             _quickAccentTrayToggle.Tag = _settings.QuickAccentEnabled ? "X" : "Check";
-            _quickAccentTrayToggle.Enabled = !_settingsOperationInProgress && !_shortcutOperationInProgress && !_quickAccentTraySaving;
+            _quickAccentTrayToggle.Enabled = !_settingsOperationInProgress && !_shortcutOperationInProgress && !_quickAccentTraySaving && !_settingsStore.IsProtected;
         }
         foreach (Forms.ToolStripMenuItem group in menu.Items.OfType<Forms.ToolStripMenuItem>())
             if (group.Name is "Captures" or "Recordings" or "Shortcuts") group.Enabled = !_settingsOperationInProgress && !_shortcutOperationInProgress;
@@ -31,7 +31,7 @@ public partial class MainWindow
     internal async Task<bool> SetQuickAccentEnabledFromTrayAsync(bool enabled)
     {
         _quickAccentTrayError = null;
-        if (_settingsOperationInProgress || _shortcutOperationInProgress || _quickAccentTraySaving) return false;
+        if (_settingsOperationInProgress || _shortcutOperationInProgress || _quickAccentTraySaving || _settingsStore.IsProtected) return false;
         _quickAccentTraySaving = true;
         await _quickAccentSaveGate.WaitAsync();
         var previous = _settings.QuickAccentEnabled;
@@ -43,7 +43,7 @@ public partial class MainWindow
             if (_settingsOperationInProgress || _shortcutOperationInProgress) return false;
             _settingsOperationInProgress = true; ownsSettingsGate = true; root.IsEnabled = false;
             _settings.QuickAccentEnabled = enabled;
-            await _settingsStore.SaveAsync(_settings);
+            await SavePreferencesAsync();
             _updatingQuickAccentControls = true;
             try { QuickAccentEnabledCheckBox.IsChecked = enabled; }
             finally { _updatingQuickAccentControls = false; }

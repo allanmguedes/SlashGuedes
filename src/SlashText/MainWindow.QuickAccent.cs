@@ -142,7 +142,7 @@ public partial class MainWindow
             _settings.QuickAccentExcludedApps = QuickAccentExcludedAppsBox.Text;
             _settings.QuickAccentCharacterSets = SelectedQuickAccentCharacterSets();
             ApplyQuickAccentSettings();
-            await _settingsStore.SaveAsync(_settings);
+            await SavePreferencesAsync();
         }
         catch (Exception exception)
         {

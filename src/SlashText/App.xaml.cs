@@ -16,6 +16,17 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         UiText.Apply(UiText.DefaultLanguage);
+        if (e.Args.Length == 2 && e.Args[0] == "--protected-storage-smoke")
+        {
+            _helperMode = true; ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var output = Path.GetFullPath(e.Args[1]);
+            Dispatcher.BeginInvoke(new Action(async () =>
+            {
+                try { await Design.ProtectedStorageSmoke.RunAsync(output); Shutdown(0); }
+                catch (Exception error) { Directory.CreateDirectory(output); File.WriteAllText(Path.Combine(output, "failure.txt"), error.ToString()); Shutdown(1); }
+            }));
+            return;
+        }
         if (e.Args.Length == 3 && e.Args[0] == "--backup-compatibility-smoke")
         {
             _helperMode = true; ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -257,6 +268,10 @@ public partial class App : System.Windows.Application
         }
 
         var dataEnvironment = AppDataEnvironment.Detect();
+        if (e.Args.Length == 2 && e.Args[0] == "--protected-storage-case" &&
+            e.Args[1] is "history" or "settings" or "blocked" && AppPaths.IsProtectedStoragePilot)
+            dataEnvironment = new AppDataEnvironment(DistributionMode.Portable,
+                Path.Combine(dataEnvironment.ExecutableDirectory, "TESTES", e.Args[1]), dataEnvironment.LocalAppDataDirectory, true);
         if (!dataEnvironment.IsCapturePilot && PortableUpdateService.TryRunHelper(e.Args, out var helperExitCode))
         {
             _helperMode = true;

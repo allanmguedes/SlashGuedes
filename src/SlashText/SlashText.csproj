@@ -27,10 +27,12 @@
     <CapturePilotBuild Condition="'$(AuxiliaryPilotBuild)' == 'true'">true</CapturePilotBuild>
     <CapturePilotBuild Condition="'$(LanguagesPilotBuild)' == 'true'">true</CapturePilotBuild>
     <CapturePilotBuild Condition="'$(BackupCompatibilityPilotBuild)' == 'true'">true</CapturePilotBuild>
+    <CapturePilotBuild Condition="'$(ProtectedStoragePilotBuild)' == 'true'">true</CapturePilotBuild>
     <SlashDeskDistribution Condition="'$(SlashDeskDistribution)' == ''">Installed</SlashDeskDistribution>
   </PropertyGroup>
 
   <ItemGroup>
+    <AssemblyMetadata Include="SlashDeskProtectedStoragePilot" Value="true" Condition="'$(ProtectedStoragePilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskBackupCompatibilityPilot" Value="true" Condition="'$(BackupCompatibilityPilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskLanguagesPilot" Value="true" Condition="'$(LanguagesPilotBuild)' == 'true'" />
     <AssemblyMetadata Include="SlashDeskAboutPilot" Value="true" Condition="'$(AboutPilotBuild)' == 'true'" />

@@ -63,7 +63,7 @@
           <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Margin="32,0,0,0">
@@ -89,6 +89,8 @@
                 </StackPanel>
             </StackPanel>
 
+            <Button x:Name="StorageProtectionHeaderButton" Grid.Column="1" Visibility="Collapsed" Margin="12,0,0,0"
+                    VerticalAlignment="Center" Style="{StaticResource Lab.Button}" Click="ReviewStorage_OnClick"/>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="16,0,32,0" VerticalAlignment="Center">
                 <Border Style="{StaticResource CompactStatusPill}" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal">
@@ -1528,6 +1530,18 @@
    <Button x:Name="SettingsHelpButton" Grid.Column="1" Style="{StaticResource Lab.Button}" VerticalAlignment="Center" Click="OpenSettingsHelp_OnClick" ToolTip="{DynamicResource Ui.755441578D215B09}" AutomationProperties.Name="{DynamicResource Ui.8C3A67D0377F68BB}"><lab:LabIcon Kind="CircleHelp" Width="18" Height="18"/></Button>
   </Grid>
   <Border Background="{DynamicResource Lab.tint}" CornerRadius="6" Padding="14" Margin="0,0,0,18"><TextBlock x:Name="SettingsOperationText" Text="{DynamicResource Ui.146D4E814EEDF7E3}" TextWrapping="Wrap" Style="{StaticResource Lab.Text}"/></Border>
+  <Border x:Name="StorageProtectionPanel" Visibility="Collapsed" Background="{DynamicResource Lab.tint}" BorderBrush="{DynamicResource Lab.line}" BorderThickness="1" CornerRadius="8" Padding="18" Margin="0,0,0,18">
+   <StackPanel>
+    <TextBlock x:Name="StorageProtectionTitle" Style="{StaticResource Lab.Settings.Title}"/>
+    <TextBlock x:Name="StorageProtectionDescription" Style="{StaticResource Lab.Text}" TextWrapping="Wrap" Margin="0,10,0,14" AutomationProperties.LiveSetting="Polite"/>
+    <WrapPanel>
+     <Button x:Name="StorageRetryButton" Style="{StaticResource Lab.Button}" Click="RetryStorage_OnClick" Margin="0,0,8,8"/>
+     <Button x:Name="StorageRecoverHistoryButton" Style="{StaticResource Lab.Button}" Click="RecoverHistory_OnClick" Margin="0,0,8,8"/>
+     <Button x:Name="StorageRecoverSettingsButton" Style="{StaticResource Lab.Button}" Click="RecoverSettings_OnClick" Margin="0,0,8,8"/>
+     <Button x:Name="StorageOpenFolderButton" Style="{StaticResource Lab.Button}" Click="OpenSettingsData_OnClick" Margin="0,0,8,8"/>
+    </WrapPanel>
+   </StackPanel>
+  </Border>
   <Grid x:Name="SettingsCardsGrid"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="20"/><ColumnDefinition/></Grid.ColumnDefinitions><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
    <Border x:Name="SettingsAppearanceCard" Style="{StaticResource Lab.Settings.Card}"><StackPanel>
     <StackPanel Orientation="Horizontal"><lab:LabIcon Kind="Palette" Style="{StaticResource Lab.Settings.Icon}"/><TextBlock Text="{DynamicResource Ui.04F9F0A78DBE13BE}" Style="{StaticResource Lab.Settings.Title}"/></StackPanel>

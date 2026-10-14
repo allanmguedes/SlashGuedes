@@ -116,6 +116,8 @@ internal static class CaptureHistoryTrustChecks
             await store.SaveAsync([new CaptureRecord { RequiresFileApproval = false, Id = "same", FilePath = png }, new CaptureRecord { RequiresFileApproval = false, Id = "same", FilePath = jpeg }]);
             await service.LoadAsync();
             Check(service.History.Select(r => r.Id).Distinct().Count() == 2, "duplicate IDs cannot target another entry");
+            Check(service.IsHistoryProtected, "duplicate IDs protect the unchanged original until recovery");
+            await service.RecoverHistoryAsync();
             var trusted = service.History[0];
             Check(await service.DeleteAsync(trusted.Id, true) && !File.Exists(png), "normal authorized deletion remains functional");
             Console.WriteLine($"Capture history trust: {_checks} checks passed.");
