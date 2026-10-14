@@ -46,17 +46,50 @@ public sealed class GifRecordingService
         IProgress<RecordingProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        var session = StartRecording(bounds, settings);
+        cancellationToken.ThrowIfCancellationRequested();
+        await using var session = StartRecording(bounds, settings);
         if (progress is not null)
         {
             session.ProgressChanged += (_, item) => progress.Report(item);
         }
         using var registration = cancellationToken.Register(session.Cancel);
-        await Task.Delay(
-            TimeSpan.FromSeconds(Math.Max(1, settings.GifDurationSeconds)),
-            cancellationToken).ConfigureAwait(false);
-        session.Stop();
-        return await session.Completion.ConfigureAwait(false);
+        using var durationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var delivered = false;
+        try
+        {
+            var duration = Task.Delay(
+                TimeSpan.FromSeconds(Math.Max(1, settings.GifDurationSeconds)),
+                durationCancellation.Token);
+            // A pipeline fault must not wait out the requested duration.
+            await Task.WhenAny(duration, session.Completion).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!session.Completion.IsCompleted)
+            {
+                await duration.ConfigureAwait(false);
+                session.Stop();
+            }
+            var result = await session.Completion.ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            delivered = true;
+            return result;
+        }
+        finally
+        {
+            durationCancellation.Cancel();
+            session.Stop();
+            try
+            {
+                // Cancellation stops production but still drains the pipeline. Its
+                // result owns the files and must be released if nobody received it.
+                var result = await session.Completion.ConfigureAwait(false);
+                if (!delivered) result.Dispose();
+            }
+            catch when (!delivered)
+            {
+                // The original failure/cancellation is already propagating. The
+                // pipeline has observed its workers and released its temporary files.
+            }
+        }
     }
 
     internal async Task<GifRecordingResult> CaptureContinuousAsync(
@@ -274,6 +307,9 @@ public sealed class GifRecordingService
         }
         finally
         {
+            // Both workers have stopped; a failed consumer may have left queued
+            // bitmaps that were never transferred into a result.
+            while (channel.Reader.TryRead(out var pending)) pending.Bitmap.Dispose();
             if (previousPixels is not null)
             {
                 ArrayPool<byte>.Shared.Return(previousPixels);
@@ -640,13 +676,15 @@ public sealed class GifRecordingService
     private sealed record CapturedFrame(int Index, TimeSpan Elapsed, Bitmap Bitmap);
 }
 
-internal sealed class GifRecordingSession : IRecordingController, IDisposable
+internal sealed class GifRecordingSession : IRecordingController, IDisposable, IAsyncDisposable
 {
+    private readonly object _stateGate = new();
     private readonly CancellationTokenSource _stop = new();
     private readonly ManualResetEventSlim _resumeGate = new(initialState: true);
     private readonly MonotonicRecordingClock _clock = new();
     private int _pauseRequested;
     private int _stopRequested;
+    private Task? _releaseResources;
 
     public GifRecordingSession(
         GifRecordingService service,
@@ -670,36 +708,45 @@ internal sealed class GifRecordingSession : IRecordingController, IDisposable
 
     public void Pause()
     {
-        if (StopRequested || Interlocked.CompareExchange(ref _pauseRequested, 1, 0) != 0)
+        lock (_stateGate)
         {
-            return;
+            if (StopRequested || Interlocked.CompareExchange(ref _pauseRequested, 1, 0) != 0)
+            {
+                return;
+            }
+            _clock.Pause();
+            _resumeGate.Reset();
         }
-        _clock.Pause();
-        _resumeGate.Reset();
         Report("GIF pausado");
     }
 
     public void Resume()
     {
-        if (StopRequested || Interlocked.CompareExchange(ref _pauseRequested, 0, 1) != 1)
+        lock (_stateGate)
         {
-            return;
+            if (StopRequested || Interlocked.CompareExchange(ref _pauseRequested, 0, 1) != 1)
+            {
+                return;
+            }
+            _clock.Resume();
+            _resumeGate.Set();
         }
-        _clock.Resume();
-        _resumeGate.Set();
         Report("Gravando GIF");
     }
 
     public void Stop()
     {
-        if (Interlocked.CompareExchange(ref _stopRequested, 1, 0) != 0)
+        lock (_stateGate)
         {
-            return;
+            if (Interlocked.CompareExchange(ref _stopRequested, 1, 0) != 0)
+            {
+                return;
+            }
+            _clock.Stop();
+            _resumeGate.Set();
+            _stop.Cancel();
         }
-        _clock.Stop();
-        _resumeGate.Set();
         Report("Finalizando GIF…");
-        _stop.Cancel();
     }
 
     internal void Cancel() => Stop();
@@ -718,11 +765,31 @@ internal sealed class GifRecordingSession : IRecordingController, IDisposable
         }
     }
 
-    public void Dispose()
+    // The caller owns Completion's result independently of the controller lifetime.
+    // Synchronous UI disposal requests stop without blocking the Dispatcher.
+    public void Dispose() => _ = DisposeAsync();
+
+    public ValueTask DisposeAsync()
     {
         Stop();
-        _stop.Dispose();
-        _resumeGate.Dispose();
+        lock (_stateGate)
+        {
+            return new ValueTask(_releaseResources ??= ReleaseResourcesAsync());
+        }
+    }
+
+    private async Task ReleaseResourcesAsync()
+    {
+        try { await Completion.ConfigureAwait(false); }
+        catch { /* Disposal observes faults; Completion remains available to its owner. */ }
+        finally
+        {
+            lock (_stateGate)
+            {
+                _stop.Dispose();
+                _resumeGate.Dispose();
+            }
+        }
     }
 }
 

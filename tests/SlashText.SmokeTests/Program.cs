@@ -6,6 +6,10 @@ using System.IO.Compression;
 using System.Diagnostics;
 using ScreenRecorderLib;
 
+if (args.Length == 2 && args[0] == "--gif-cancellation-smoke")
+{
+    await GifCancellationChecks.RunAsync(args[1]); return;
+}
 if (args.Length == 2 && args[0] == "--recording-operation-smoke")
 {
     await RecordingOperationChecks.RunAsync(args[1]); return;
@@ -90,6 +94,7 @@ if (args.Length == 2 && args[0] == "--clipboard-native-isolated")
 var root = Path.Combine(Path.GetTempPath(), $"slashtext-smoke-{Guid.NewGuid():N}");
 AppPaths.Initialize(new AppDataEnvironment(DistributionMode.Portable, Path.Combine(root, "initial-app"), root, isCapturePilot: true));
 await RecordingOperationChecks.RunAsync(Path.Combine(root, "recording-operation"));
+await GifCancellationChecks.RunAsync(Path.Combine(root, "gif-cancellation"));
 await UsageWriteFailureChecks.RunAsync(Path.Combine(root, "usage-writes"));
 
 await ProtectedStorageChecks.RunAsync(Path.Combine(root, "protected-storage"));
@@ -1722,9 +1727,10 @@ await BackupCompatibilityChecks.RunAsync(root);
                 CapturedFrames: >= 8,
                 StoredFrames: 1
             } metrics &&
-            metrics.ProcessedFrames == metrics.CapturedFrames &&
+            metrics.ProcessedFrames <= metrics.CapturedFrames &&
             metrics.EffectiveCapturedFps > 0 &&
-            metrics.DuplicateFrames == metrics.CapturedFrames - 1,
+            // Stop can discard a captured frame before it enters the queue.
+            metrics.DuplicateFrames == metrics.ProcessedFrames - 1,
             "pipeline GIF descarta quadro idêntico preservando duração");
         Require(
             pipelineResult.Duration >= TimeSpan.FromMilliseconds(900) &&
