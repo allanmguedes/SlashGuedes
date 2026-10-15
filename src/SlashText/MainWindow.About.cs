@@ -8,7 +8,7 @@ namespace SlashText;
 
 public partial class MainWindow
 {
-    private static readonly string ProjectUrl = $"https://github.com/{UpdateService.Repository}";
+    private static string ProjectUrl => $"https://github.com/{UpdateService.ActiveRepository}";
     private Action<Uri>? _aboutEvidenceLinkLauncher;
     private bool _manualUpdateCheckInProgress;
 
@@ -46,8 +46,8 @@ public partial class MainWindow
         {
             var uri = new Uri(address, UriKind.Absolute);
             if (uri.Scheme != Uri.UriSchemeHttps || uri.Host != "github.com" ||
-                !uri.AbsolutePath.StartsWith($"/{UpdateService.Repository}/", StringComparison.OrdinalIgnoreCase) &&
-                !uri.AbsolutePath.Equals($"/{UpdateService.Repository}", StringComparison.OrdinalIgnoreCase))
+                !uri.AbsolutePath.StartsWith($"/{UpdateService.ActiveRepository}/", StringComparison.OrdinalIgnoreCase) &&
+                !uri.AbsolutePath.Equals($"/{UpdateService.ActiveRepository}", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException(UiText.Get("Destino do projeto inválido."));
             if (_aboutEvidenceLinkLauncher is not null) _aboutEvidenceLinkLauncher(uri);
             else Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
@@ -55,7 +55,7 @@ public partial class MainWindow
         }
         catch (Exception)
         {
-            AboutLinkStatusText.Text = UiText.Get("Não foi possível abrir o navegador. Tente novamente ou acesse github.com/") + UpdateService.Repository + ".";
+            AboutLinkStatusText.Text = UiText.Get("Não foi possível abrir o navegador. Tente novamente ou acesse github.com/") + UpdateService.ActiveRepository + ".";
             AboutLinkStatusText.Visibility = Visibility.Visible;
         }
     }
