@@ -74,7 +74,9 @@ public partial class MainWindow
         => RefreshClipboardView();
 
     private void ClipboardFilter_OnChanged(object sender, SelectionChangedEventArgs e)
-        => RefreshClipboardView();
+    {
+        if (!_refreshingClipboardCategories) RefreshClipboardView();
+    }
 
     private void RefreshClipboardView()
     {
@@ -92,7 +94,7 @@ public partial class MainWindow
                  filter == "text" && item.Kind == "text" ||
                  filter == "image" && item.Kind == "image" ||
                  filter.StartsWith("category:", StringComparison.Ordinal) &&
-                 item.Category.Equals(filter["category:".Length..],
+                 string.Equals(item.Category, filter["category:".Length..],
                      StringComparison.OrdinalIgnoreCase)))
             .ToList();
         ClipboardItemsList.ItemsSource = list;
