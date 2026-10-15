@@ -19,6 +19,7 @@ public sealed class ClipboardQuickWindow : Window
     private readonly ListBox _list;
     private readonly TextBlock _hint;
     private readonly Button _enable;
+    private readonly TextBlock _subtitle;
 
     public ClipboardQuickWindow(ClipboardHistoryService history,
         Action<ClipboardHistoryItem> choose, Action manage, Action enable)
@@ -57,10 +58,10 @@ public sealed class ClipboardQuickWindow : Window
             FontWeight = FontWeights.SemiBold };
         title.SetResourceReference(TextBlock.ForegroundProperty, "Lab.text");
         header.Children.Add(title);
-        var subtitle = new TextBlock { Text = "Win + Shift + V   •   Enter para copiar   •   Esc para fechar",
+        _subtitle = new TextBlock { Text = "Enter para copiar · Esc para fechar",
             Margin = new Thickness(0, 4, 0, 0), FontSize = 11 };
-        subtitle.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
-        header.Children.Add(subtitle);
+        _subtitle.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
+        header.Children.Add(_subtitle);
         Grid.SetRow(header, 0);
         grid.Children.Add(header);
 
@@ -75,9 +76,11 @@ public sealed class ClipboardQuickWindow : Window
         Grid.SetRow(_search, 1);
         grid.Children.Add(_search);
 
-        _list = new ListBox { DisplayMemberPath = "Summary",
+        _list = new ListBox
+        {
             BorderThickness = new Thickness(0), FontSize = 13,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            HorizontalContentAlignment = HorizontalAlignment.Stretch
+        };
         _list.MouseDoubleClick += (_, _) => SelectCurrent();
         _list.PreviewKeyDown += (_, e) =>
         {
@@ -130,21 +133,88 @@ public sealed class ClipboardQuickWindow : Window
     {
         if (_list is null || _search is null) return;
         var query = _search.Text.Trim();
-        _list.ItemsSource = _history.Items
+        var selectedId = (_list.SelectedItem as ListBoxItem)?.Tag is ClipboardHistoryItem active
+            ? active.Id : null;
+        var candidates = _history.Items
             .Where(i => string.IsNullOrEmpty(query) ||
                         i.Summary.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
                         i.Category.Contains(query, StringComparison.CurrentCultureIgnoreCase))
-            .Take(50).ToList();
-        _list.SelectedIndex = _list.Items.Count > 0 ? 0 : -1;
-        _hint.Text = !_history.Enabled ? "Histórico pausado. Ative para registrar novas cópias."
-            : _history.Items.Count == 0 ? "Ainda não há cópias registradas." 
-            : $"{_history.Items.Count} itens salvos · histórico local";
+            .OrderByDescending(i => i.IsFavorite || i.IsPinned)
+            .ThenByDescending(i => i.CopiedUtc)
+            .Take(70)
+            .ToArray();
+        _list.Items.Clear();
+        foreach (var item in candidates)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
+            var star = new Button
+            {
+                Content = item.IsFavorite ? "★" : "☆",
+                ToolTip = item.IsFavorite ? "Remover dos favoritos" : "Favoritar e proteger da limpeza",
+                FontSize = 19,
+                MinWidth = 36,
+                Margin = new Thickness(5, 0, 2, 0),
+                Padding = new Thickness(4, 1, 4, 1)
+            };
+            DockPanel.SetDock(star, Dock.Right);
+            star.Click += async (_, _) =>
+            {
+                star.IsEnabled = false;
+                try { await _history.ChangeAsync(item, favorite: !item.IsFavorite); }
+                catch (Exception) { /* A aba principal continua disponível. */ }
+                finally { star.IsEnabled = true; }
+                Refresh();
+            };
+            row.Children.Add(star);
+            if (item.Kind == "image" && _history.LoadThumbnail(item) is { } bitmap)
+            {
+                var image = new System.Windows.Controls.Image
+                {
+                    Source = bitmap, Width = 58, Height = 38,
+                    Stretch = Stretch.UniformToFill,
+                    Margin = new Thickness(4, 0, 10, 0)
+                };
+                DockPanel.SetDock(image, Dock.Left);
+                row.Children.Add(image);
+            }
+            var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            var label = new TextBlock
+            {
+                Text = item.Kind == "image" ? "Imagem copiada" : item.Summary,
+                MaxHeight = 38, FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis
+            };
+            label.SetResourceReference(TextBlock.ForegroundProperty, "Lab.text");
+            text.Children.Add(label);
+            var note = new TextBlock
+            {
+                Text = (item.IsPinned ? "FIXADO · " : "") +
+                       (item.IsFavorite ? "FAVORITO · " : "") +
+                       (!string.IsNullOrWhiteSpace(item.Category) ? item.Category + " · " : "") +
+                       item.CopiedUtc.ToLocalTime().ToString("dd/MM HH:mm"),
+                FontSize = 10
+            };
+            note.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
+            text.Children.Add(note);
+            row.Children.Add(text);
+            var control = new ListBoxItem { Tag = item, Content = row, Padding = new Thickness(7, 4, 7, 4) };
+            _list.Items.Add(control);
+        }
+        _list.SelectedItem = _list.Items.Cast<ListBoxItem>()
+            .FirstOrDefault(entry => ((ClipboardHistoryItem)entry.Tag).Id == selectedId)
+            ?? _list.Items.Cast<ListBoxItem>().FirstOrDefault();
+        var protectedCount = _history.Items.Count(i => i.IsFavorite || i.IsPinned);
+        var recentCount = _history.Items.Count - protectedCount;
+        _hint.Text = !_history.Enabled ? "Histórico pausado · itens salvos permanecem disponíveis."
+            : _history.Items.Count == 0 ? "Nenhum item copiado ainda."
+            : $"{recentCount}/{_history.MaxEntries} recentes · {protectedCount} favoritos ou fixados protegidos";
+        _subtitle.Text = _history.Shortcut.Replace("+", " + ") +
+                         " · Enter para copiar · ☆ para favoritar · Esc para fechar";
         _enable.Visibility = _history.Enabled ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void SelectCurrent()
     {
-        if (_list.SelectedItem is not ClipboardHistoryItem item) return;
+        if (_list.SelectedItem is not ListBoxItem { Tag: ClipboardHistoryItem item }) return;
         Hide();
         _choose(item);
     }
