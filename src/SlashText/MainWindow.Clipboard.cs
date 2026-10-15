@@ -21,7 +21,12 @@ public partial class MainWindow
         _clipboardHistory.Changed += (_, _) =>
             Dispatcher.BeginInvoke(new Action(RefreshClipboardView));
         _clipboardHistory.OpenRequested += (_, _) =>
-            Dispatcher.BeginInvoke(new Action(OpenClipboardQuickWindow));
+        {
+            // Capture the foreground HWND synchronously when Windows delivers
+            // the global hotkey, before any dispatcher scheduling or popup focus.
+            var externalTarget = ClipboardPasteService.CaptureExternalTarget();
+            Dispatcher.BeginInvoke(new Action(() => OpenClipboardQuickWindow(externalTarget)));
+        };
     }
 
     private async Task StartClipboardAsync()
@@ -243,7 +248,7 @@ public partial class MainWindow
 
     private void ClipboardOpenQuick_OnClick(object sender, RoutedEventArgs e) => OpenClipboardQuickWindow();
 
-    private void OpenClipboardQuickWindow()
+    private void OpenClipboardQuickWindow(IntPtr? capturedExternalTarget = null)
     {
         if (_clipboardQuickWindow is { IsVisible: true })
         {
@@ -259,7 +264,8 @@ public partial class MainWindow
         {
         // Remember the external target BEFORE we activate the popup.
         // Opening from the main window deliberately uses copy-only behavior.
-        _clipboardPasteTarget = ClipboardPasteService.CaptureExternalTarget();
+        _clipboardPasteTarget = capturedExternalTarget ??
+            ClipboardPasteService.CaptureExternalTarget();
         _clipboardQuickWindow ??= new ClipboardQuickWindow(
             _clipboardHistory,
             item => _ = UseClipboardQuickItemAsync(item, copyOnly: false),
