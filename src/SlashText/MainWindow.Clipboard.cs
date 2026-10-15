@@ -26,6 +26,19 @@ public partial class MainWindow
         var recentLimit = ClipboardRetentionPolicy.NormalizeLimit(_settings.ClipboardMaxEntries);
         await _clipboardHistory.LoadAsync(recentLimit);
         _clipboardHistory.Attach(this, _settings.ClipboardShortcut, out var hotkeyWarning);
+        if (_clipboardHistory.HotkeyRegistered &&
+            !_settings.ClipboardShortcut.Equals(_clipboardHistory.Shortcut, StringComparison.OrdinalIgnoreCase) &&
+            !_settingsStore.IsProtected)
+        {
+            // Keep the working fallback across restarts.
+            _settings.ClipboardShortcut = _clipboardHistory.Shortcut;
+            try { await _settingsStore.SaveAsync(_settings); }
+            catch (Exception error)
+            {
+                AppDiagnosticLog.Write("clipboard.settings.save_failed",
+                    ("exceptionType", error.GetType().Name));
+            }
+        }
         if (_settings.ClipboardMonitoringEnabled)
             _clipboardHistory.SetEnabled(true);
         _clipboardReady = true;
@@ -40,12 +53,13 @@ public partial class MainWindow
                     break;
                 }
             }
-            ClipboardShortcutBox.Text = _clipboardHistory.Shortcut;
+            ClipboardShortcutBox.Text = _clipboardHistory.HotkeyRegistered ? _clipboardHistory.Shortcut : "";
         }
         finally { _suppressClipboardOptions = false; }
-        ClipboardShortcutHint.Text = hotkeyWarning is null
-            ? "O atalho abre o painel mesmo com o histórico pausado."
-            : "Atalho não registrado: " + hotkeyWarning;
+        ClipboardShortcutHint.Text = hotkeyWarning ??
+            (_clipboardHistory.HotkeyRegistered
+                ? "Atalho global ativo."
+                : "Sem atalho ativo. Use Abrir painel rápido.");
         RefreshClipboardView();
     }
 
@@ -82,9 +96,11 @@ public partial class MainWindow
 
         var protectedItems = _clipboardHistory.Items.Count(item => item.IsFavorite || item.IsPinned);
         var recentCount = _clipboardHistory.Items.Count - protectedItems;
+        var hotkeyStatus = _clipboardHistory.HotkeyRegistered
+            ? _clipboardHistory.Shortcut : "atalho não registrado";
         ClipboardStatusText.Text = _clipboardHistory.Enabled
-            ? $"Histórico ativo · {recentCount}/{_clipboardHistory.MaxEntries} recentes · {protectedItems} protegidos · {_clipboardHistory.Shortcut}"
-            : $"Histórico pausado · {recentCount} recentes · {protectedItems} protegidos";
+            ? $"Histórico ativo · {recentCount}/{_clipboardHistory.MaxEntries} recentes · {protectedItems} protegidos · {hotkeyStatus}"
+            : $"Histórico pausado · {recentCount} recentes · {protectedItems} protegidos · {hotkeyStatus}";
         ClipboardToggleButton.Content = _clipboardHistory.Enabled ? "Pausar histórico" : "Ativar histórico";
         ClipboardQuickWindowButton.IsEnabled = _clipboardReady;
         ClipboardSelected_OnChanged(null!, null!);
@@ -152,7 +168,9 @@ public partial class MainWindow
         var previous = _clipboardHistory.Shortcut;
         if (!_clipboardHistory.TrySetShortcut(ClipboardShortcutBox.Text, out var error))
         {
-            ClipboardShortcutHint.Text = error;
+            ClipboardShortcutHint.Text = error + " Clique em Sugerir outra ou pressione outra combinação.";
+            ClipboardShortcutBox.Text = _clipboardHistory.HotkeyRegistered
+                ? _clipboardHistory.Shortcut : string.Empty;
             return;
         }
         try
@@ -171,11 +189,32 @@ public partial class MainWindow
         RefreshClipboardView();
     }
 
+    private static readonly string[] ClipboardShortcutSuggestions =
+    [
+        "Ctrl+Alt+V", "Ctrl+Shift+H", "Alt+Shift+V", "Ctrl+Alt+H"
+    ];
+
+    private void ClipboardShortcutSuggest_OnClick(object sender, RoutedEventArgs e)
+    {
+        var current = ClipboardShortcutBox.Text.Trim();
+        var idx = Array.FindIndex(ClipboardShortcutSuggestions, value =>
+            value.Equals(current, StringComparison.OrdinalIgnoreCase));
+        ClipboardShortcutBox.Text =
+            ClipboardShortcutSuggestions[(idx + 1) % ClipboardShortcutSuggestions.Length];
+        ClipboardShortcutHint.Text = "Sugestão selecionada. Clique em Salvar atalho para testar no Windows.";
+    }
+
     private void ClipboardOpenQuick_OnClick(object sender, RoutedEventArgs e) => OpenClipboardQuickWindow();
 
     private void OpenClipboardQuickWindow()
     {
-        if (!_clipboardReady) return;
+        if (!_clipboardReady)
+        {
+            StatusText.Text = "O histórico ainda está carregando. Aguarde um instante.";
+            return;
+        }
+        try
+        {
         _clipboardQuickWindow ??= new ClipboardQuickWindow(
             _clipboardHistory,
             item =>
@@ -193,6 +232,16 @@ public partial class MainWindow
             },
             () => ClipboardToggle_OnClick(this, new RoutedEventArgs()));
         _clipboardQuickWindow.Open();
+        StatusText.Text = "Painel rápido aberto. Use Esc para fechar.";
+        }
+        catch (Exception error)
+        {
+            ClipboardShortcutHint.Text = "Erro ao abrir o painel rápido. Consulte o diagnóstico.";
+            StatusText.Text = "Não foi possível abrir o painel rápido.";
+            AppDiagnosticLog.Write("clipboard.popup.failed",
+                ("exceptionType", error.GetType().Name),
+                ("hresult", $"0x{error.HResult:X8}"));
+        }
     }
 
     private void ClipboardCopy_OnClick(object sender, RoutedEventArgs e)
