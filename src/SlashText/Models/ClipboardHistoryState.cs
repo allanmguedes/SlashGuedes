@@ -4,6 +4,8 @@ namespace SlashText.Models;
 public sealed class ClipboardHistoryState
 {
     public List<ClipboardHistoryItem> Items { get; set; } = [];
+    // User-defined local categories. Empty means uncategorized; names are unique ignoring case.
+    public List<string> Categories { get; set; } = [];
 }
 
 public sealed class ClipboardHistoryItem
