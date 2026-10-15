@@ -59,12 +59,13 @@ public sealed class ClipboardShortcutRecorderBox : TextBox
         if (flags.HasFlag(ModifierKeys.Alt)) names.Add("Alt");
         if (flags.HasFlag(ModifierKeys.Shift)) names.Add("Shift");
 
-        var name = key switch
+        var vk = KeyInterop.VirtualKeyFromKey(key);
+        var name = vk switch
         {
-            >= Key.A and <= Key.Z => key.ToString().ToUpperInvariant(),
-            >= Key.D0 and <= Key.D9 => ((int)key - (int)Key.D0).ToString(),
-            >= Key.NumPad0 and <= Key.NumPad9 => ((int)key - (int)Key.NumPad0).ToString(),
-            >= Key.F1 and <= Key.F12 => key.ToString().ToUpperInvariant(),
+            >= 0x41 and <= 0x5A => ((char)vk).ToString(),
+            >= 0x30 and <= 0x39 => ((char)vk).ToString(),
+            >= 0x60 and <= 0x69 => (vk - 0x60).ToString(),
+            >= 0x70 and <= 0x7B => "F" + (vk - 0x70 + 1),
             _ => string.Empty
         };
         if (names.Count < 2 || string.IsNullOrEmpty(name)) return;
