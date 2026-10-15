@@ -1,4 +1,5 @@
 using System.IO;
+using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
@@ -15,9 +16,9 @@ public sealed class ClipboardHistoryService : IDisposable
 {
     private const int WmClipboardUpdate = 0x031D;
     private const int WmHotKey = 0x0312;
-    private const int HotKeyId = 7951;
-    private const uint ModWinShiftNoRepeat = 0x0008 | 0x0004 | 0x4000;
-    private const uint VkV = 0x56;
+    private const int FirstHotKeyId = 7951;
+    private const int SecondHotKeyId = 7952;
+    private const uint ModNoRepeat = 0x4000;
     private const long MaxImageUncompressed = 48L * 1024 * 1024;
     private const int MaxImagePng = 8 * 1024 * 1024;
 
@@ -31,6 +32,7 @@ public sealed class ClipboardHistoryService : IDisposable
     private uint _selfSequence;
     private bool _listening;
     private bool _hotkeyRegistered;
+    private int _hotkeyId;
     private bool _disposed;
 
     public ClipboardHistoryService()
@@ -45,30 +47,83 @@ public sealed class ClipboardHistoryService : IDisposable
     public bool Enabled { get; private set; }
     public bool CanSave => !_store.IsProtected;
     public bool HotkeyRegistered => _hotkeyRegistered;
-    public int MaxEntries { get; set; } = 150;
+    public int MaxEntries { get; private set; } = ClipboardRetentionPolicy.DefaultRecentLimit;
+    public string Shortcut { get; private set; } = ClipboardShortcut.Default;
 
-    public async Task LoadAsync()
+    public async Task LoadAsync(int maxRecentEntries)
     {
+        MaxEntries = ClipboardRetentionPolicy.NormalizeLimit(maxRecentEntries);
         _state = await _store.LoadAsync();
         _state.Items ??= [];
         _state.Items = _state.Items
-            .Where(i => i.Kind is "text" or "image" &&
+            .Where(i => i is not null && (i.Kind is "text" or "image") &&
                         !string.IsNullOrEmpty(i.Id) &&
                         (i.Kind == "text" || IsSafeImageName(i.ImageFile)))
-            .Take(500)
+            .OrderByDescending(i => i.CopiedUtc)
             .ToList();
+        if (ClipboardRetentionPolicy.SelectExpired(_state.Items, MaxEntries).Count > 0)
+        {
+            if (CanSave) await SaveWithRetentionAsync();
+        }
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    public void Attach(Window owner)
+    public void Attach(Window owner, string? savedShortcut, out string? warning)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        warning = null;
         if (_handle != IntPtr.Zero) return;
         _handle = new WindowInteropHelper(owner).EnsureHandle();
         _source = HwndSource.FromHwnd(_handle);
         _source?.AddHook(OnWindowMessage);
-        _hotkeyRegistered = RegisterHotKey(_handle, HotKeyId, ModWinShiftNoRepeat, VkV);
+        if (!TrySetShortcut(savedShortcut ?? ClipboardShortcut.Default, out var error))
+        {
+            warning = error;
+            if (!TrySetShortcut(ClipboardShortcut.Default, out var fallbackError))
+                warning += " Também falhou o atalho padrão: " + fallbackError;
+        }
         _lastSequence = GetClipboardSequenceNumber();
+    }
+
+    public bool TrySetShortcut(string value, out string error)
+    {
+        error = string.Empty;
+        if (!ClipboardShortcut.TryParse(value, out var normalized, out var modifiers, out var key))
+        {
+            error = "Use duas ou mais teclas modificadoras (Win/Ctrl/Alt/Shift) e uma letra, número ou F1–F12.";
+            return false;
+        }
+        if (_hotkeyRegistered && Shortcut.Equals(normalized, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (_handle == IntPtr.Zero)
+        {
+            error = "O aplicativo ainda está iniciando.";
+            return false;
+        }
+        var nextId = _hotkeyId == FirstHotKeyId ? SecondHotKeyId : FirstHotKeyId;
+        // Keep the previous hotkey until Windows accepts the replacement.
+        if (!RegisterHotKey(_handle, nextId, modifiers | ModNoRepeat, key))
+        {
+            error = "Esse atalho está reservado ou já está sendo usado. Escolha outra combinação.";
+            return false;
+        }
+        if (_hotkeyRegistered) UnregisterHotKey(_handle, _hotkeyId);
+        _hotkeyId = nextId;
+        _hotkeyRegistered = true;
+        Shortcut = normalized;
+        return true;
+    }
+
+    public async Task SetMaxEntriesAsync(int recentLimit)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            MaxEntries = ClipboardRetentionPolicy.NormalizeLimit(recentLimit);
+            if (CanSave) await SaveWithRetentionAsync();
+            else Changed?.Invoke(this, EventArgs.Empty);
+        }
+        finally { _gate.Release(); }
     }
 
     public bool SetEnabled(bool enabled)
@@ -92,7 +147,7 @@ public sealed class ClipboardHistoryService : IDisposable
     private IntPtr OnWindowMessage(IntPtr hwnd, int msg, IntPtr wparam,
         IntPtr lparam, ref bool handled)
     {
-        if (msg == WmHotKey && wparam.ToInt32() == HotKeyId)
+        if (msg == WmHotKey && _hotkeyRegistered && wparam.ToInt32() == _hotkeyId)
         {
             handled = true;
             OpenRequested?.Invoke(this, EventArgs.Empty);
@@ -146,14 +201,17 @@ public sealed class ClipboardHistoryService : IDisposable
                 item = new ClipboardHistoryItem
                 {
                     Kind = "image",
-                    ImageFile = Guid.NewGuid().ToString("N") + ".png"
+                    ImageFile = Guid.NewGuid().ToString("N") + ".png",
+                    Fingerprint = Convert.ToHexString(SHA256.HashData(imageBytes))
                 };
             }
             if (item is null || seq != GetClipboardSequenceNumber()) return;
 
             var same = _state.Items.FirstOrDefault(old =>
                 old.Kind == item.Kind &&
-                (item.Kind == "text" && old.Text == item.Text));
+                (item.Kind == "text" && old.Text == item.Text ||
+                 item.Kind == "image" && item.Fingerprint.Length > 0 &&
+                 old.Fingerprint == item.Fingerprint));
             if (same is not null)
             {
                 _state.Items.Remove(same);
@@ -212,16 +270,16 @@ public sealed class ClipboardHistoryService : IDisposable
         finally { _gate.Release(); }
     }
 
-    public async Task ClearAsync()
+    public async Task ClearRecentsAsync()
     {
         await _gate.WaitAsync();
         try
         {
             if (!CanSave) return;
-            var existing = _state.Items.ToArray();
-            _state.Items.Clear();
+            var toDelete = _state.Items.Where(i => !i.IsFavorite && !i.IsPinned).ToArray();
+            foreach (var item in toDelete) _state.Items.Remove(item);
             await _store.SaveAsync(_state);
-            foreach (var item in existing) DeleteImage(item);
+            foreach (var item in toDelete) DeleteImage(item);
             Changed?.Invoke(this, EventArgs.Empty);
         }
         finally { _gate.Release(); }
@@ -281,11 +339,7 @@ public sealed class ClipboardHistoryService : IDisposable
 
     private async Task SaveWithRetentionAsync()
     {
-        MaxEntries = Math.Clamp(MaxEntries, 10, 500);
-        var toDrop = _state.Items
-            .Where(item => !item.IsPinned)
-            .Skip(Math.Max(0, MaxEntries - _state.Items.Count(i => i.IsPinned)))
-            .ToArray();
+        var toDrop = ClipboardRetentionPolicy.SelectExpired(_state.Items, MaxEntries);
         foreach (var item in toDrop) _state.Items.Remove(item);
         await _store.SaveAsync(_state);
         foreach (var item in toDrop) DeleteImage(item);
@@ -308,9 +362,9 @@ public sealed class ClipboardHistoryService : IDisposable
         if (_disposed) return;
         _disposed = true;
         if (_listening) RemoveClipboardFormatListener(_handle);
-        if (_hotkeyRegistered) UnregisterHotKey(_handle, HotKeyId);
+        if (_hotkeyRegistered) UnregisterHotKey(_handle, _hotkeyId);
         _source?.RemoveHook(OnWindowMessage);
-        _gate.Dispose();
+        // A clipboard callback already in flight may finish after closing.
     }
 
     [DllImport("user32.dll", SetLastError = true)]
