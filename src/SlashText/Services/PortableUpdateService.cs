@@ -76,13 +76,14 @@ internal sealed class PortableUpdateService
                 throw new InvalidDataException(UiText.Get("O SHA-256 do pacote baixado não corresponde à Release."));
             }
 
-            var stagedExecutable = Path.Combine(operationDirectory, "SlashDesk.new.exe");
+            var product = AppPaths.IsSlashGuedes ? "SlashGuedes" : "SlashDesk";
+            var stagedExecutable = Path.Combine(operationDirectory, product + ".new.exe");
             ExtractSingleExecutable(zipPath, stagedExecutable);
             ValidateX64Executable(stagedExecutable);
             ValidateProductVersion(stagedExecutable, release.Version);
 
             var currentExecutable = _currentExecutable;
-            var helperExecutable = Path.Combine(operationDirectory, "SlashDesk.Updater.exe");
+            var helperExecutable = Path.Combine(operationDirectory, product + ".Updater.exe");
             File.Copy(currentExecutable, helperExecutable, overwrite: false);
             var manifest = new PortableUpdateManifest
             {
@@ -92,8 +93,8 @@ internal sealed class PortableUpdateService
                 DataDirectory = AppPaths.DataDirectory,
                 TargetExecutable = currentExecutable,
                 StagedExecutable = stagedExecutable,
-                BackupExecutable = Path.Combine(operationDirectory, "SlashDesk.previous.exe"),
-                FailedExecutable = Path.Combine(operationDirectory, "SlashDesk.failed.exe"),
+                BackupExecutable = Path.Combine(operationDirectory, product + ".previous.exe"),
+                FailedExecutable = Path.Combine(operationDirectory, product + ".failed.exe"),
                 HelperExecutable = helperExecutable,
                 ConfirmationFile = Path.Combine(operationDirectory, "update-confirmed.json"),
                 CreatedUtc = DateTimeOffset.UtcNow
@@ -338,10 +339,11 @@ internal sealed class PortableUpdateService
     {
         using var archive = ZipFile.OpenRead(zipPath);
         var files = archive.Entries.Where(entry => !string.IsNullOrEmpty(entry.Name)).ToList();
+        var product = AppPaths.IsSlashGuedes ? "SlashGuedes" : "SlashDesk";
         if (files.Count != 1 ||
-            !files[0].FullName.Replace('\\', '/').Equals("SlashDesk.exe", StringComparison.OrdinalIgnoreCase))
+            !files[0].FullName.Replace('\\', '/').Equals(product + ".exe", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidDataException(UiText.Get("O pacote portátil deve conter somente SlashDesk.exe na raiz."));
+            throw new InvalidDataException($"O ZIP deve conter somente {product}.exe na raiz.");
         }
         files[0].ExtractToFile(destination, overwrite: false);
     }
@@ -369,22 +371,31 @@ internal sealed class PortableUpdateService
 
     private static void ValidateProductVersion(string path, string expectedVersion)
     {
-        var fileVersion = FileVersionInfo.GetVersionInfo(path).FileVersion;
-        if (string.IsNullOrWhiteSpace(fileVersion) ||
-            !fileVersion.StartsWith(expectedVersion, StringComparison.OrdinalIgnoreCase))
+        var info = FileVersionInfo.GetVersionInfo(path);
+        if (AppPaths.IsSlashGuedes)
+        {
+            // Numerical file versions cannot distinguish preview.10 from preview.11.
+            if (!SemanticVersion.TryParse(info.ProductVersion, out var actual) ||
+                !actual.ToString().Equals(expectedVersion, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException($"O executável baixado não corresponde à Preview {expectedVersion}.");
+        }
+        else if (string.IsNullOrWhiteSpace(info.FileVersion) ||
+                 !info.FileVersion.StartsWith(expectedVersion, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                UiText.Format($"A versão do executável ({fileVersion ?? "desconhecida"}) não corresponde a {expectedVersion}."));
+                UiText.Format($"A versão do executável ({info.FileVersion ?? "desconhecida"}) não corresponde a {expectedVersion}."));
         }
     }
 
     private static void ValidateRelease(ReleaseInfo release)
     {
-        if (!SemanticVersion.TryParse(release.Version, out var version) || version.IsPrerelease)
-        {
-            throw new InvalidDataException(UiText.Get("Somente uma Release estável SemVer pode ser aplicada automaticamente."));
-        }
-        var expected = $"SlashDesk-{version}-portable-win-x64.zip";
+        if (!SemanticVersion.TryParse(release.Version, out var version) ||
+            (!AppPaths.IsSlashGuedes && version.IsPrerelease) ||
+            (AppPaths.IsSlashGuedes &&
+                (!version.IsPrerelease || version.Prerelease.Count != 2 ||
+                 !version.Prerelease[0].Equals("preview", StringComparison.OrdinalIgnoreCase))))
+            throw new InvalidDataException("Canal ou versão de atualização incompatível.");
+        var expected = $"{(AppPaths.IsSlashGuedes ? "SlashGuedes" : "SlashDesk")}-{version}-portable-win-x64.zip";
         if (!release.PortableAsset.Name.Equals(expected, StringComparison.OrdinalIgnoreCase) ||
             !release.ChecksumAsset.Name.Equals(expected + ".sha256", StringComparison.OrdinalIgnoreCase))
         {
@@ -392,6 +403,13 @@ internal sealed class PortableUpdateService
         }
         ValidateAssetUrl(release.PortableAsset.DownloadUrl);
         ValidateAssetUrl(release.ChecksumAsset.DownloadUrl);
+        if (AppPaths.IsSlashGuedes)
+        {
+            var prefix = $"https://github.com/{UpdateService.GuedesRepository}/releases/download/v{version}/";
+            if (!release.PortableAsset.DownloadUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ||
+                !release.ChecksumAsset.DownloadUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Pacote não pertence à Release verificada do SlashGuedes.");
+        }
     }
 
     private static void ValidateAssetUrl(string value)
@@ -412,12 +430,11 @@ internal sealed class PortableUpdateService
         var target = Path.GetFullPath(manifest.TargetExecutable);
         var executableDirectory = Path.GetDirectoryName(target)
             ?? throw new InvalidDataException(UiText.Get("Destino do executável inválido."));
-        if (!Path.GetFileName(target).Equals("SlashDesk.exe", StringComparison.OrdinalIgnoreCase) ||
-            !Path.GetFullPath(Path.Combine(executableDirectory, "SlashDeskData"))
+        var product = AppPaths.IsSlashGuedes ? "SlashGuedes" : "SlashDesk";
+        if (!Path.GetFileName(target).Equals(product + ".exe", StringComparison.OrdinalIgnoreCase) ||
+            !Path.GetFullPath(Path.Combine(executableDirectory, product + "Data"))
                 .Equals(data, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidDataException(UiText.Get("O manifesto não aponta para SlashDesk.exe ao lado de SlashDeskData."));
-        }
+            throw new InvalidDataException($"Manifesto não aponta para {product}.exe com {product}Data.");
         foreach (var path in new[]
                  {
                      manifestPath, manifest.StagedExecutable, manifest.BackupExecutable,
@@ -588,9 +605,7 @@ internal sealed class PortableUpdateService
         Timeout = TimeSpan.FromMinutes(10)
     };
 
-    private static string ProductVersion() =>
-        (System.Reflection.Assembly.GetEntryAssembly() ??
-         System.Reflection.Assembly.GetExecutingAssembly()).GetName().Version?.ToString(3) ?? "0.0.0";
+    private static string ProductVersion() => UpdateService.InstalledVersion();
 }
 
 internal static class PortableUpdateFileTransaction
