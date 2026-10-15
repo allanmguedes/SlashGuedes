@@ -9,11 +9,26 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: slashguedes-preview
+  cancel-in-progress: true
+
+env:
+  GUEDES_VERSION: 3.2.1-preview.${{ github.run_number }}
+
 jobs:
   preview:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
     timeout-minutes: 45
     steps:
+      - name: Identificar versão
+        id: meta
+        shell: pwsh
+        run: |
+          "version=$env:GUEDES_VERSION" >> $env:GITHUB_OUTPUT
+          Write-Output "Gerando SlashGuedes $env:GUEDES_VERSION"
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -24,20 +39,24 @@ jobs:
           dotnet-version: 10.0.x
       - name: Restaurar dependências
         shell: pwsh
-        run: dotnet restore src/SlashText/SlashText.csproj --runtime win-x64 -p:Platform=x64 -p:SlashGuedesBuild=true
+        run: dotnet restore src/SlashText/SlashText.csproj --runtime win-x64 -p:Platform=x64 -p:SlashGuedesBuild=true -p:SlashGuedesVersion=$env:GUEDES_VERSION
       - name: Gerar executável Windows x64
         shell: pwsh
         run: |
-          dotnet publish src/SlashText/SlashText.csproj --configuration Release -p:Platform=x64 -p:SlashGuedesBuild=true -p:PublishProfile=Portable --no-restore --output publish-slashguedes
+          dotnet publish src/SlashText/SlashText.csproj --configuration Release -p:Platform=x64 -p:SlashGuedesBuild=true -p:SlashGuedesVersion=$env:GUEDES_VERSION -p:PublishProfile=Portable --no-restore --output publish-slashguedes
       - name: Validar regras de favoritos, retenção e atalhos
         shell: pwsh
         run: |
-          dotnet run --project tests/SlashText.SmokeTests/SlashText.SmokeTests.csproj --configuration Release -p:Platform=x64 -p:SlashGuedesBuild=true -- --guedes-clipboard-checks
+          dotnet run --project tests/SlashText.SmokeTests/SlashText.SmokeTests.csproj --configuration Release -p:Platform=x64 -p:SlashGuedesBuild=true -p:SlashGuedesVersion=$env:GUEDES_VERSION -- --guedes-clipboard-checks
       - name: Validar executável portátil
         shell: pwsh
         run: |
           $exe = Join-Path $PWD 'publish-slashguedes/SlashGuedes.exe'
           if (-not (Test-Path $exe)) { throw 'SlashGuedes.exe não encontrado.' }
+          $product = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($exe).ProductVersion
+          if (-not $product.StartsWith($env:GUEDES_VERSION, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Versão do executável inválida: $product (esperada $env:GUEDES_VERSION)"
+          }
           $testDir = Join-Path $env:RUNNER_TEMP 'SlashGuedes preview isolado'
           New-Item -ItemType Directory -Path $testDir -Force | Out-Null
           Copy-Item $exe (Join-Path $testDir 'SlashGuedes.exe')
@@ -51,6 +70,23 @@ jobs:
           Copy-Item $exe (Join-Path package 'SlashGuedes.exe')
           "Versão experimental. Extraia o ZIP e execute SlashGuedes.exe. Seus dados ficam em SlashGuedesData, separados do SlashDesk oficial." |
             Set-Content -LiteralPath package/LEIA-ME.txt -Encoding utf8
+      - name: Preparar ZIP de atualização e SHA-256
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release-assets -Force | Out-Null
+          $zip = "release-assets/SlashGuedes-$env:GUEDES_VERSION-portable-win-x64.zip"
+          Compress-Archive -LiteralPath "publish-slashguedes/SlashGuedes.exe" -DestinationPath $zip
+          $name = Split-Path $zip -Leaf
+          $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $name" | Set-Content -LiteralPath "$zip.sha256" -Encoding ascii -NoNewline
+          Write-Output "Release pronta: $name · SHA-256 $hash"
+      - name: Arquivar pacote de atualização
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: SlashGuedes-release-assets
+          path: release-assets/
+          retention-days: 30
+          if-no-files-found: error
       - name: Entregar ZIP portátil
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -58,3 +94,41 @@ jobs:
           path: package/
           retention-days: 30
           if-no-files-found: error
+
+  release:
+    needs: preview
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Recuperar pacote testado
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: SlashGuedes-release-assets
+          path: release-assets/
+      - name: Publicar nova Preview no GitHub Releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GUEDES_TAG: v${{ needs.preview.outputs.version }}
+        run: |
+          set -euo pipefail
+          version="${GUEDES_TAG#v}"
+          zip="release-assets/SlashGuedes-${version}-portable-win-x64.zip"
+          test -s "$zip"
+          test -s "$zip.sha256"
+          printf '%s\n' \
+            "SlashGuedes $version — canal Preview" \
+            "" \
+            "- Atualizador próprio: consulta apenas allanmguedes/SlashGuedes." \
+            "- Verificação SHA-256 e recuperação se a instalação falhar." \
+            "- Arquivos do usuário preservados em SlashGuedesData." \
+            "- Versão de testes. As novas atualizações exigem sua confirmação." \
+            "" \
+            "Primeira migração: usuários da Preview 01/02 devem baixar este EXE uma vez." > release-notes.md
+          gh release create "$GUEDES_TAG" "$zip" "$zip.sha256" \
+            --repo "allanmguedes/SlashGuedes" \
+            --target "$GITHUB_SHA" \
+            --title "SlashGuedes $version" \
+            --notes-file release-notes.md \
+            --prerelease
