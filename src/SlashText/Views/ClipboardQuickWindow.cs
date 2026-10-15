@@ -146,7 +146,8 @@ public sealed class ClipboardQuickWindow : Window
         var manageButton = new Button { Content = "Gerenciar" };
         manageButton.Click += (_, _) => { Hide(); _manage(); };
         actions.Children.Add(manageButton);
-        _enable = new Button { Content = "Ativar histórico", Margin = new Thickness(8, 0, 0, 0) };
+        _enable = new Button { Content = "Pausar histórico", Margin = new Thickness(8, 0, 0, 0),
+            ToolTip = "Pausar impede novas capturas, mas mantém itens existentes." };
         _enable.Click += (_, _) => { enable(); Refresh(); };
         actions.Children.Add(_enable);
         footer.Children.Add(actions);
@@ -392,7 +393,8 @@ public sealed class ClipboardQuickWindow : Window
                          " · Enter: colar · ☆: favorito · ◇: fixar · Esc: fechar";
         _moveButton.IsEnabled = _list.SelectedItem is not null;
         _deleteButton.IsEnabled = _list.SelectedItem is not null;
-        _enable.Visibility = _history.Enabled ? Visibility.Collapsed : Visibility.Visible;
+        _enable.Content = _history.Enabled ? "Pausar histórico" : "Ativar histórico";
+        _enable.Visibility = Visibility.Visible;
     }
 
     private void SelectCurrent(bool copyOnly = false)
