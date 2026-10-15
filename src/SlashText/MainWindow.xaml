@@ -1568,13 +1568,13 @@
                                 <views:ClipboardShortcutRecorderBox x:Name="ClipboardShortcutBox" Grid.Column="4"
                                          Text="Win+Shift+V" Height="34"
                                          VerticalContentAlignment="Center"
-                                         ToolTip="Clique e pressione as teclas desejadas, depois salve."/>
+                                         ToolTip="Clique neste campo e pressione Ctrl, Alt ou Win + a tecla desejada. Shift é opcional. Depois clique em Salvar."/>
                                 <Button Grid.Column="5" Margin="8,0,0,0"
                                         Click="ClipboardShortcutSave_OnClick"
                                         Content="Salvar atalho"/>
                                 <StackPanel Grid.Column="6" Orientation="Horizontal"
                                             VerticalAlignment="Center" Margin="10,0,0,0">
-                                    <Button Content="Sugerir outra" Padding="8,4"
+                                    <Button Content="Sugestão opcional" Padding="8,4"
                                             Click="ClipboardShortcutSuggest_OnClick"
                                             ToolTip="Alterna entre atalhos alternativos."/>
                                     <TextBlock x:Name="ClipboardShortcutHint"
