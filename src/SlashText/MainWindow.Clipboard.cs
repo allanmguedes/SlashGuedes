@@ -13,6 +13,8 @@ public partial class MainWindow
     private bool _clipboardReady;
     private bool _suppressClipboardOptions;
     private bool _refreshingClipboardCategories;
+    private IntPtr _clipboardPasteTarget;
+    private bool _clipboardPasteInProgress;
 
     private void InitializeClipboard()
     {
@@ -55,6 +57,7 @@ public partial class MainWindow
                 }
             }
             ClipboardShortcutBox.Text = _clipboardHistory.HotkeyRegistered ? _clipboardHistory.Shortcut : "";
+            ClipboardAutoPasteCheckBox.IsChecked = _settings.ClipboardAutoPasteEnabled;
         }
         finally { _suppressClipboardOptions = false; }
         ClipboardShortcutHint.Text = hotkeyWarning ??
@@ -214,10 +217,39 @@ public partial class MainWindow
         ClipboardShortcutHint.Text = "Sugestão selecionada. Clique em Salvar atalho para testar no Windows.";
     }
 
+    private async void ClipboardAutoPaste_OnChanged(object sender, RoutedEventArgs e)
+    {
+        if (!_clipboardReady || _suppressClipboardOptions) return;
+        var enabled = ClipboardAutoPasteCheckBox.IsChecked == true;
+        var before = _settings.ClipboardAutoPasteEnabled;
+        if (before == enabled) return;
+        _settings.ClipboardAutoPasteEnabled = enabled;
+        try
+        {
+            await SavePreferencesAsync();
+            StatusText.Text = enabled
+                ? "Colagem automática ativada para aplicações externas."
+                : "Colagem automática pausada: os itens serão apenas copiados.";
+        }
+        catch (Exception error)
+        {
+            _settings.ClipboardAutoPasteEnabled = before;
+            _suppressClipboardOptions = true;
+            ClipboardAutoPasteCheckBox.IsChecked = before;
+            _suppressClipboardOptions = false;
+            StatusText.Text = "Não foi possível salvar a preferência: " + error.Message;
+        }
+    }
+
     private void ClipboardOpenQuick_OnClick(object sender, RoutedEventArgs e) => OpenClipboardQuickWindow();
 
     private void OpenClipboardQuickWindow()
     {
+        if (_clipboardQuickWindow is { IsVisible: true })
+        {
+            _clipboardQuickWindow.Hide();
+            return;
+        }
         if (!_clipboardReady)
         {
             StatusText.Text = "O histórico ainda está carregando. Aguarde um instante.";
@@ -225,15 +257,13 @@ public partial class MainWindow
         }
         try
         {
+        // Remember the external target BEFORE we activate the popup.
+        // Opening from the main window deliberately uses copy-only behavior.
+        _clipboardPasteTarget = ClipboardPasteService.CaptureExternalTarget();
         _clipboardQuickWindow ??= new ClipboardQuickWindow(
             _clipboardHistory,
-            item =>
-            {
-                var copied = _clipboardHistory.CopyToClipboard(item);
-                StatusText.Text = copied
-                    ? "Item restaurado para a área de transferência. Use Ctrl + V para colar."
-                    : "Não foi possível restaurar este item.";
-            },
+            item => _ = UseClipboardQuickItemAsync(item, copyOnly: false),
+            item => _ = UseClipboardQuickItemAsync(item, copyOnly: true),
             () =>
             {
                 ShowFromTray();
@@ -252,6 +282,44 @@ public partial class MainWindow
                 ("exceptionType", error.GetType().Name),
                 ("hresult", $"0x{error.HResult:X8}"));
         }
+    }
+
+    private async Task UseClipboardQuickItemAsync(ClipboardHistoryItem item, bool copyOnly)
+    {
+        if (_clipboardPasteInProgress) return;
+        _clipboardPasteInProgress = true;
+        try
+        {
+            if (!_clipboardHistory.CopyToClipboard(item))
+            {
+                StatusText.Text = "Falha ao recuperar item do histórico.";
+                return;
+            }
+
+            var target = _clipboardPasteTarget;
+            _clipboardPasteTarget = IntPtr.Zero;
+            if (copyOnly || !_settings.ClipboardAutoPasteEnabled ||
+                !ClipboardPasteService.IsExternalTarget(target))
+            {
+                StatusText.Text = "Item copiado para a área de transferência. Use Ctrl + V.";
+                return;
+            }
+
+            var result = await ClipboardPasteService.TryPasteAsync(target);
+            StatusText.Text = result == ClipboardPasteService.Result.Sent
+                ? "Ctrl + V enviado para o aplicativo original."
+                : "Não foi possível colar automaticamente. Item copiado: use Ctrl + V.";
+            if (result != ClipboardPasteService.Result.Sent)
+                AppDiagnosticLog.Write("clipboard.paste.fallback",
+                    ("reason", result.ToString()));
+        }
+        catch (Exception error)
+        {
+            StatusText.Text = "Colagem indisponível. Use Ctrl + V se o item foi copiado.";
+            AppDiagnosticLog.Write("clipboard.paste.fallback",
+                ("reason", error.GetType().Name));
+        }
+        finally { _clipboardPasteInProgress = false; }
     }
 
     private void ClipboardCopy_OnClick(object sender, RoutedEventArgs e)
