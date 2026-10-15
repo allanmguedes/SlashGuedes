@@ -4179,7 +4179,7 @@ public partial class MainWindow : Window
 
     private bool _updateShutdownPreapproved;
 
-    private bool CanPrepareForUpdate()
+    private async Task<bool> CanPrepareForUpdateAsync()
     {
         if (_settingsOperationInProgress || _shortcutOperationInProgress ||
             _recordingExitPending || _restoreRecoveryBlocked)
@@ -4190,10 +4190,23 @@ public partial class MainWindow : Window
 
         // Ask *before* download; otherwise a pending shortcut draft can
         // prevent Close() after the updater helper has already started.
-        if (!CanDiscardShortcutDraft())
+        if (HasUnsavedShortcutDraft)
         {
-            StatusText.Text = "Atualização adiada: salve seu atalho e tente novamente.";
-            return false;
+            var decision = ShowAppDialog(
+                "Seu atalho de texto tem alterações não salvas. Deseja salvá-las antes de atualizar?\n\n" +
+                "Sim: salvar e continuar. Não: atualizar descartando alterações. Cancelar: permanecer nesta versão.",
+                "Salvar atalho antes de atualizar", MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Question, MessageBoxResult.Cancel);
+            if (decision == MessageBoxResult.Cancel)
+            {
+                StatusText.Text = "Atualização adiada. Seu rascunho foi mantido.";
+                return false;
+            }
+            if (decision == MessageBoxResult.Yes && !await TrySaveShortcutAsync())
+            {
+                StatusText.Text = "Atualização adiada: o atalho não pôde ser salvo.";
+                return false;
+            }
         }
 
         if (CaptureInlineEditor.HasUnsavedChanges &&
@@ -4209,7 +4222,7 @@ public partial class MainWindow : Window
 
     private async Task DownloadAndApplyUpdateAsync(ReleaseInfo release)
     {
-        if (!CanPrepareForUpdate()) return;
+        if (!await CanPrepareForUpdateAsync()) return;
         using var lease = TryReserveCaptureCommand();
         if (lease is null) return;
         var progressWindow = new UpdateProgressWindow { Owner = this };
