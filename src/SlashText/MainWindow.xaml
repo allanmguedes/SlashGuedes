@@ -43,7 +43,7 @@
                 <StackPanel Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
                     <Image Source="Assets/SlashDesk.png" Width="18" Height="18"
                            RenderOptions.BitmapScalingMode="HighQuality"/>
-                    <TextBlock Text="{DynamicResource Ui.6DC43EE9BAD493F2}" Margin="8,0,0,0" VerticalAlignment="Center"
+                    <TextBlock x:Name="AppTitleBarText" Text="{DynamicResource Ui.6DC43EE9BAD493F2}" Margin="8,0,0,0" VerticalAlignment="Center"
                                FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Lab.text}"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" shell:WindowChrome.IsHitTestVisibleInChrome="True">
@@ -726,7 +726,12 @@
                                             <TextBlock Text="{DynamicResource Ui.4C2E1DF4570BEBD6}" FontSize="15" FontWeight="SemiBold"/>
                                         </StackPanel>
                                         <TextBlock x:Name="CaptureMonitorShortcutText" Margin="30,7,0,0"
-                                                   Style="{StaticResource Lab.Metadata}"/>
+                                                   Visibility="Collapsed" Style="{StaticResource Lab.Metadata}"/>
+                                        <views:ShortcutRecorderBox x:Name="CaptureMonitorShortcutBox"
+                                                   Margin="30,7,0,0" Height="33" MinHeight="33" Padding="6,2"
+                                                   Style="{StaticResource Lab.Field}"
+                                                   LostKeyboardFocus="CaptureInlineShortcut_OnLostFocus"
+                                                   ToolTip="Clique e pressione a combinação. Salva automaticamente."/>
                                     </StackPanel>
                                 </RadioButton>
                                 <RadioButton x:Name="CaptureRegionModeButton"
@@ -741,7 +746,12 @@
                                             <TextBlock Text="{DynamicResource Ui.1433152B0C58A9B9}" FontSize="15" FontWeight="SemiBold"/>
                                         </StackPanel>
                                         <TextBlock x:Name="CaptureRegionShortcutText" Margin="30,7,0,0"
-                                                   Style="{StaticResource Lab.Metadata}"/>
+                                                   Visibility="Collapsed" Style="{StaticResource Lab.Metadata}"/>
+                                        <views:ShortcutRecorderBox x:Name="CaptureRegionShortcutBox"
+                                                   Margin="30,7,0,0" Height="33" MinHeight="33" Padding="6,2"
+                                                   Style="{StaticResource Lab.Field}"
+                                                   LostKeyboardFocus="CaptureInlineShortcut_OnLostFocus"
+                                                   ToolTip="Clique e pressione a combinação. Salva automaticamente."/>
                                     </StackPanel>
                                 </RadioButton>
                                 <RadioButton x:Name="CaptureWindowModeButton"
@@ -756,7 +766,12 @@
                                             <TextBlock Text="{DynamicResource Ui.28014EF3525228E8}" FontSize="15" FontWeight="SemiBold"/>
                                         </StackPanel>
                                         <TextBlock x:Name="CaptureWindowShortcutText" Margin="30,7,0,0"
-                                                   Style="{StaticResource Lab.Metadata}"/>
+                                                   Visibility="Collapsed" Style="{StaticResource Lab.Metadata}"/>
+                                        <views:ShortcutRecorderBox x:Name="CaptureWindowShortcutBox"
+                                                   Margin="30,7,0,0" Height="33" MinHeight="33" Padding="6,2"
+                                                   Style="{StaticResource Lab.Field}"
+                                                   LostKeyboardFocus="CaptureInlineShortcut_OnLostFocus"
+                                                   ToolTip="Clique e pressione a combinação. Salva automaticamente."/>
                                     </StackPanel>
                                 </RadioButton>
                                 <RadioButton x:Name="CaptureScrollingModeButton"
@@ -772,7 +787,12 @@
                                             <TextBlock Text="{DynamicResource Ui.B8A9923CBF3F1345}" FontSize="15" FontWeight="SemiBold"/>
                                         </StackPanel>
                                         <TextBlock x:Name="CaptureScrollingShortcutText" Margin="30,7,0,0"
-                                                   Style="{StaticResource Lab.Metadata}"/>
+                                                   Visibility="Collapsed" Style="{StaticResource Lab.Metadata}"/>
+                                        <views:ShortcutRecorderBox x:Name="CaptureScrollingShortcutBox"
+                                                   Margin="30,7,0,0" Height="33" MinHeight="33" Padding="6,2"
+                                                   Style="{StaticResource Lab.Field}"
+                                                   LostKeyboardFocus="CaptureInlineShortcut_OnLostFocus"
+                                                   ToolTip="Clique e pressione a combinação. Salva automaticamente."/>
                                     </StackPanel>
                                 </RadioButton>
                                 <RadioButton x:Name="CaptureGifModeButton"
@@ -1121,10 +1141,10 @@
                                         <TextBlock x:Name="CaptureShortcutStatusText"
                                                    Margin="0,12,0,0" TextWrapping="Wrap"
                                                    Foreground="{DynamicResource MutedBrush}"/>
-                                        <views:ShortcutRecorderBox x:Name="CaptureMonitorShortcutBox" Visibility="Collapsed"/>
-                                        <views:ShortcutRecorderBox x:Name="CaptureRegionShortcutBox" Visibility="Collapsed"/>
-                                        <views:ShortcutRecorderBox x:Name="CaptureWindowShortcutBox" Visibility="Collapsed"/>
-                                        <views:ShortcutRecorderBox x:Name="CaptureScrollingShortcutBox" Visibility="Collapsed"/>
+                                        
+                                        
+                                        
+                                        
                                         <TextBlock Text="{DynamicResource Ui.DB59B0BBBF7F1C6B}"
                                                    Margin="0,6,0,0" FontSize="12" TextWrapping="Wrap"
                                                    Foreground="{DynamicResource MutedBrush}"/>
