@@ -111,6 +111,9 @@ public partial class MainWindow : Window
     private const double ShortcutSplitterStep = 16;
     private const double ShortcutDividerSpace = 32;
     private static readonly TimeSpan UpdateMonitorInterval = TimeSpan.FromMinutes(30);
+    private static bool IsGuedesUiSmoke =>
+        AppPaths.IsSlashGuedes &&
+        Environment.GetCommandLineArgs().Contains("--guedes-ui-smoke", StringComparer.OrdinalIgnoreCase);
 
     private enum CaptureLauncherMode
     {
@@ -186,6 +189,14 @@ public partial class MainWindow : Window
                 _settings = new AppSettings();
             }
 
+            if (IsGuedesUiSmoke)
+            {
+                // CI Windows UI startup check, with an isolated folder.
+                _settings.OnboardingCompleted = true;
+                _settings.CheckUpdatesOnStartup = false;
+                _settings.StartWithWindows = false;
+                _settings.ClipboardMonitoringEnabled = false;
+            }
             _settings.Capture ??= new CaptureSettings();
             _settings.Capture.Recording ??= new RecordingSettings();
             if (AppPaths.IsCapturePilot)
@@ -324,6 +335,13 @@ public partial class MainWindow : Window
                     });
             }
 
+            if (IsGuedesUiSmoke)
+            {
+                AppDiagnosticLog.Write("startup.module.ready", ("module", "GuedesUI"));
+                _exitRequested = true;
+                Application.Current.Shutdown(startup.Failures.Count == 0 ? 0 : 12);
+                return;
+            }
             StartUpdateMonitor();
             ShowStartupWarnings(startup);
         }
@@ -333,6 +351,12 @@ public partial class MainWindow : Window
                 "startup.shell.failed",
                 ("exceptionType", exception.GetType().FullName),
                 ("hresult", $"0x{exception.HResult:X8}"));
+            if (IsGuedesUiSmoke)
+            {
+                _exitRequested = true;
+                Application.Current.Shutdown(11);
+                return;
+            }
             MessageBox.Show(
                 (AppPaths.IsSlashGuedes ? "O SlashGuedes encontrou uma falha inesperada ao preparar a interface. " : UiText.Get("O SlashDesk encontrou uma falha inesperada ao preparar a interface. ")) +
                 UiText.Get("Nenhum dado foi apagado. Consulte a pasta Logs para o diagnóstico."),
