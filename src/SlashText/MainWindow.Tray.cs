@@ -155,7 +155,7 @@ public partial class MainWindow
         accentMenu.DropDownItems.Add(UiText.Get("Gerenciar Acento Rápido"), null, (_, _) => Dispatcher.Invoke(OpenQuickAccentFromTray));
         var applicationMenu = new Forms.ToolStripMenuItem(UiText.Get("Aplicativo"));
         applicationMenu.DropDownItems.Add(
-            UiText.Get("Abrir SlashDesk"),
+            AppPaths.IsSlashGuedes ? "Abrir SlashGuedes" : UiText.Get("Abrir SlashDesk"),
             null,
             (_, _) => Dispatcher.Invoke(ShowFromTray));
         applicationMenu.DropDownItems.Add(
@@ -191,7 +191,7 @@ public partial class MainWindow
             ["Capturas"] = "Camera", ["Monitor"] = "Monitor", ["Região"] = "ScanLine", ["Janela"] = "AppWindow", ["Captura longa"] = "ScanText",
             ["Gravações"] = "Video", ["Vídeo MP4"] = "Video", ["GIF animado"] = "Film",
             ["Atalhos"] = "Keyboard", ["Novo atalho"] = "Plus", ["Gerenciar atalhos"] = "Keyboard",
-            ["Aplicativo"] = "AppWindow", ["Abrir SlashDesk"] = "AppWindow", ["Configurações"] = "Settings", ["Sobre"] = "Info", ["Sair"] = "X",
+            ["Aplicativo"] = "AppWindow", ["Abrir SlashDesk"] = "AppWindow", ["Abrir SlashGuedes"] = "AppWindow", ["Configurações"] = "Settings", ["Sobre"] = "Info", ["Sair"] = "X",
             ["Gerenciar Acento Rápido"] = "Languages"
         };
         void AssignIcons(Forms.ToolStripItemCollection items)
