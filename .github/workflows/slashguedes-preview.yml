@@ -70,6 +70,31 @@ jobs:
           Copy-Item $exe (Join-Path package 'SlashGuedes.exe')
           "Versão experimental. Extraia o ZIP e execute SlashGuedes.exe. Seus dados ficam em SlashGuedesData, separados do SlashDesk oficial." |
             Set-Content -LiteralPath package/LEIA-ME.txt -Encoding utf8
+      - name: Testar inicialização completa da interface do SlashGuedes
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD 'publish-slashguedes/SlashGuedes.exe'
+          $folder = Join-Path $env:RUNNER_TEMP 'Guedes-UI-Startup-Check'
+          New-Item -ItemType Directory -Path $folder -Force | Out-Null
+          Copy-Item $exe (Join-Path $folder 'SlashGuedes.exe')
+          $runner = Start-Process -FilePath (Join-Path $folder 'SlashGuedes.exe') -ArgumentList '--guedes-ui-smoke' -PassThru
+          if (-not $runner.WaitForExit(35000)) {
+            Stop-Process -Id $runner.Id -Force -ErrorAction SilentlyContinue
+            throw 'A inicialização completa excedeu 35 segundos.'
+          }
+          $logFolder = Join-Path $folder 'SlashGuedesData/Logs'
+          $logs = @(Get-ChildItem -Path $logFolder -Filter '*.jsonl' -ErrorAction SilentlyContinue)
+          if ($runner.ExitCode -ne 0) {
+            foreach ($log in $logs) {
+              Get-Content -LiteralPath $log.FullName | Select-Object -Last 30
+            }
+            throw "A inicialização completa do SlashGuedes falhou: $($runner.ExitCode)"
+          }
+          if ($logs.Count -eq 0) { throw 'Nenhum diagnóstico de inicialização criado.' }
+          if (Select-String -Path $logs.FullName -Pattern 'startup.shell.failed|startup.module.failed' -Quiet) {
+            throw 'Houve erro em um módulo durante o smoke test.'
+          }
+          Write-Output 'Inicialização real de interface, temas e serviços: OK'
       - name: Preparar ZIP de atualização e SHA-256
         shell: pwsh
         run: |
