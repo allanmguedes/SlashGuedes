@@ -76,11 +76,23 @@ public sealed class ClipboardHistoryService : IDisposable
         _handle = new WindowInteropHelper(owner).EnsureHandle();
         _source = HwndSource.FromHwnd(_handle);
         _source?.AddHook(OnWindowMessage);
-        if (!TrySetShortcut(savedShortcut ?? ClipboardShortcut.Default, out var error))
+        var requested = string.IsNullOrWhiteSpace(savedShortcut)
+            ? ClipboardShortcut.Default : savedShortcut.Trim();
+        if (!TrySetShortcut(requested, out var error))
         {
-            warning = error;
-            if (!TrySetShortcut(ClipboardShortcut.Default, out var fallbackError))
-                warning += " Também falhou o atalho padrão: " + fallbackError;
+            // A competing application may own the old combo, particularly
+            // Win+Shift+V. Try safe alternatives; never leave the user with a
+            // deceptively displayed shortcut that Windows did not register.
+            var candidates = new[]
+            {
+                "Ctrl+Alt+V", "Ctrl+Shift+H", "Alt+Shift+V", "Ctrl+Alt+H"
+            };
+            var fallback = candidates.FirstOrDefault(candidate =>
+                !candidate.Equals(requested, StringComparison.OrdinalIgnoreCase) &&
+                TrySetShortcut(candidate, out _));
+            warning = fallback is null
+                ? "Nenhuma combinação automática disponível. Abra pelo botão e escolha outro atalho. " + error
+                : $"{requested} não está disponível. Atalho alternativo ativado: {fallback}.";
         }
         _lastSequence = GetClipboardSequenceNumber();
     }
