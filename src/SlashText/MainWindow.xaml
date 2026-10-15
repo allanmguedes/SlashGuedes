@@ -1508,8 +1508,13 @@
                                         Style="{StaticResource Lab.Button}" Content="Abrir painel rápido" Margin="0,0,8,0"/>
                                 <Button Click="ClipboardClear_OnClick" Style="{StaticResource Lab.Button}" Content="Limpar recentes" Margin="0,0,8,0"/>
                                 <Button Click="ClipboardClearNonFavorites_OnClick" Style="{StaticResource Lab.Button}"
-                                        Content="Limpar não favoritos"
+                                        Content="Limpar não favoritos" Margin="0,0,12,0"
                                         ToolTip="Apaga todos os itens sem estrela, inclusive os apenas fixados."/>
+                                <CheckBox x:Name="ClipboardAutoPasteCheckBox" Content="Colar automaticamente"
+                                          ToolTip="Ao escolher um item no painel, tenta colar no aplicativo original. Se falhar, deixa o conteúdo copiado."
+                                          VerticalAlignment="Center" IsChecked="True"
+                                          Checked="ClipboardAutoPaste_OnChanged"
+                                          Unchecked="ClipboardAutoPaste_OnChanged"/>
                             </StackPanel>
                         </Grid>
                         <Grid Grid.Row="1" Margin="6,0,6,14">
