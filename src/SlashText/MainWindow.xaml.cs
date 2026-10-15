@@ -202,11 +202,20 @@ public partial class MainWindow : Window
             }
             if (AppPaths.IsSlashGuedes)
             {
-                Title = "SlashGuedes — versão experimental";
-                _settings.CheckUpdatesOnStartup = false;
-                CheckUpdatesCheckBox.IsEnabled = false;
-                CheckUpdatesButton.IsEnabled = false;
-                SettingsCheckUpdatesButton.IsEnabled = false;
+                Title = "SlashGuedes — Preview " + UpdateService.InstalledVersion();
+                // Preview 01/02 disabled updates while still pointing to upstream.
+                // Enable our own Preview channel once; keep later user preferences.
+                if (!_settings.GuedesUpdatesInitialized && !_settingsStore.IsProtected)
+                {
+                    _settings.GuedesUpdatesInitialized = true;
+                    _settings.CheckUpdatesOnStartup = true;
+                    try { await _settingsStore.SaveAsync(_settings); }
+                    catch (Exception error)
+                    {
+                        AppDiagnosticLog.Write("guedes.update.preference.save_failed",
+                            ("exceptionType", error.GetType().Name));
+                    }
+                }
             }
             RecordingPresetCatalog.Normalize(_settings.Capture.Recording);
             ThemeService.Apply(_settings.Theme);
@@ -4085,7 +4094,9 @@ public partial class MainWindow : Window
                 progressWindow,
                 progressWindow.Cancellation.Token);
             progressWindow.Report(new UpdateProgress(
-                UiText.Get("Download validado. Encerrando para substituir somente SlashDesk.exe..."),
+                UiText.Get(AppPaths.IsSlashGuedes
+                    ? "Download validado. Atualizando somente SlashGuedes.exe..."
+                    : "Download validado. Encerrando para substituir somente SlashDesk.exe..."),
                 0,
                 null,
                 IsApplying: true));
@@ -4142,6 +4153,7 @@ public partial class MainWindow : Window
     }
 
     private static string ProductVersion() =>
+        AppPaths.IsSlashGuedes ? UpdateService.InstalledVersion() :
         (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())
             .GetName().Version?.ToString(3) ?? "0.0.0";
 
