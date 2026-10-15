@@ -20,7 +20,7 @@ internal sealed class UpdateAvailableWindow : Window
 
     public UpdateAvailableWindow(UpdateCheckResult result)
     {
-        Title = UiText.Get("Atualização do SlashDesk");
+        Title = AppPaths.IsSlashGuedes ? "Atualização do SlashGuedes" : UiText.Get("Atualização do SlashDesk");
         Width = 590;
         Height = 470;
         MinWidth = 500;
@@ -39,7 +39,7 @@ internal sealed class UpdateAvailableWindow : Window
 
         var heading = new TextBlock
         {
-            Text = UiText.Format($"SlashDesk {result.LatestVersion} está disponível"),
+            Text = UiText.Format($"{(AppPaths.IsSlashGuedes ? "SlashGuedes" : "SlashDesk")} {result.LatestVersion} está disponível"),
             FontSize = 23,
             TextWrapping = TextWrapping.Wrap,
             FontWeight = FontWeights.SemiBold,
