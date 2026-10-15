@@ -10,6 +10,8 @@ namespace SlashText.Services;
 public sealed class UpdateService
 {
     internal const string Repository = "lucasllira/SlashText";
+    internal const string GuedesRepository = "allanmguedes/SlashGuedes";
+    internal static string ActiveRepository => AppPaths.IsSlashGuedes ? GuedesRepository : Repository;
     internal static readonly Uri ReleasesApi =
         new($"https://api.github.com/repos/{Repository}/releases?per_page=20");
     internal static readonly TimeSpan AutomaticCheckInterval = TimeSpan.FromHours(6);
@@ -20,11 +22,14 @@ public sealed class UpdateService
     private readonly Func<DateTimeOffset> _utcNow;
     private readonly string _currentVersion;
     private readonly TimeSpan _timeout;
+    private readonly bool _isGuedes;
+    private readonly string _repository;
+    private readonly Uri _releasesApi;
     private readonly SemaphoreSlim _checkGate = new(1, 1);
 
     public UpdateService()
-        : this(CreateClient(), AppPaths.UpdateStateFile, ProductVersion(),
-            () => DateTimeOffset.UtcNow, TimeSpan.FromSeconds(8))
+        : this(CreateClient(), AppPaths.UpdateStateFile, InstalledVersion(),
+            () => DateTimeOffset.UtcNow, TimeSpan.FromSeconds(8), AppPaths.IsSlashGuedes)
     {
     }
 
@@ -33,8 +38,14 @@ public sealed class UpdateService
         string stateFile,
         string currentVersion,
         Func<DateTimeOffset>? utcNow = null,
-        TimeSpan? timeout = null)
+        TimeSpan? timeout = null,
+        bool isSlashGuedes = false)
     {
+        _isGuedes = isSlashGuedes;
+        _repository = isSlashGuedes ? GuedesRepository : Repository;
+        _releasesApi = isSlashGuedes
+            ? new Uri($"https://api.github.com/repos/{GuedesRepository}/releases?per_page=30")
+            : ReleasesApi;
         _client = client;
         _stateStore = new JsonFileStore<UpdateState>(stateFile);
         _currentVersion = SemanticVersion.TryParse(currentVersion, out var parsed)
@@ -66,25 +77,25 @@ public sealed class UpdateService
             timeout.CancelAfter(_timeout);
             try
             {
-                AppDiagnosticLog.Write("update.check.started", ("repository", Repository), ("manual", force));
-                using var response = await _client.GetAsync(ReleasesApi, timeout.Token);
+                AppDiagnosticLog.Write("update.check.started", ("repository", _repository), ("manual", force));
+                using var response = await _client.GetAsync(_releasesApi, timeout.Token);
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {
                     return await SaveResultAsync(state, new UpdateCheckResult(
                         UpdateCheckStatus.NoRelease, false, _currentVersion, null,
                         "Ainda não existe uma versão publicada no GitHub Releases.",
-                        $"https://github.com/{Repository}/releases", null, null, null), cancellationToken);
+                        $"https://github.com/{_repository}/releases", null, null, null), cancellationToken);
                 }
                 response.EnsureSuccessStatusCode();
                 await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
                 using var document = await JsonDocument.ParseAsync(stream, cancellationToken: timeout.Token);
-                var release = SelectLatestStableRelease(document.RootElement);
+                var release = SelectLatestRelease(document.RootElement, _isGuedes);
                 if (release is null)
                 {
                     return await SaveResultAsync(state, new UpdateCheckResult(
                         UpdateCheckStatus.NoRelease, false, _currentVersion, null,
-                        "Nenhuma versão estável compatível foi encontrada.",
-                        $"https://github.com/{Repository}/releases", null, null, null), cancellationToken);
+                        _isGuedes ? "Nenhuma Preview do SlashGuedes foi publicada ainda." : "Nenhuma versão estável compatível foi encontrada.",
+                        $"https://github.com/{_repository}/releases", null, null, null), cancellationToken);
                 }
                 if (!SemanticVersion.TryParse(_currentVersion, out var current) ||
                     !SemanticVersion.TryParse(release.Version, out var latest))
@@ -120,7 +131,7 @@ public sealed class UpdateService
 
                 return await SaveResultAsync(state, new UpdateCheckResult(
                     UpdateCheckStatus.UpdateAvailable, true, _currentVersion, release.Version,
-                    $"SlashDesk {release.Version} está disponível.", release.PageUrl,
+                    $"{(_isGuedes ? "SlashGuedes" : "SlashDesk")} {release.Version} está disponível.", release.PageUrl,
                     release.Notes, release.PortableAsset.Size, release), cancellationToken);
             }
             catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException &&
@@ -210,23 +221,31 @@ public sealed class UpdateService
             state.LastDownloadSize, release);
     }
 
-    private static ReleaseInfo? SelectLatestStableRelease(JsonElement releases)
+    private static ReleaseInfo? SelectLatestStableRelease(JsonElement releases) =>
+        SelectLatestRelease(releases, isSlashGuedes: false);
+
+    private static ReleaseInfo? SelectLatestRelease(JsonElement releases, bool isSlashGuedes)
     {
         ReleaseInfo? selected = null;
         SemanticVersion? selectedVersion = null;
         foreach (var item in releases.EnumerateArray())
         {
-            if (item.GetProperty("draft").GetBoolean() || item.GetProperty("prerelease").GetBoolean())
+            if (item.GetProperty("draft").GetBoolean() ||
+                (!isSlashGuedes && item.GetProperty("prerelease").GetBoolean()))
             {
                 continue;
             }
             var tag = item.GetProperty("tag_name").GetString();
-            if (!SemanticVersion.TryParse(tag, out var version) || version.IsPrerelease)
+            if (!SemanticVersion.TryParse(tag, out var version) ||
+                (!isSlashGuedes && version.IsPrerelease))
             {
                 continue;
             }
+            if (isSlashGuedes && (!version.IsPrerelease ||
+                version.Prerelease.Count != 2 ||
+                !version.Prerelease[0].Equals("preview", StringComparison.OrdinalIgnoreCase))) continue;
             var versionText = version.ToString();
-            var expectedZip = $"SlashDesk-{versionText}-portable-win-x64.zip";
+            var expectedZip = $"{(isSlashGuedes ? "SlashGuedes" : "SlashDesk")}-{versionText}-portable-win-x64.zip";
             var expectedChecksum = expectedZip + ".sha256";
             ReleaseAssetInfo? portable = null;
             ReleaseAssetInfo? checksum = null;
@@ -248,7 +267,7 @@ public sealed class UpdateService
                 versionText,
                 item.TryGetProperty("name", out var name) ? name.GetString() ?? versionText : versionText,
                 item.TryGetProperty("body", out var body) ? body.GetString() ?? string.Empty : string.Empty,
-                item.GetProperty("html_url").GetString() ?? $"https://github.com/{Repository}/releases",
+                item.GetProperty("html_url").GetString() ?? $"https://github.com/{(isSlashGuedes ? GuedesRepository : Repository)}/releases",
                 item.TryGetProperty("published_at", out var published) && published.TryGetDateTimeOffset(out var date)
                     ? date : null,
                 portable,
@@ -267,7 +286,16 @@ public sealed class UpdateService
         return client;
     }
 
-    private static string ProductVersion() =>
-        (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())
-            .GetName().Version?.ToString(3) ?? "0.0.0";
+    internal static string InstalledVersion()
+    {
+        var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
+        if (AppPaths.IsSlashGuedes)
+        {
+            var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+            if (SemanticVersion.TryParse(informational, out var preview)) return preview.ToString();
+        }
+        return assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+    }
+
+    private static string ProductVersion() => InstalledVersion();
 }
