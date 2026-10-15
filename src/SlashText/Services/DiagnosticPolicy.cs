@@ -23,6 +23,8 @@ internal static class DiagnosticPolicy
         "capture.started",
         "capture.settings.save_failed",
         "capture.toolbar-positioned",
+        "clipboard.popup.failed",
+        "clipboard.settings.save_failed",
         "exception.app-domain",
         "exception.unobserved-task",
         "exception.wpf-dispatcher",
