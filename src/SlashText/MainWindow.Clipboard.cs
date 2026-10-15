@@ -67,8 +67,8 @@ public partial class MainWindow
         finally { _suppressClipboardOptions = false; }
         ClipboardShortcutHint.Text = hotkeyWarning ??
             (_clipboardHistory.HotkeyRegistered
-                ? "Atalho global ativo."
-                : "Sem atalho ativo. Use Abrir painel rápido.");
+                ? "Clique no campo e pressione Ctrl, Alt ou Win + uma tecla para alterar."
+                : "Clique no campo e pressione Ctrl, Alt ou Win + uma tecla.");
         RefreshClipboardView();
     }
 
@@ -186,7 +186,7 @@ public partial class MainWindow
         var previous = _clipboardHistory.Shortcut;
         if (!_clipboardHistory.TrySetShortcut(ClipboardShortcutBox.Text, out var error))
         {
-            ClipboardShortcutHint.Text = error + " Clique em Sugerir outra ou pressione outra combinação.";
+            ClipboardShortcutHint.Text = error + " Clique no campo e pressione outra combinação.";
             ClipboardShortcutBox.Text = _clipboardHistory.HotkeyRegistered
                 ? _clipboardHistory.Shortcut : string.Empty;
             return;
@@ -219,7 +219,7 @@ public partial class MainWindow
             value.Equals(current, StringComparison.OrdinalIgnoreCase));
         ClipboardShortcutBox.Text =
             ClipboardShortcutSuggestions[(idx + 1) % ClipboardShortcutSuggestions.Length];
-        ClipboardShortcutHint.Text = "Sugestão selecionada. Clique em Salvar atalho para testar no Windows.";
+        ClipboardShortcutHint.Text = "Sugestão opcional. Você também pode clicar no campo e pressionar qualquer combinação com Ctrl, Alt ou Win.";
     }
 
     private async void ClipboardAutoPaste_OnChanged(object sender, RoutedEventArgs e)
