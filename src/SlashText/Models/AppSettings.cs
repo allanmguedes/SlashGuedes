@@ -6,6 +6,7 @@ public sealed class AppSettings
 {
     public bool OnboardingCompleted { get; set; }
     public bool CheckUpdatesOnStartup { get; set; } = true;
+    public bool GuedesUpdatesInitialized { get; set; }
     public bool CloseToTray { get; set; } = true;
     public bool StartWithWindows { get; set; }
     public bool ShowSuggestions { get; set; } = true;
