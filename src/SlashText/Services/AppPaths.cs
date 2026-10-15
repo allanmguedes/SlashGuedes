@@ -14,6 +14,7 @@ public static class AppPaths
     public static DistributionMode Mode => Current.Mode;
     public static bool IsPortable => Current.IsPortable;
     public static bool IsCapturePilot => Current.IsCapturePilot;
+    public static bool IsSlashGuedes => Current.IsSlashGuedes;
     public static bool IsCaptureOcrPilot => IsCapturePilot &&
         (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())
         .GetCustomAttributes<AssemblyMetadataAttribute>()

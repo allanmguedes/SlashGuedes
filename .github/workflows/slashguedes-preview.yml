@@ -1,0 +1,56 @@
+name: SlashGuedes - Preview Windows x64
+
+on:
+  push:
+    branches:
+      - feature/clipboard-manager
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Instalar .NET 10
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: 10.0.x
+      - name: Restaurar dependências
+        shell: pwsh
+        run: dotnet restore src/SlashText/SlashText.csproj --runtime win-x64 -p:Platform=x64 -p:SlashGuedesBuild=true
+      - name: Gerar executável Windows x64
+        shell: pwsh
+        run: |
+          dotnet publish src/SlashText/SlashText.csproj --configuration Release -p:Platform=x64 -p:SlashGuedesBuild=true -p:PublishProfile=Portable --no-restore --output publish-slashguedes
+      - name: Validar executável portátil
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD 'publish-slashguedes/SlashGuedes.exe'
+          if (-not (Test-Path $exe)) { throw 'SlashGuedes.exe não encontrado.' }
+          $testDir = Join-Path $env:RUNNER_TEMP 'SlashGuedes preview isolado'
+          New-Item -ItemType Directory -Path $testDir -Force | Out-Null
+          Copy-Item $exe (Join-Path $testDir 'SlashGuedes.exe')
+          $test = Start-Process -FilePath (Join-Path $testDir 'SlashGuedes.exe') -ArgumentList '--portable-smoke' -Wait -PassThru
+          if ($test.ExitCode -ne 0) { throw "Teste de inicialização falhou: $($test.ExitCode)" }
+          if (-not (Test-Path (Join-Path $testDir 'SlashGuedesData/snippets.md'))) {
+            throw 'SlashGuedesData não foi criada, ou dados não estão isolados.'
+          }
+          Write-Output "SlashGuedes.exe publicado, teste de inicialização OK"
+          New-Item -ItemType Directory -Path package -Force | Out-Null
+          Copy-Item $exe (Join-Path package 'SlashGuedes.exe')
+          "Versão experimental. Extraia o ZIP e execute SlashGuedes.exe. Seus dados ficam em SlashGuedesData, separados do SlashDesk oficial." |
+            Set-Content -LiteralPath package/LEIA-ME.txt -Encoding utf8
+      - name: Entregar ZIP portátil
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: SlashGuedes-win-x64
+          path: package/
+          retention-days: 30
+          if-no-files-found: error

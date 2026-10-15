@@ -23,6 +23,8 @@ public sealed class AppSettings
     public string QuickAccentExcludedApps { get; set; } = string.Empty;
     public List<string> QuickAccentCharacterSets { get; set; } = ["PortugueseBrazil"];
     public CaptureSettings Capture { get; set; } = new();
+    public bool ClipboardMonitoringEnabled { get; set; }
+    public int ClipboardMaxEntries { get; set; } = 150;
 }
 
 public sealed class CaptureSettings

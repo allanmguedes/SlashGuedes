@@ -138,6 +138,14 @@
                             <TextBlock Text="{DynamicResource Ui.BD0BB1D075558740}"/>
                         </StackPanel>
                     </Button>
+                    <Button x:Name="ClipboardTabButton"
+                            Style="{StaticResource Lab.Pilot.NavigationButton}"
+                            Click="ClipboardTab_OnClick">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource Icon.Shortcuts}" Style="{StaticResource NavigationIcon}"/>
+                            <TextBlock Text="Área de transferência"/>
+                        </StackPanel>
+                    </Button>
                     <Button x:Name="StatisticsTabButton"
                             Style="{StaticResource Lab.Pilot.NavigationButton}"
                             Click="StatisticsTab_OnClick">
@@ -1450,6 +1458,113 @@
                             </Border>
                         </Grid>
                     </ScrollViewer>
+
+                    <Grid x:Name="ClipboardView" Visibility="Collapsed" Margin="26">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Margin="6,4,6,18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="HISTÓRICO INTELIGENTE" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource Lab.accent-text}"/>
+                                <TextBlock Text="Sua área de transferência, organizada." Margin="0,7,0,5"
+                                           FontSize="25" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource Lab.text}"/>
+                                <TextBlock x:Name="ClipboardStatusText" Text="Carregando histórico..."
+                                           FontSize="12" Foreground="{DynamicResource Lab.muted}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom">
+                                <Button x:Name="ClipboardToggleButton" Click="ClipboardToggle_OnClick"
+                                        Style="{StaticResource Lab.Button}" Content="Ativar histórico" Margin="0,0,8,0"/>
+                                <Button x:Name="ClipboardQuickWindowButton" Click="ClipboardOpenQuick_OnClick"
+                                        Style="{StaticResource Lab.Button}" Content="Abrir painel rápido" Margin="0,0,8,0"/>
+                                <Button Click="ClipboardClear_OnClick" Style="{StaticResource Lab.Button}" Content="Limpar tudo"/>
+                            </StackPanel>
+                        </Grid>
+                        <Grid Grid.Row="1" Margin="6,0,6,14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="180"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="ClipboardSearchBox" Grid.Column="0"
+                                     ToolTip="Pesquisar no conteúdo e nas categorias"
+                                     Height="36" VerticalContentAlignment="Center"
+                                     TextChanged="ClipboardSearch_OnChanged" Margin="0,0,10,0"/>
+                            <ComboBox x:Name="ClipboardFilterBox" Grid.Column="1"
+                                      Height="36" SelectedIndex="0"
+                                      SelectionChanged="ClipboardFilter_OnChanged">
+                                <ComboBoxItem Content="Todos os itens" Tag="all"/>
+                                <ComboBoxItem Content="Favoritos" Tag="favorite"/>
+                                <ComboBoxItem Content="Fixados" Tag="pinned"/>
+                                <ComboBoxItem Content="Textos e links" Tag="text"/>
+                                <ComboBoxItem Content="Imagens" Tag="image"/>
+                            </ComboBox>
+                        </Grid>
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.1*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="1*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" BorderThickness="1" CornerRadius="12"
+                                    BorderBrush="{DynamicResource Lab.line}" Background="{DynamicResource Lab.surface}">
+                                <ListBox x:Name="ClipboardItemsList" DisplayMemberPath="Summary"
+                                         FontSize="13" Padding="12" BorderThickness="0"
+                                         SelectionChanged="ClipboardSelected_OnChanged"/>
+                            </Border>
+                            <Border Grid.Column="2" BorderThickness="1" CornerRadius="12"
+                                    BorderBrush="{DynamicResource Lab.line}" Background="{DynamicResource Lab.surface}" Padding="18">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="VISUALIZAÇÃO E AÇÕES" FontWeight="SemiBold"
+                                               FontSize="12" Foreground="{DynamicResource Lab.accent-text}"
+                                               Margin="0,0,0,14"/>
+                                    <Grid Grid.Row="1">
+                                        <TextBlock x:Name="ClipboardSelectionEmpty" Text="Selecione um item do histórico."
+                                                   Foreground="{DynamicResource Lab.muted}" TextWrapping="Wrap"
+                                                   VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                        <TextBox x:Name="ClipboardSelectionText" IsReadOnly="True" TextWrapping="Wrap"
+                                                 AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                                                 Visibility="Collapsed" Padding="12"/>
+                                        <Image x:Name="ClipboardSelectionImage" Visibility="Collapsed"
+                                               Stretch="Uniform"/>
+                                    </Grid>
+                                    <StackPanel Grid.Row="2" Margin="0,14,0,8">
+                                        <TextBlock Text="Categoria" Foreground="{DynamicResource Lab.muted}"
+                                                   FontSize="12" Margin="0,0,0,6"/>
+                                        <DockPanel>
+                                            <Button x:Name="ClipboardCategorySaveButton" DockPanel.Dock="Right"
+                                                    Click="ClipboardCategorySave_OnClick" Content="Salvar"
+                                                    Margin="8,0,0,0"/>
+                                            <TextBox x:Name="ClipboardCategoryBox" MaxLength="50"
+                                                     VerticalContentAlignment="Center" Height="35"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                    <WrapPanel Grid.Row="3">
+                                        <Button x:Name="ClipboardCopyButton" Content="Copiar" Margin="0,0,8,8"
+                                                Click="ClipboardCopy_OnClick"/>
+                                        <Button x:Name="ClipboardFavoriteButton" Content="☆ Favoritar" Margin="0,0,8,8"
+                                                Click="ClipboardFavorite_OnClick"/>
+                                        <Button x:Name="ClipboardPinButton" Content="Fixar" Margin="0,0,8,8"
+                                                Click="ClipboardPin_OnClick"/>
+                                        <Button x:Name="ClipboardDeleteButton" Content="Excluir" Margin="0,0,8,8"
+                                                Click="ClipboardDelete_OnClick"/>
+                                    </WrapPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </Grid>
 
                     <ScrollViewer x:Name="StatisticsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" lab:LabMotion.Entrance="Page">
                         <StackPanel Margin="30,28,30,24" MaxWidth="1320" HorizontalAlignment="Stretch">

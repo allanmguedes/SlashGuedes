@@ -17,19 +17,25 @@ public sealed class AppDataEnvironment
         DistributionMode mode,
         string executableDirectory,
         string localAppDataDirectory,
-        bool isCapturePilot = false)
+        bool isCapturePilot = false,
+        bool isSlashGuedes = false)
     {
         IsCapturePilot = isCapturePilot;
+        IsSlashGuedes = isSlashGuedes;
         Mode = isCapturePilot ? DistributionMode.Portable : mode;
         ExecutableDirectory = Path.GetFullPath(executableDirectory);
         LocalAppDataDirectory = Path.GetFullPath(localAppDataDirectory);
-        DataDirectory = isCapturePilot ? Path.Combine(ExecutableDirectory, "SlashDeskPilotData") : mode == DistributionMode.Portable
+        DataDirectory = isSlashGuedes ? (mode == DistributionMode.Portable
+            ? Path.Combine(ExecutableDirectory, "SlashGuedesData")
+            : Path.Combine(LocalAppDataDirectory, "SlashGuedes"))
+            : isCapturePilot ? Path.Combine(ExecutableDirectory, "SlashDeskPilotData") : mode == DistributionMode.Portable
             ? Path.Combine(ExecutableDirectory, "SlashDeskData")
             : Path.Combine(LocalAppDataDirectory, "SlashDesk");
     }
 
     public DistributionMode Mode { get; }
     public bool IsCapturePilot { get; }
+    public bool IsSlashGuedes { get; }
     public string ExecutableDirectory { get; }
     public string LocalAppDataDirectory { get; }
     public string DataDirectory { get; }
@@ -55,7 +61,8 @@ public sealed class AppDataEnvironment
         return new AppDataEnvironment(
             mode,
             executableDirectory,
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), pilot);
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), pilot,
+            string.Equals(assembly.GetName().Name, "SlashGuedes", StringComparison.Ordinal));
     }
 
     public bool TryProbePortableWrite(out string? error)

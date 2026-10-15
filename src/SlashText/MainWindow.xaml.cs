@@ -148,6 +148,7 @@ public partial class MainWindow : Window
         InitializeRecordingPresetControls();
         // Unshown UI fixture: no tray, startup/data loading, hooks or updater.
         if (captureEvidence) return;
+        InitializeClipboard();
         InitializeTray();
         Loaded += MainWindow_OnLoaded;
         Closing += MainWindow_OnClosing;
@@ -199,6 +200,14 @@ public partial class MainWindow : Window
                 CheckUpdatesButton.IsEnabled = false;
                 SettingsCheckUpdatesButton.IsEnabled = false;
             }
+            if (AppPaths.IsSlashGuedes)
+            {
+                Title = "SlashGuedes — versão experimental";
+                _settings.CheckUpdatesOnStartup = false;
+                CheckUpdatesCheckBox.IsEnabled = false;
+                CheckUpdatesButton.IsEnabled = false;
+                SettingsCheckUpdatesButton.IsEnabled = false;
+            }
             RecordingPresetCatalog.Normalize(_settings.Capture.Recording);
             ThemeService.Apply(_settings.Theme);
             if (_trayIcon?.ContextMenuStrip is { } startupTrayMenu)
@@ -240,6 +249,7 @@ public partial class MainWindow : Window
                         deleteFiles: false);
                 });
             LoadCaptureSettings();
+            await startup.RunAsync("Área de transferência", StartClipboardAsync);
             _initialized = true;
 
             IReadOnlyList<Snippet> loaded = [];
@@ -1134,7 +1144,7 @@ public partial class MainWindow : Window
     {
         var views = new UIElement[]
         {
-            ShortcutsView, CaptureView, QuickAccentView, StatisticsView, SettingsView, AboutView
+            ShortcutsView, CaptureView, QuickAccentView, ClipboardView, StatisticsView, SettingsView, AboutView
         };
         foreach (var item in views)
         {
@@ -1145,7 +1155,7 @@ public partial class MainWindow : Window
 
         var buttons = new[]
         {
-            ShortcutsTabButton, CaptureTabButton, QuickAccentTabButton, StatisticsTabButton,
+            ShortcutsTabButton, CaptureTabButton, QuickAccentTabButton, ClipboardTabButton, StatisticsTabButton,
             SettingsTabButton, AboutTabButton
         };
         foreach (var button in buttons)
@@ -1160,6 +1170,8 @@ public partial class MainWindow : Window
                 ? (UiText.Get("Acento Rápido"), UiText.Get("Digite caracteres especiais sem interromper seu fluxo."))
                 : ReferenceEquals(view, CaptureView)
                     ? (UiText.Get("Captura"), UiText.Get("Capture, edite e grave sua tela localmente."))
+                    : ReferenceEquals(view, ClipboardView)
+                        ? ("Área de transferência", "Histórico local, favoritos e categorias. • Win + Shift + V")
                     : ReferenceEquals(view, StatisticsView)
                         ? (UiText.Get("Estatísticas"), UiText.Get("Acompanhe o uso real dos recursos do SlashDesk."))
                         : ReferenceEquals(view, SettingsView)
@@ -4395,6 +4407,7 @@ public partial class MainWindow : Window
         _quickAccentService.Dispose();
         _captureShortcuts.Triggered -= CaptureShortcuts_OnTriggered;
         _captureShortcuts.Dispose();
+        DisposeClipboard();
         CleanupRecordingResources();
         CaptureInlineEditor.Dispose();
         _suggestionWindow.Close();
