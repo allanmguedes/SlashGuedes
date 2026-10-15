@@ -6,6 +6,11 @@ using System.IO.Compression;
 using System.Diagnostics;
 using ScreenRecorderLib;
 
+if (args.Length == 1 && args[0] == "--guedes-clipboard-checks")
+{
+    ClipboardGuedesChecks.Run(); return;
+}
+
 if (args.Length == 2 && args[0] == "--snippet-batch-smoke")
 {
     await SnippetBatchChecks.RunAsync(args[1]); return;

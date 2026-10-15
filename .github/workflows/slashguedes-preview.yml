@@ -29,6 +29,10 @@ jobs:
         shell: pwsh
         run: |
           dotnet publish src/SlashText/SlashText.csproj --configuration Release -p:Platform=x64 -p:SlashGuedesBuild=true -p:PublishProfile=Portable --no-restore --output publish-slashguedes
+      - name: Validar regras de favoritos, retenção e atalhos
+        shell: pwsh
+        run: |
+          dotnet run --project tests/SlashText.SmokeTests/SlashText.SmokeTests.csproj --configuration Release -p:Platform=x64 -p:SlashGuedesBuild=true -- --guedes-clipboard-checks
       - name: Validar executável portátil
         shell: pwsh
         run: |
