@@ -106,7 +106,7 @@ public sealed class ClipboardHistoryService : IDisposable
         error = string.Empty;
         if (!ClipboardShortcut.TryParse(value, out var normalized, out var modifiers, out var key))
         {
-            error = "Use duas ou mais teclas modificadoras (Win/Ctrl/Alt/Shift) e uma letra, número ou F1–F12.";
+            error = "O atalho precisa ter Ctrl, Alt ou Win e uma tecla. Shift pode ser adicionado, mas não pode ser usado sozinho.";
             return false;
         }
         if (_hotkeyRegistered && Shortcut.Equals(normalized, StringComparison.OrdinalIgnoreCase))
