@@ -1484,6 +1484,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid Margin="6,4,6,18">
@@ -1505,7 +1506,10 @@
                                         Style="{StaticResource Lab.Button}" Content="Ativar histórico" Margin="0,0,8,0"/>
                                 <Button x:Name="ClipboardQuickWindowButton" Click="ClipboardOpenQuick_OnClick"
                                         Style="{StaticResource Lab.Button}" Content="Abrir painel rápido" Margin="0,0,8,0"/>
-                                <Button Click="ClipboardClear_OnClick" Style="{StaticResource Lab.Button}" Content="Limpar recentes"/>
+                                <Button Click="ClipboardClear_OnClick" Style="{StaticResource Lab.Button}" Content="Limpar recentes" Margin="0,0,8,0"/>
+                                <Button Click="ClipboardClearNonFavorites_OnClick" Style="{StaticResource Lab.Button}"
+                                        Content="Limpar não favoritos"
+                                        ToolTip="Apaga todos os itens sem estrela, inclusive os apenas fixados."/>
                             </StackPanel>
                         </Grid>
                         <Grid Grid.Row="1" Margin="6,0,6,14">
@@ -1575,7 +1579,26 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
-                        <Grid Grid.Row="3">
+                        <Border Grid.Row="3" Margin="6,0,6,15" Padding="12,10"
+                                Background="{DynamicResource Lab.surface}"
+                                BorderBrush="{DynamicResource Lab.line}"
+                                BorderThickness="1" CornerRadius="10">
+                            <DockPanel LastChildFill="False">
+                                <TextBlock Text="MINHAS CATEGORIAS" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource Lab.accent-text}"
+                                           FontSize="12" FontWeight="SemiBold" Margin="0,0,12,0"/>
+                                <ComboBox x:Name="ClipboardCategoryManageBox"
+                                          Width="175" Height="34" Margin="0,0,10,0"
+                                          ToolTip="Selecione uma categoria para renomear ou excluir."/>
+                                <TextBox x:Name="ClipboardNewCategoryBox" Width="175" Height="34"
+                                         MaxLength="50" VerticalContentAlignment="Center" Margin="0,0,8,0"
+                                         ToolTip="Digite o nome da categoria. Ex.: Trabalho, Links, Imagens."/>
+                                <Button Content="Criar" Click="ClipboardCategoryCreate_OnClick" Margin="0,0,8,0"/>
+                                <Button Content="Renomear" Click="ClipboardCategoryRename_OnClick" Margin="0,0,8,0"/>
+                                <Button Content="Excluir categoria" Click="ClipboardCategoryDelete_OnClick"/>
+                            </DockPanel>
+                        </Border>
+                        <Grid Grid.Row="4">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="1.1*"/>
                                 <ColumnDefinition Width="16"/>
@@ -1616,8 +1639,9 @@
                                             <Button x:Name="ClipboardCategorySaveButton" DockPanel.Dock="Right"
                                                     Click="ClipboardCategorySave_OnClick" Content="Salvar"
                                                     Margin="8,0,0,0"/>
-                                            <TextBox x:Name="ClipboardCategoryBox" MaxLength="50"
-                                                     VerticalContentAlignment="Center" Height="35"/>
+                                            <ComboBox x:Name="ClipboardCategoryBox" Height="35" MinWidth="160"
+                                                      VerticalContentAlignment="Center"
+                                                      ToolTip="Escolha uma categoria criada acima."/>
                                         </DockPanel>
                                     </StackPanel>
                                     <WrapPanel Grid.Row="3">
