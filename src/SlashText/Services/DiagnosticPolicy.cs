@@ -24,6 +24,7 @@ internal static class DiagnosticPolicy
         "capture.settings.save_failed",
         "capture.toolbar-positioned",
         "clipboard.popup.failed",
+        "clipboard.paste.fallback",
         "clipboard.settings.save_failed",
         "exception.app-domain",
         "exception.unobserved-task",
