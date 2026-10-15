@@ -69,7 +69,7 @@ public sealed class ClipboardQuickWindow : Window
         _search.TextChanged += (_, _) => Refresh();
         _search.PreviewKeyDown += (_, e) =>
         {
-            if (e.Key == Key.Down) { _list.Focus(); if (_list.Items.Count > 0) _list.SelectedIndex = 0; e.Handled = true; }
+            if (e.Key == Key.Down && _list is { } list) { list.Focus(); if (list.Items.Count > 0) list.SelectedIndex = 0; e.Handled = true; }
             if (e.Key == Key.Enter) { SelectCurrent(); e.Handled = true; }
         };
         Grid.SetRow(_search, 1);
@@ -96,9 +96,9 @@ public sealed class ClipboardQuickWindow : Window
         var copy = new Button { Content = "Copiar item", Margin = new Thickness(0, 0, 8, 0) };
         copy.Click += (_, _) => SelectCurrent();
         actions.Children.Add(copy);
-        var manage = new Button { Content = "Gerenciar" };
-        manage.Click += (_, _) => { Hide(); _manage(); };
-        actions.Children.Add(manage);
+        var manageButton = new Button { Content = "Gerenciar" };
+        manageButton.Click += (_, _) => { Hide(); _manage(); };
+        actions.Children.Add(manageButton);
         _enable = new Button { Content = "Ativar histórico", Margin = new Thickness(8, 0, 0, 0) };
         _enable.Click += (_, _) => { enable(); Refresh(); };
         actions.Children.Add(_enable);
