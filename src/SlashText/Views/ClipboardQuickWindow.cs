@@ -20,6 +20,8 @@ public sealed class ClipboardQuickWindow : Window
     private readonly TextBlock _hint;
     private readonly Button _enable;
     private readonly TextBlock _subtitle;
+    private readonly ComboBox _categoryFilter;
+    private bool _refreshingCategories;
 
     public ClipboardQuickWindow(ClipboardHistoryService history,
         Action<ClipboardHistoryItem> choose, Action manage, Action enable)
@@ -28,7 +30,7 @@ public sealed class ClipboardQuickWindow : Window
         _choose = choose;
         _manage = manage;
         Width = 480;
-        Height = 510;
+        Height = 550;
         MinWidth = 400;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
@@ -73,8 +75,20 @@ public sealed class ClipboardQuickWindow : Window
             if (e.Key == Key.Down && _list is { } list) { list.Focus(); if (list.Items.Count > 0) list.SelectedIndex = 0; e.Handled = true; }
             if (e.Key == Key.Enter) { SelectCurrent(); e.Handled = true; }
         };
-        Grid.SetRow(_search, 1);
-        grid.Children.Add(_search);
+        var filterRow = new Grid();
+        filterRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        filterRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+        Grid.SetColumn(_search, 0);
+        filterRow.Children.Add(_search);
+        _categoryFilter = new ComboBox { Height = 38, Margin = new Thickness(8, 0, 0, 12) };
+        _categoryFilter.SelectionChanged += (_, _) =>
+        {
+            if (!_refreshingCategories) Refresh();
+        };
+        Grid.SetColumn(_categoryFilter, 1);
+        filterRow.Children.Add(_categoryFilter);
+        Grid.SetRow(filterRow, 1);
+        grid.Children.Add(filterRow);
 
         _list = new ListBox
         {
@@ -106,6 +120,30 @@ public sealed class ClipboardQuickWindow : Window
         _enable.Click += (_, _) => { enable(); Refresh(); };
         actions.Children.Add(_enable);
         footer.Children.Add(actions);
+        var clean = new Button
+        {
+            Content = "Limpar tudo, exceto favoritos",
+            ToolTip = "Itens sem estrela serão apagados, mesmo que estejam apenas fixados.",
+            Margin = new Thickness(0, 8, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        clean.Click += async (_, _) =>
+        {
+            var count = _history.Items.Count(i => !i.IsFavorite);
+            if (count == 0) return;
+            if (MessageBox.Show(this,
+                    $"Apagar definitivamente {count} item(ns) sem estrela? Somente favoritos serão mantidos.",
+                    "Limpar não favoritos", MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+            try { await _history.ClearNonFavoritesAsync(); Refresh(); }
+            catch (Exception)
+            {
+                MessageBox.Show(this,
+                    "Não foi possível limpar o histórico. Os dados foram mantidos.",
+                    "SlashGuedes", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        footer.Children.Add(clean);
         Grid.SetRow(footer, 3);
         grid.Children.Add(footer);
 
@@ -131,14 +169,32 @@ public sealed class ClipboardQuickWindow : Window
 
     public void Refresh()
     {
-        if (_list is null || _search is null) return;
+        if (_list is null || _search is null || _categoryFilter is null) return;
+        var chosenCategory = _categoryFilter.SelectedItem as string ?? "";
+        var categories = new[] { "Todas as categorias" }
+            .Concat(_history.Categories).ToArray();
+        if (!_categoryFilter.Items.OfType<string>().SequenceEqual(categories))
+        {
+            _refreshingCategories = true;
+            try
+            {
+                _categoryFilter.ItemsSource = categories;
+                _categoryFilter.SelectedItem = categories.FirstOrDefault(c =>
+                    c.Equals(chosenCategory, StringComparison.OrdinalIgnoreCase))
+                    ?? categories[0];
+            }
+            finally { _refreshingCategories = false; }
+        }
+        var filterCategory = _categoryFilter.SelectedItem as string ?? "Todas as categorias";
         var query = _search.Text.Trim();
         var selectedId = (_list.SelectedItem as ListBoxItem)?.Tag is ClipboardHistoryItem active
             ? active.Id : null;
         var candidates = _history.Items
-            .Where(i => string.IsNullOrEmpty(query) ||
-                        i.Summary.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
-                        i.Category.Contains(query, StringComparison.CurrentCultureIgnoreCase))
+            .Where(i => (filterCategory == "Todas as categorias" ||
+                         i.Category.Equals(filterCategory, StringComparison.OrdinalIgnoreCase)) &&
+                        (string.IsNullOrEmpty(query) ||
+                         i.Summary.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
+                         i.Category.Contains(query, StringComparison.CurrentCultureIgnoreCase)))
             .OrderByDescending(i => i.IsFavorite || i.IsPinned)
             .ThenByDescending(i => i.CopiedUtc)
             .Take(70)
