@@ -107,7 +107,7 @@ public static class ClipboardPasteService
     private struct MouseData
     {
         public int X, Y;
-        public uint MouseData, Flags, Time;
+        public uint WheelData, Flags, Time;
         public UIntPtr ExtraInfo;
     }
     [StructLayout(LayoutKind.Sequential)]
