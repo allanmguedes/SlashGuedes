@@ -13,6 +13,10 @@
     <ApplicationIcon>Assets\SlashDesk.ico</ApplicationIcon>
     <AssemblyName>SlashDesk</AssemblyName>
     <AssemblyName Condition="'$(SlashGuedesBuild)' == 'true'">SlashGuedes</AssemblyName>
+    <Version Condition="'$(SlashGuedesBuild)' == 'true' and '$(SlashGuedesVersion)' != ''">$(SlashGuedesVersion)</Version>
+    <AssemblyVersion Condition="'$(SlashGuedesBuild)' == 'true'">3.2.1.0</AssemblyVersion>
+    <FileVersion Condition="'$(SlashGuedesBuild)' == 'true'">3.2.1.0</FileVersion>
+    <InformationalVersion Condition="'$(SlashGuedesBuild)' == 'true' and '$(SlashGuedesVersion)' != ''">$(SlashGuedesVersion)</InformationalVersion>
     <RootNamespace>SlashText</RootNamespace>
     <Version>3.2.0</Version>
     <AssemblyVersion>3.2.0.0</AssemblyVersion>
