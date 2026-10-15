@@ -747,8 +747,39 @@ public partial class MainWindow : Window
         if (ShortcutEditorPanel.IsLoaded) LabMotion.PlayEntrance(ShortcutEditorPanel);
     }
 
-    private void NewSnippet_OnClick(object sender, RoutedEventArgs e) =>
-        BeginNewSnippet();
+    private async void NewSnippet_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!AppPaths.IsSlashGuedes)
+        {
+            BeginNewSnippet();
+            return;
+        }
+        if (!EnsureSnippetStorageAvailable() || !CanDiscardShortcutDraft()) return;
+
+        var wizard = new ShortcutCreationWizardWindow(_snippets.Select(item => item.Trigger))
+        {
+            Owner = this
+        };
+        LabMotion.SetReduced(wizard, LabMotion.GetReduced(this));
+        if (wizard.ShowDialog() != true) return;
+
+        BeginNewSnippet(discardAlreadyConfirmed: true);
+        if (wizard.UseAdvancedEditor)
+        {
+            StatusText.Text = "Editor avançado aberto. Configure e salve seu atalho.";
+            return;
+        }
+        if (wizard.CreatedSnippet is not { } result) return;
+        NameBox.Text = result.Name;
+        TriggerBox.Text = result.Trigger;
+        SelectShortcutCategory(result.Category);
+        FormatBox.SelectedIndex = 0;
+        RichTextMarkdownConverter.Load(ContentEditor, result.Content, SnippetFormat.Plain);
+        RefreshShortcutDraftState();
+        UpdatePreview();
+        if (!await TrySaveShortcutAsync())
+            StatusText.Text = "Não foi possível salvar pelo assistente. Seu rascunho permanece no editor.";
+    }
 
     private void BeginNewSnippet(bool discardAlreadyConfirmed = false)
     {
