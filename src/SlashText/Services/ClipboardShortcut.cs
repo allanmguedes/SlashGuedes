@@ -99,7 +99,9 @@ public static class ClipboardShortcut
             name = "F" + (vk - 0x70 + 1);
         else if (vk is >= 0x60 and <= 0x69)
             name = "Num" + (vk - 0x60);
-        else if (!NamedKeys.TryGetValue(vk, out name!))
+        else if (NamedKeys.TryGetValue(vk, out var named))
+            name = named;
+        else
             name = "VK_" + vk.ToString("X2", CultureInfo.InvariantCulture);
         return true;
     }
