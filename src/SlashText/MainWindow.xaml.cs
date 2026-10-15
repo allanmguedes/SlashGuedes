@@ -134,6 +134,11 @@ public partial class MainWindow : Window
     {
         _updateService = updateService ?? new UpdateService();
         InitializeComponent();
+        if (AppPaths.IsSlashGuedes)
+        {
+            Title = "SlashGuedes";
+            AppTitleBarText.Text = "SlashGuedes";
+        }
         CategoryBox.ItemsSource = ShortcutCategories.All;
         SelectShortcutCategory("Geral");
         InitializeShortcutFormatting();
@@ -2020,6 +2025,63 @@ public partial class MainWindow : Window
 
     private static string DisplayShortcut(string value) =>
         value.Replace("+", " + ", StringComparison.Ordinal);
+
+    private bool _inlineCaptureShortcutSaving;
+
+    // The shortcut fields on the capture action cards now behave like those in
+    // the original SlashDesk: click, press the key combination, then save.
+    private async void CaptureInlineShortcut_OnLostFocus(
+        object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e)
+    {
+        if (!_initialized || _inlineCaptureShortcutSaving || _settingsStore.IsProtected) return;
+        var shortcuts = new[]
+        {
+            CaptureMonitorShortcutBox.Text.Trim(),
+            CaptureRegionShortcutBox.Text.Trim(),
+            CaptureWindowShortcutBox.Text.Trim(),
+            CaptureScrollingShortcutBox.Text.Trim()
+        };
+        var previous = new[]
+        {
+            _settings.Capture.ActiveMonitorShortcut,
+            _settings.Capture.RegionShortcut,
+            _settings.Capture.WindowShortcut,
+            _settings.Capture.ScrollingShortcut
+        };
+        if (shortcuts.SequenceEqual(previous, StringComparer.OrdinalIgnoreCase)) return;
+        if (shortcuts.Any(value => !GlobalCaptureShortcutService.IsValid(value)) ||
+            shortcuts.Distinct(StringComparer.OrdinalIgnoreCase).Count() != shortcuts.Length)
+        {
+            CaptureShortcutStatusText.Text =
+                "Atalho inválido ou repetido. A combinação anterior foi preservada.";
+            LoadCaptureSettings();
+            return;
+        }
+        _inlineCaptureShortcutSaving = true;
+        try
+        {
+            _settings.Capture.ActiveMonitorShortcut = shortcuts[0];
+            _settings.Capture.RegionShortcut = shortcuts[1];
+            _settings.Capture.WindowShortcut = shortcuts[2];
+            _settings.Capture.ScrollingShortcut = shortcuts[3];
+            await SavePreferencesAsync();
+            ConfigureCaptureShortcuts();
+            LoadCaptureSettings();
+            StatusText.Text = "Atalhos de captura salvos. Teste a nova combinação fora do SlashGuedes.";
+        }
+        catch (Exception error)
+        {
+            _settings.Capture.ActiveMonitorShortcut = previous[0];
+            _settings.Capture.RegionShortcut = previous[1];
+            _settings.Capture.WindowShortcut = previous[2];
+            _settings.Capture.ScrollingShortcut = previous[3];
+            LoadCaptureSettings();
+            CaptureShortcutStatusText.Text =
+                "Não foi possível salvar os atalhos. A configuração anterior foi mantida.";
+            AppDiagnosticLog.WriteException("startup.module.failed", error);
+        }
+        finally { _inlineCaptureShortcutSaving = false; }
+    }
 
     private void BrowseCaptureDestination_OnClick(object sender, RoutedEventArgs e)
     {
