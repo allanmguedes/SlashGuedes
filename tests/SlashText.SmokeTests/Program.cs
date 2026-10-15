@@ -8,7 +8,9 @@ using ScreenRecorderLib;
 
 if (args.Length == 1 && args[0] == "--guedes-clipboard-checks")
 {
-    ClipboardGuedesChecks.Run(); return;
+    ClipboardGuedesChecks.Run();
+    await SlashGuedesUpdateChecks.RunAsync();
+    return;
 }
 
 if (args.Length == 2 && args[0] == "--snippet-batch-smoke")
