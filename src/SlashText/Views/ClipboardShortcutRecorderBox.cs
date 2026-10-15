@@ -5,19 +5,20 @@ using SlashText.Services;
 namespace SlashText.Views;
 
 /// <summary>
-/// Captures a hotkey without triggering a save during keyboard input.
-/// Only accepts combinations supported by ClipboardShortcut.
+/// Records a real keyboard combination, including OEM keys on ABNT2.
+/// A Ctrl, Alt or Win modifier is mandatory; Shift is optional.
+/// The name is normalized to Win32 virtual-key codes before persistence.
 /// </summary>
 public sealed class ClipboardShortcutRecorderBox : TextBox
 {
-    private const string Prompt = "Pressione sua combinação...";
+    private const string Prompt = "Pressione Ctrl, Alt ou Win + uma tecla";
     private string _original = ClipboardShortcut.Default;
 
     public ClipboardShortcutRecorderBox()
     {
         IsReadOnly = true;
         Cursor = Cursors.Hand;
-        ToolTip = "Clique e pressione, por exemplo, Ctrl + Alt + V. Depois clique em Salvar atalho.";
+        ToolTip = "Clique e pressione sua combinação: Ctrl, Alt ou Win + qualquer tecla. Shift é opcional. Depois clique em Salvar.";
         GotKeyboardFocus += (_, _) =>
         {
             _original = Text;
@@ -35,41 +36,42 @@ public sealed class ClipboardShortcutRecorderBox : TextBox
     private void CaptureKeys(object sender, KeyEventArgs e)
     {
         e.Handled = true;
-        var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        if (key == Key.Escape)
+        var key = e.Key switch
         {
-            Text = _original;
-            Keyboard.ClearFocus();
-            return;
-        }
-        if (key is Key.Back or Key.Delete)
-        {
-            Text = _original;
-            Keyboard.ClearFocus();
-            return;
-        }
-        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or
-            Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
-            return;
+            Key.System => e.SystemKey,
+            Key.ImeProcessed => e.ImeProcessedKey,
+            Key.DeadCharProcessed => e.DeadCharProcessedKey,
+            _ => e.Key
+        };
 
         var flags = Keyboard.Modifiers;
         var names = new List<string>(4);
-        if (Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin)) names.Add("Win");
+        if (Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin))
+            names.Add("Win");
         if (flags.HasFlag(ModifierKeys.Control)) names.Add("Ctrl");
         if (flags.HasFlag(ModifierKeys.Alt)) names.Add("Alt");
         if (flags.HasFlag(ModifierKeys.Shift)) names.Add("Shift");
 
-        var vk = KeyInterop.VirtualKeyFromKey(key);
-        var name = vk switch
+        var hasRequiredModifier = names.Any(s => s is "Ctrl" or "Alt" or "Win");
+        if (key == Key.Escape && !hasRequiredModifier)
         {
-            >= 0x41 and <= 0x5A => ((char)vk).ToString(),
-            >= 0x30 and <= 0x39 => ((char)vk).ToString(),
-            >= 0x60 and <= 0x69 => (vk - 0x60).ToString(),
-            >= 0x70 and <= 0x7B => "F" + (vk - 0x70 + 1),
-            _ => string.Empty
-        };
-        if (names.Count < 2 || string.IsNullOrEmpty(name)) return;
-        var value = string.Join("+", names.Append(name));
+            Text = _original;
+            Keyboard.ClearFocus();
+            return;
+        }
+        if (!hasRequiredModifier)
+        {
+            // A regular letter / Shift+letter never replaces the shortcut.
+            return;
+        }
+
+        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or
+            Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
+            return;
+
+        var vk = (uint)KeyInterop.VirtualKeyFromKey(key);
+        if (!ClipboardShortcut.TryDescribeKey(vk, out var keyName)) return;
+        var value = string.Join("+", names.Append(keyName));
         if (!ClipboardShortcut.TryParse(value, out var normalized, out _, out _))
             return;
         Text = normalized;
