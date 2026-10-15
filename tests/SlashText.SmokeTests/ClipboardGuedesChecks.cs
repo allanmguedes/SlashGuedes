@@ -75,7 +75,14 @@ internal static class ClipboardGuedesChecks
             ClipboardCategoryRules.ValidateNew(new string('X', 51), normalized)),
             "categoria com mais de 50 caracteres rejeitada");
 
-        Console.WriteLine("SlashGuedes clipboard: retenção, favoritos, fixados e teclas OK.");
+        Require(!ClipboardPasteService.IsExternalTarget(IntPtr.Zero),
+            "não enviar colagem quando não existe uma janela de destino");
+        Require(ClipboardPasteService.TryPasteAsync(IntPtr.Zero).GetAwaiter().GetResult()
+                == ClipboardPasteService.Result.NoExternalTarget,
+            "não deve enviar Ctrl+V sem destino válido");
+        Require(new AppSettings().ClipboardAutoPasteEnabled,
+            "novas instalações ativam colagem com fallback seguro");
+        Console.WriteLine("SlashGuedes clipboard: retenção, categorias, pop-up e colagem segura OK.");
     }
 
     private static bool Throws<T>(Action callback) where T : Exception
