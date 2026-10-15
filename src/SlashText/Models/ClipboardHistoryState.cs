@@ -13,6 +13,7 @@ public sealed class ClipboardHistoryItem
     public string Kind { get; set; } = "text";
     public string Text { get; set; } = string.Empty;
     public string ImageFile { get; set; } = string.Empty;
+    public string Fingerprint { get; set; } = string.Empty;
     public bool IsPinned { get; set; }
     public bool IsFavorite { get; set; }
     public string Category { get; set; } = string.Empty;

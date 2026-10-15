@@ -1463,6 +1463,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <Grid Margin="6,4,6,18">
@@ -1484,7 +1485,7 @@
                                         Style="{StaticResource Lab.Button}" Content="Ativar histórico" Margin="0,0,8,0"/>
                                 <Button x:Name="ClipboardQuickWindowButton" Click="ClipboardOpenQuick_OnClick"
                                         Style="{StaticResource Lab.Button}" Content="Abrir painel rápido" Margin="0,0,8,0"/>
-                                <Button Click="ClipboardClear_OnClick" Style="{StaticResource Lab.Button}" Content="Limpar tudo"/>
+                                <Button Click="ClipboardClear_OnClick" Style="{StaticResource Lab.Button}" Content="Limpar recentes"/>
                             </StackPanel>
                         </Grid>
                         <Grid Grid.Row="1" Margin="6,0,6,14">
@@ -1506,7 +1507,49 @@
                                 <ComboBoxItem Content="Imagens" Tag="image"/>
                             </ComboBox>
                         </Grid>
-                        <Grid Grid.Row="2">
+                        <Border Grid.Row="2" Margin="6,0,6,15" Padding="12,10"
+                                Background="{DynamicResource Lab.surface}"
+                                BorderBrush="{DynamicResource Lab.line}"
+                                BorderThickness="1" CornerRadius="10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="24"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Manter recentes" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource Lab.text}"
+                                           Margin="0,0,10,0"/>
+                                <ComboBox Grid.Column="1" x:Name="ClipboardRetentionBox"
+                                          Height="34" SelectionChanged="ClipboardRetention_OnChanged">
+                                    <ComboBoxItem Tag="10" Content="10 itens"/>
+                                    <ComboBoxItem Tag="25" Content="25 itens"/>
+                                    <ComboBoxItem Tag="50" Content="50 itens"/>
+                                    <ComboBoxItem Tag="100" Content="100 itens"/>
+                                    <ComboBoxItem Tag="150" Content="150 itens"/>
+                                    <ComboBoxItem Tag="200" Content="200 itens"/>
+                                    <ComboBoxItem Tag="500" Content="500 itens"/>
+                                </ComboBox>
+                                <TextBlock Grid.Column="3" Text="Atalho do pop-up" VerticalAlignment="Center"
+                                           Margin="0,0,10,0" Foreground="{DynamicResource Lab.text}"/>
+                                <TextBox x:Name="ClipboardShortcutBox" Grid.Column="4"
+                                         Text="Win+Shift+V" Height="34"
+                                         VerticalContentAlignment="Center"
+                                         ToolTip="Exemplos: Win+Shift+V, Ctrl+Alt+V, Ctrl+Shift+H"/>
+                                <Button Grid.Column="5" Margin="8,0,0,0"
+                                        Click="ClipboardShortcutSave_OnClick"
+                                        Content="Salvar atalho"/>
+                                <TextBlock x:Name="ClipboardShortcutHint" Grid.Column="6"
+                                           Margin="10,0,0,0" FontSize="11" TextWrapping="Wrap"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource Lab.muted}"/>
+                            </Grid>
+                        </Border>
+                        <Grid Grid.Row="3">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="1.1*"/>
                                 <ColumnDefinition Width="16"/>

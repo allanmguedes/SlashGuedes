@@ -24,7 +24,8 @@ public sealed class AppSettings
     public List<string> QuickAccentCharacterSets { get; set; } = ["PortugueseBrazil"];
     public CaptureSettings Capture { get; set; } = new();
     public bool ClipboardMonitoringEnabled { get; set; }
-    public int ClipboardMaxEntries { get; set; } = 150;
+    public int ClipboardMaxEntries { get; set; } = 25;
+    public string ClipboardShortcut { get; set; } = "Win+Shift+V";
 }
 
 public sealed class CaptureSettings

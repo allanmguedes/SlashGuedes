@@ -11,6 +11,7 @@ public partial class MainWindow
     private readonly ClipboardHistoryService _clipboardHistory = new();
     private ClipboardQuickWindow? _clipboardQuickWindow;
     private bool _clipboardReady;
+    private bool _suppressClipboardOptions;
 
     private void InitializeClipboard()
     {
@@ -22,12 +23,29 @@ public partial class MainWindow
 
     private async Task StartClipboardAsync()
     {
-        await _clipboardHistory.LoadAsync();
-        _clipboardHistory.Attach(this);
-        _clipboardHistory.MaxEntries = Math.Clamp(_settings.ClipboardMaxEntries, 10, 500);
+        var recentLimit = ClipboardRetentionPolicy.NormalizeLimit(_settings.ClipboardMaxEntries);
+        await _clipboardHistory.LoadAsync(recentLimit);
+        _clipboardHistory.Attach(this, _settings.ClipboardShortcut, out var hotkeyWarning);
         if (_settings.ClipboardMonitoringEnabled)
             _clipboardHistory.SetEnabled(true);
         _clipboardReady = true;
+        _suppressClipboardOptions = true;
+        try
+        {
+            foreach (var option in ClipboardRetentionBox.Items.OfType<ComboBoxItem>())
+            {
+                if (int.TryParse(option.Tag as string, out var count) && count == recentLimit)
+                {
+                    ClipboardRetentionBox.SelectedItem = option;
+                    break;
+                }
+            }
+            ClipboardShortcutBox.Text = _clipboardHistory.Shortcut;
+        }
+        finally { _suppressClipboardOptions = false; }
+        ClipboardShortcutHint.Text = hotkeyWarning is null
+            ? "O atalho abre o painel mesmo com o histórico pausado."
+            : "Atalho não registrado: " + hotkeyWarning;
         RefreshClipboardView();
     }
 
@@ -62,9 +80,11 @@ public partial class MainWindow
         ClipboardItemsList.SelectedItem =
             list.FirstOrDefault(item => item.Id == selectedId) ?? list.FirstOrDefault();
 
+        var protectedItems = _clipboardHistory.Items.Count(item => item.IsFavorite || item.IsPinned);
+        var recentCount = _clipboardHistory.Items.Count - protectedItems;
         ClipboardStatusText.Text = _clipboardHistory.Enabled
-            ? $"Histórico ativo · {_clipboardHistory.Items.Count} itens · Win + Shift + V"
-            : "Histórico pausado · novas cópias não serão salvas";
+            ? $"Histórico ativo · {recentCount}/{_clipboardHistory.MaxEntries} recentes · {protectedItems} protegidos · {_clipboardHistory.Shortcut}"
+            : $"Histórico pausado · {recentCount} recentes · {protectedItems} protegidos";
         ClipboardToggleButton.Content = _clipboardHistory.Enabled ? "Pausar histórico" : "Ativar histórico";
         ClipboardQuickWindowButton.IsEnabled = _clipboardReady;
         ClipboardSelected_OnChanged(null!, null!);
@@ -102,6 +122,52 @@ public partial class MainWindow
         _settings.ClipboardMonitoringEnabled = enabled;
         try { await SavePreferencesAsync(); }
         catch (Exception error) { StatusText.Text = "Histórico alterado nesta sessão, mas não salvo: " + error.Message; }
+        RefreshClipboardView();
+    }
+
+    private async void ClipboardRetention_OnChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_clipboardReady || _suppressClipboardOptions ||
+            ClipboardRetentionBox.SelectedItem is not ComboBoxItem option ||
+            !int.TryParse(option.Tag as string, out var next)) return;
+        var previous = _settings.ClipboardMaxEntries;
+        try
+        {
+            await _clipboardHistory.SetMaxEntriesAsync(next);
+            _settings.ClipboardMaxEntries = next;
+            await SavePreferencesAsync();
+            StatusText.Text = $"Histórico limitado aos últimos {next} itens comuns. Favoritos e fixados são permanentes.";
+        }
+        catch (Exception error)
+        {
+            _settings.ClipboardMaxEntries = previous;
+            StatusText.Text = "Não foi possível salvar o limite: " + error.Message;
+        }
+        RefreshClipboardView();
+    }
+
+    private async void ClipboardShortcutSave_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!_clipboardReady) return;
+        var previous = _clipboardHistory.Shortcut;
+        if (!_clipboardHistory.TrySetShortcut(ClipboardShortcutBox.Text, out var error))
+        {
+            ClipboardShortcutHint.Text = error;
+            return;
+        }
+        try
+        {
+            _settings.ClipboardShortcut = _clipboardHistory.Shortcut;
+            await SavePreferencesAsync();
+            ClipboardShortcutBox.Text = _clipboardHistory.Shortcut;
+            ClipboardShortcutHint.Text = "Atalho salvo e funcionando: " + _clipboardHistory.Shortcut;
+        }
+        catch (Exception exception)
+        {
+            _clipboardHistory.TrySetShortcut(previous, out _);
+            ClipboardShortcutBox.Text = previous;
+            ClipboardShortcutHint.Text = "Não foi possível salvar o atalho: " + exception.Message;
+        }
         RefreshClipboardView();
     }
 
@@ -163,10 +229,10 @@ public partial class MainWindow
 
     private async void ClipboardClear_OnClick(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show("Excluir permanentemente todos os itens do histórico (incluindo favoritos)?",
-                "Limpar área de transferência do SlashGuedes", MessageBoxButton.YesNo,
-                MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
-        await _clipboardHistory.ClearAsync();
+        if (MessageBox.Show("Excluir os itens recentes? Favoritos e fixados serão mantidos.",
+                "Limpar histórico recente", MessageBoxButton.YesNo,
+                MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        await _clipboardHistory.ClearRecentsAsync();
     }
 
     private void DisposeClipboard()
