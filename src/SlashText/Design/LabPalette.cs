@@ -11,7 +11,7 @@ public static class LabPalette
     {
         var source = new ResourceDictionary
         {
-            Source = new Uri($"/SlashDesk;component/Styles/VisualLab/{(dark ? "Black" : "Light")}.xaml", UriKind.Relative)
+            Source = new Uri($"/{typeof(LabPalette).Assembly.GetName().Name};component/Styles/VisualLab/{(dark ? "Black" : "Light")}.xaml", UriKind.Relative)
         };
         foreach (string key in source.Keys)
         {
