@@ -4177,8 +4177,39 @@ public partial class MainWindow : Window
         }
     }
 
+    private bool _updateShutdownPreapproved;
+
+    private bool CanPrepareForUpdate()
+    {
+        if (_settingsOperationInProgress || _shortcutOperationInProgress ||
+            _recordingExitPending || _restoreRecoveryBlocked)
+        {
+            StatusText.Text = "Termine as operações em andamento antes de atualizar.";
+            return false;
+        }
+
+        // Ask *before* download; otherwise a pending shortcut draft can
+        // prevent Close() after the updater helper has already started.
+        if (!CanDiscardShortcutDraft())
+        {
+            StatusText.Text = "Atualização adiada: salve seu atalho e tente novamente.";
+            return false;
+        }
+
+        if (CaptureInlineEditor.HasUnsavedChanges &&
+            ShowAppDialog("Há alterações de imagem não salvas. Descartar para atualizar?",
+                "Antes de atualizar", MessageBoxButton.YesNo,
+                MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
+        {
+            StatusText.Text = "Atualização adiada: salve sua edição de imagem primeiro.";
+            return false;
+        }
+        return true;
+    }
+
     private async Task DownloadAndApplyUpdateAsync(ReleaseInfo release)
     {
+        if (!CanPrepareForUpdate()) return;
         using var lease = TryReserveCaptureCommand();
         if (lease is null) return;
         var progressWindow = new UpdateProgressWindow { Owner = this };
@@ -4197,18 +4228,31 @@ public partial class MainWindow : Window
                 0,
                 null,
                 IsApplying: true));
+            // The user has approved discarding drafts before the download.
+            // Apply the same decision at shutdown instead of asking again
+            // after the new helper process has been launched.
+            if (_settingsOperationInProgress || _recordingExitPending ||
+                _shortcutOperationInProgress)
+                throw new InvalidOperationException(
+                    "Uma operação foi iniciada durante o download. Atualização adiada.");
+            _updateShutdownPreapproved = true;
             PortableUpdateService.LaunchHelper(prepared);
             progressWindow.AllowClose();
             _exitRequested = true;
             Close();
+            if (IsVisible)
+                throw new InvalidOperationException(
+                    "A janela não conseguiu encerrar para concluir a atualização.");
         }
         catch (OperationCanceledException)
         {
+            _updateShutdownPreapproved = false;
             progressWindow.AllowClose();
             StatusText.Text = UiText.Get("Atualização cancelada; nenhum arquivo do aplicativo foi alterado");
         }
         catch (Exception exception)
         {
+            _updateShutdownPreapproved = false;
             progressWindow.AllowClose();
             AppDiagnosticLog.WriteException("update.prepare.failed", exception);
             ShowAppDialog(
@@ -4456,9 +4500,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!CanDiscardShortcutDraft()) { e.Cancel = true; _exitRequested = false; return; }
+        if (!_updateShutdownPreapproved && !CanDiscardShortcutDraft())
+        { e.Cancel = true; _exitRequested = false; return; }
         _activeUpdateCancellation?.Cancel();
-        if (CaptureInlineEditor.HasUnsavedChanges && ShowAppDialog(UiText.Get("Há alterações de imagem não salvas. Sair sem salvar?"), UiText.Get("Editor de imagem"),
+        if (!_updateShutdownPreapproved && CaptureInlineEditor.HasUnsavedChanges && ShowAppDialog(UiText.Get("Há alterações de imagem não salvas. Sair sem salvar?"), UiText.Get("Editor de imagem"),
                 MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
         { e.Cancel = true; _exitRequested = false; return; }
         if (_recordingOperation is { Phase: RecordingOperationPhase.Preparing } operation)
