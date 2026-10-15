@@ -12,6 +12,7 @@ public partial class MainWindow
     private ClipboardQuickWindow? _clipboardQuickWindow;
     private bool _clipboardReady;
     private bool _suppressClipboardOptions;
+    private bool _refreshingClipboardCategories;
 
     private void InitializeClipboard()
     {
@@ -80,6 +81,7 @@ public partial class MainWindow
         if (ClipboardItemsList is null || ClipboardStatusText is null) return;
         var selectedId = (ClipboardItemsList.SelectedItem as ClipboardHistoryItem)?.Id;
         var query = ClipboardSearchBox?.Text?.Trim() ?? string.Empty;
+        RefreshClipboardCategories();
         var filter = (ClipboardFilterBox?.SelectedItem as ComboBoxItem)?.Tag as string ?? "all";
         var list = _clipboardHistory.Items
             .Where(item =>
@@ -88,7 +90,10 @@ public partial class MainWindow
                 (filter == "all" || filter == "favorite" && item.IsFavorite ||
                  filter == "pinned" && item.IsPinned ||
                  filter == "text" && item.Kind == "text" ||
-                 filter == "image" && item.Kind == "image"))
+                 filter == "image" && item.Kind == "image" ||
+                 filter.StartsWith("category:", StringComparison.Ordinal) &&
+                 item.Category.Equals(filter["category:".Length..],
+                     StringComparison.OrdinalIgnoreCase)))
             .ToList();
         ClipboardItemsList.ItemsSource = list;
         ClipboardItemsList.SelectedItem =
@@ -123,7 +128,10 @@ public partial class MainWindow
         ClipboardCategorySaveButton.IsEnabled = selected is not null;
         ClipboardFavoriteButton.Content = selected?.IsFavorite == true ? "★ Favorito" : "☆ Favoritar";
         ClipboardPinButton.Content = selected?.IsPinned == true ? "Desafixar" : "Fixar";
-        ClipboardCategoryBox.Text = selected?.Category ?? string.Empty;
+        ClipboardCategoryBox.SelectedItem = selected is not null &&
+            _clipboardHistory.Categories.FirstOrDefault(c =>
+                c.Equals(selected.Category, StringComparison.OrdinalIgnoreCase)) is { } selectedCategory
+            ? selectedCategory : string.Empty;
     }
 
     private async void ClipboardToggle_OnClick(object sender, RoutedEventArgs e)
@@ -267,13 +275,148 @@ public partial class MainWindow
     private async void ClipboardCategorySave_OnClick(object sender, RoutedEventArgs e)
     {
         if (ClipboardItemsList.SelectedItem is not ClipboardHistoryItem item) return;
-        await _clipboardHistory.ChangeAsync(item, category: ClipboardCategoryBox.Text);
+        var category = ClipboardCategoryBox.SelectedItem as string ?? string.Empty;
+        try
+        {
+            await _clipboardHistory.ChangeAsync(item, category: category);
+            StatusText.Text = string.IsNullOrEmpty(category)
+                ? "Item removido da categoria." : "Item movido para a categoria " + category + ".";
+        }
+        catch (Exception error)
+        {
+            StatusText.Text = "Não foi possível aplicar a categoria: " + error.Message;
+        }
     }
 
     private async void ClipboardDelete_OnClick(object sender, RoutedEventArgs e)
     {
         if (ClipboardItemsList.SelectedItem is not ClipboardHistoryItem item) return;
         await _clipboardHistory.DeleteAsync(item);
+    }
+
+    private void RefreshClipboardCategories()
+    {
+        if (_refreshingClipboardCategories || ClipboardCategoryManageBox is null ||
+            ClipboardCategoryBox is null || ClipboardFilterBox is null) return;
+        _refreshingClipboardCategories = true;
+        try
+        {
+            var categories = _clipboardHistory.Categories.ToArray();
+            var managerSelected = ClipboardCategoryManageBox.SelectedItem as string;
+            var assignmentSelected = ClipboardCategoryBox.SelectedItem as string;
+            var filterSelected = (ClipboardFilterBox.SelectedItem as ComboBoxItem)?.Tag as string ?? "all";
+
+            ClipboardCategoryManageBox.ItemsSource = categories;
+            ClipboardCategoryManageBox.SelectedItem = categories.FirstOrDefault(c =>
+                c.Equals(managerSelected, StringComparison.OrdinalIgnoreCase));
+
+            ClipboardCategoryBox.ItemsSource = new[] { string.Empty }.Concat(categories).ToArray();
+            ClipboardCategoryBox.SelectedItem = categories.FirstOrDefault(c =>
+                c.Equals(assignmentSelected, StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
+
+            var missing = ClipboardFilterBox.Items.OfType<ComboBoxItem>()
+                .Where(i => i.Tag is string tag &&
+                            tag.StartsWith("category:", StringComparison.Ordinal))
+                .ToArray();
+            foreach (var entry in missing) ClipboardFilterBox.Items.Remove(entry);
+            foreach (var category in categories)
+                ClipboardFilterBox.Items.Add(new ComboBoxItem
+                {
+                    Content = "Categoria: " + category,
+                    Tag = "category:" + category
+                });
+            ClipboardFilterBox.SelectedItem = ClipboardFilterBox.Items.OfType<ComboBoxItem>()
+                .FirstOrDefault(entry => string.Equals(entry.Tag as string,
+                    filterSelected, StringComparison.OrdinalIgnoreCase))
+                ?? ClipboardFilterBox.Items.OfType<ComboBoxItem>().FirstOrDefault();
+        }
+        finally { _refreshingClipboardCategories = false; }
+    }
+
+    private async void ClipboardCategoryCreate_OnClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var name = ClipboardNewCategoryBox.Text;
+            await _clipboardHistory.AddCategoryAsync(name);
+            ClipboardNewCategoryBox.Clear();
+            ClipboardCategoryManageBox.SelectedItem =
+                _clipboardHistory.Categories.FirstOrDefault(c =>
+                    c.Equals(name.Trim(), StringComparison.OrdinalIgnoreCase));
+            StatusText.Text = "Categoria criada com sucesso.";
+        }
+        catch (Exception error)
+        {
+            StatusText.Text = "Não foi possível criar categoria: " + error.Message;
+        }
+    }
+
+    private async void ClipboardCategoryRename_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (ClipboardCategoryManageBox.SelectedItem is not string selected)
+        {
+            StatusText.Text = "Selecione uma categoria para renomear.";
+            return;
+        }
+        try
+        {
+            var newName = ClipboardNewCategoryBox.Text.Trim();
+            await _clipboardHistory.RenameCategoryAsync(selected, newName);
+            ClipboardNewCategoryBox.Clear();
+            ClipboardCategoryManageBox.SelectedItem =
+                _clipboardHistory.Categories.FirstOrDefault(c =>
+                    c.Equals(newName, StringComparison.OrdinalIgnoreCase));
+            StatusText.Text = "Categoria renomeada. Todos os itens foram atualizados.";
+        }
+        catch (Exception error)
+        {
+            StatusText.Text = "Não foi possível renomear categoria: " + error.Message;
+        }
+    }
+
+    private async void ClipboardCategoryDelete_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (ClipboardCategoryManageBox.SelectedItem is not string selected)
+        {
+            StatusText.Text = "Selecione a categoria que deseja excluir.";
+            return;
+        }
+        if (MessageBox.Show(
+                "Excluir a categoria \"" + selected + "\"? Os itens serão mantidos sem categoria.",
+                "Excluir categoria do SlashGuedes", MessageBoxButton.YesNo,
+                MessageBoxImage.Question, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try
+        {
+            await _clipboardHistory.DeleteCategoryAsync(selected);
+            StatusText.Text = "Categoria excluída. Nenhum item foi apagado.";
+        }
+        catch (Exception error)
+        {
+            StatusText.Text = "Não foi possível excluir categoria: " + error.Message;
+        }
+    }
+
+    private async void ClipboardClearNonFavorites_OnClick(object sender, RoutedEventArgs e)
+    {
+        var total = _clipboardHistory.Items.Count(i => !i.IsFavorite);
+        if (total == 0)
+        {
+            StatusText.Text = "Não há itens sem estrela para limpar.";
+            return;
+        }
+        if (MessageBox.Show(
+                $"Excluir definitivamente {total} item(ns) sem estrela? Apenas os favoritos serão preservados; itens apenas fixados também serão excluídos.",
+                "Limpar não favoritos", MessageBoxButton.YesNo,
+                MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try
+        {
+            await _clipboardHistory.ClearNonFavoritesAsync();
+            StatusText.Text = $"{total} item(ns) não favoritos excluídos. Seus favoritos foram preservados.";
+        }
+        catch (Exception error)
+        {
+            StatusText.Text = "Não foi possível limpar histórico: " + error.Message;
+        }
     }
 
     private async void ClipboardClear_OnClick(object sender, RoutedEventArgs e)
