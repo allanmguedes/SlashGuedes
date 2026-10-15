@@ -334,9 +334,9 @@ public partial class MainWindow : Window
                 ("exceptionType", exception.GetType().FullName),
                 ("hresult", $"0x{exception.HResult:X8}"));
             MessageBox.Show(
-                UiText.Get("O SlashDesk encontrou uma falha inesperada ao preparar a interface. ") +
+                (AppPaths.IsSlashGuedes ? "O SlashGuedes encontrou uma falha inesperada ao preparar a interface. " : UiText.Get("O SlashDesk encontrou uma falha inesperada ao preparar a interface. ")) +
                 UiText.Get("Nenhum dado foi apagado. Consulte a pasta Logs para o diagnóstico."),
-                "SlashDesk",
+                AppPaths.IsSlashGuedes ? "SlashGuedes" : "SlashDesk",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
             BeginNewSnippet();
@@ -411,7 +411,7 @@ public partial class MainWindow : Window
 
         _trayIcon = new Forms.NotifyIcon
         {
-            Text = UiText.Get("SlashDesk · Monitoramento ativo"),
+            Text = AppPaths.IsSlashGuedes ? "SlashGuedes · Monitoramento ativo" : UiText.Get("SlashDesk · Monitoramento ativo"),
             Icon = icon ?? DrawingSystemIcons.Application,
             ContextMenuStrip = menu,
             Visible = true
