@@ -248,6 +248,18 @@ public partial class App : System.Windows.Application
             Shutdown(CaptureOcrService.RunWorker(e.Args));
             return;
         }
+        if (e.Args.Length > 0 && e.Args[0] == "--shortcut-list-smoke")
+        {
+            _helperMode = true; ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var output = Path.GetFullPath(e.Args.Length > 1 ? e.Args[1] : "shortcut-list-evidence");
+            base.OnStartup(e);
+            Dispatcher.BeginInvoke(new Action(async () =>
+            {
+                try { await Design.ShortcutListSmoke.RunAsync(output); Shutdown(0); }
+                catch (Exception exception) { Directory.CreateDirectory(output); File.WriteAllText(Path.Combine(output, "failure.txt"), exception.ToString()); Shutdown(1); }
+            }));
+            return;
+        }
         if (e.Args.Contains("--shortcuts-workspace-smoke", StringComparer.OrdinalIgnoreCase))
         {
             _helperMode = true; ShutdownMode = ShutdownMode.OnExplicitShutdown;

@@ -31,8 +31,10 @@ public partial class MainWindow
     { _showShortcutFavorites = false; _showShortcutPinned = true; _showMostUsed = false; RefreshNavigation(); }
     private void ShortcutActions_OnClick(object sender, RoutedEventArgs e) => ShowShortcutActions((Button)sender, _selected);
 
-    private void ShowShortcutActions(Button anchor, Snippet? snippet)
+    private void ShowShortcutActions(FrameworkElement anchor, Snippet? snippet)
     {
+        var previousFocus = Keyboard.FocusedElement;
+        var previousFocusSnippet = (previousFocus as ShortcutListItem)?.Snippet;
         var panel = new StackPanel { Margin = new Thickness(8) };
         var surface = new Border { Child = panel, Width = 248, CornerRadius = new CornerRadius(9), BorderThickness = new Thickness(1) };
         surface.SetResourceReference(Border.BackgroundProperty, "Lab.panel"); surface.SetResourceReference(Border.BorderBrushProperty, "Lab.line-strong");
@@ -53,7 +55,15 @@ public partial class MainWindow
         LabMotion.SetEntrance(surface, "Popup"); LabMotion.SetReduced(surface, LabMotion.GetReduced(this));
         surface.PreviewKeyDown += (_, args) => { if (args.Key == Key.Escape) { popup.IsOpen = false; args.Handled = true; } };
         popup.Opened += (_, _) => { LabMotion.PlayEntrance(surface); surface.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)); };
-        popup.Closed += (_, _) => anchor.Focus(); popup.IsOpen = true;
+        popup.Closed += (_, _) =>
+        {
+            if (anchor is not ShortcutListItem) { anchor.Focus(); return; }
+            if (previousFocus is UIElement { IsVisible: true, IsEnabled: true } element &&
+                PresentationSource.FromVisual(element) is not null &&
+                (element is not ShortcutListItem oldRow || ReferenceEquals(oldRow.Snippet, previousFocusSnippet))) element.Focus();
+            else SearchBox.Focus();
+        };
+        popup.IsOpen = true;
     }
 
     private static Snippet CopyShortcut(Snippet source) => new()

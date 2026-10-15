@@ -201,8 +201,8 @@
                                 <ColumnDefinition x:Name="ShortcutRightColumn" Width="280" MinWidth="240" MaxWidth="480"/>
                             </Grid.ColumnDefinitions>
                             <Grid x:Name="ShortcutSidebarPanel" Style="{StaticResource WorkspaceSidebar}" Background="{DynamicResource Lab.shell}">
-                                <Grid Margin="18">
-                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="24"/><RowDefinition Height="Auto"/><RowDefinition Height="24"/><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                                <Grid x:Name="ShortcutSidebarContent" Margin="18" SizeChanged="ShortcutSidebarContent_OnSizeChanged">
+                                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition x:Name="ShortcutSidebarSearchGap" Height="24"/><RowDefinition Height="Auto"/><RowDefinition x:Name="ShortcutSidebarCategoryGap" Height="24"/><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                                     <Grid>
                                         <TextBox x:Name="SearchBox" Style="{StaticResource Lab.Field}" Padding="32,9,28,9" TextChanged="SearchBox_OnTextChanged" ToolTip="{DynamicResource Ui.0D0E43169FAADACA}" AutomationProperties.Name="{DynamicResource Ui.02859A9360AD38AB}"/>
                                         <lab:LabIcon Kind="Search" Width="16" Height="16" Margin="11,0,0,0" HorizontalAlignment="Left" IsHitTestVisible="False" Foreground="{DynamicResource Lab.muted}"/>
@@ -212,8 +212,8 @@
                                         </Button>
                                     </Grid>
                                     <StackPanel Grid.Row="2">
-                                        <TextBlock Text="{DynamicResource Ui.3ADB5537C59AC03F}" Style="{StaticResource SidebarSectionTitle}" Foreground="{DynamicResource Lab.muted}" Margin="0,0,0,8"/>
-                                        <ScrollViewer MaxHeight="152" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="CategoriesPanel"/></ScrollViewer>
+                                        <TextBlock x:Name="ShortcutCategoryHeading" Text="{DynamicResource Ui.3ADB5537C59AC03F}" Style="{StaticResource SidebarSectionTitle}" Foreground="{DynamicResource Lab.muted}" Margin="0,0,0,8"/>
+                                        <ScrollViewer x:Name="ShortcutCategoriesScroll" MaxHeight="152" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="CategoriesPanel"/></ScrollViewer>
                                     </StackPanel>
                                     <StackPanel Grid.Row="4">
                                         <DockPanel LastChildFill="True">
@@ -227,7 +227,19 @@
                                             <Button x:Name="DisplayPinnedButton" Content="{DynamicResource Ui.EDD6DD450D3492B5}" Style="{StaticResource Lab.Shortcuts.Filter}" Margin="0,0,0,4" Click="DisplayPinned_OnClick"/>
                                         </WrapPanel>
                                     </StackPanel>
-                                    <ScrollViewer Grid.Row="6" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel x:Name="SnippetListPanel"/></ScrollViewer>
+                                    <Grid Grid.Row="6">
+                                        <lab:ShortcutListBox x:Name="SnippetListPanel" Style="{StaticResource Lab.Shortcuts.List}"
+                                            AutomationProperties.Name="{DynamicResource Ui.1ACE550668D5985D}"
+                                            ItemContainerStyle="{StaticResource Lab.Shortcuts.ListItem}"
+                                            SelectionChanged="ShortcutList_OnSelectionChanged"
+                                            PreviewMouseLeftButtonDown="ShortcutList_OnPreviewMouseLeftButtonDown"
+                                            PreviewMouseRightButtonUp="ShortcutList_OnPreviewMouseRightButtonUp"
+                                            PreviewKeyDown="ShortcutList_OnPreviewKeyDown"/>
+                                        <StackPanel x:Name="ShortcutListEmptyPanel" Margin="4,12,4,0" Visibility="Collapsed">
+                                            <TextBlock x:Name="ShortcutListEmptyHint" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,12" Foreground="{DynamicResource Lab.muted}"/>
+                                            <Button x:Name="ShortcutListEmptyAction" Style="{StaticResource Lab.Button}" Click="ShortcutListEmpty_OnClick"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </Grid>
                             </Grid>
                             <GridSplitter x:Name="ShortcutLeftDivider" Grid.Column="1" Style="{StaticResource WorkspaceColumnSplitter}" ResizeBehavior="PreviousAndNext" AutomationProperties.Name="{DynamicResource Ui.3FA1523D1188C39B}" ToolTip="{DynamicResource Ui.AA73F57279C9202A}" PreviewKeyDown="ShortcutSplitter_OnPreviewKeyDown" MouseDoubleClick="ShortcutSplitter_OnMouseDoubleClick" DragStarted="ShortcutSplitter_OnDragStarted" DragCompleted="ShortcutSplitter_OnDragCompleted"/>

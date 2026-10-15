@@ -18,7 +18,7 @@ internal static class ShortcutCodeBlockView
 {
     private const string Prefix = "SlashDesk.Code:";
     private sealed record State(string Language, string Code, bool Editable);
-    private sealed class Attached { internal string? Theme; internal Action<Border>? Edit; }
+    private sealed class Attached { internal string? Theme; internal Action<Border>? Edit; internal Action<string>? CopyForEvidence; }
     private static readonly ConditionalWeakTable<Border, Attached> Attachments = new();
     internal static readonly RoutedEvent EditRequestedEvent = EventManager.RegisterRoutedEvent("ShortcutCodeEditRequested", RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(Border));
 
@@ -87,6 +87,12 @@ internal static class ShortcutCodeBlockView
     {
         var state = Read(border); content = state is null ? new CodeBlockContent("text", "") : new CodeBlockContent(state.Language, state.Code); return state is not null;
     }
+    internal static void SetCopySinkForEvidence(Border border, Action<string> copy)
+    {
+        Attach(border);
+        if (!Attachments.TryGetValue(border, out var attached)) throw new InvalidOperationException("Code view is not attached.");
+        attached.CopyForEvidence = copy;
+    }
     private static State? Read(Border border) => ReadTag(border.Tag);
     private static State? ReadTag(object? value)
     {
@@ -101,7 +107,11 @@ internal static class ShortcutCodeBlockView
         ((Button)Find(border, "CodeCollapse")!).Click += (_, _) => SetExpanded(border, ((ScrollViewer)Find(border, "CodeScroll")!).Visibility != Visibility.Visible);
         ((Button)Find(border, "CodeCopy")!).Click += (_, _) =>
         {
-            try { Clipboard.SetText(state.Code); ((Button)Find(border, "CodeCopy")!).ToolTip = UiText.Get("Código copiado"); }
+            try
+            {
+                if (attached.CopyForEvidence is { } copy) copy(state.Code); else Clipboard.SetText(state.Code);
+                ((Button)Find(border, "CodeCopy")!).ToolTip = UiText.Get("Código copiado");
+            }
             catch (System.Runtime.InteropServices.ExternalException) { ((Button)Find(border, "CodeCopy")!).ToolTip = UiText.Get("Tente copiar novamente"); }
         };
         ((Button)Find(border, "CodeEdit")!).Click += (_, _) => { if (!state.Editable) return;

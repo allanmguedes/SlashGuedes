@@ -632,24 +632,7 @@ public partial class MainWindow : Window
             CategoriesPanel.Children.Add(CreateCategoryButton(category.Name, category.DisplayName, count));
         }
 
-        SnippetListPanel.Children.Clear();
-        if (visible.Count == 0)
-        {
-            var empty = new StackPanel { Margin = new Thickness(4, 12, 4, 0) };
-            var hint = new TextBlock { Text = _snippets.Count == 0 ? UiText.Get("Seu primeiro texto começa aqui.") : UiText.Get("Nenhum atalho corresponde aos filtros."), TextWrapping = TextWrapping.Wrap, FontSize = 12, Margin = new Thickness(0, 0, 0, 12) };
-            hint.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); empty.Children.Add(hint);
-            var action = new Button { Content = _snippets.Count == 0 ? UiText.Get("Criar atalho") : UiText.Get("Limpar filtros") };
-            action.SetResourceReference(StyleProperty, "Lab.Button");
-            action.Click += (_, _) => { if (_snippets.Count == 0) BeginNewSnippet(); else { _selectedCategory = null; _showMostUsed = false; _showShortcutFavorites = false; _showShortcutPinned = false; SearchBox.Clear(); RefreshNavigation(); } };
-            empty.Children.Add(action); SnippetListPanel.Children.Add(empty);
-        }
-        else
-        {
-            foreach (var snippet in visible)
-            {
-                SnippetListPanel.Children.Add(CreateSnippetButton(snippet));
-            }
-        }
+        UpdateShortcutItems(visible);
 
         SnippetCountText.Text = $"{visible.Count}/{_snippets.Count}";
         ShellCollectionStatusText.Text = UiText.Format($"{_snippets.Count} atalhos · {CategoriesPanel.Children.Count - 1} categorias");
@@ -700,7 +683,7 @@ public partial class MainWindow : Window
             : snippet.Enabled ? UiText.Get("Atalho ativo") : UiText.Get("Atalho pausado");
         _loadingShortcutDraft = false;
         ResetShortcutDraftBaseline();
-        RefreshNavigation();
+        RefreshShortcutListSelection();
         UpdatePreview();
         if (ShortcutEditorPanel.IsLoaded) LabMotion.PlayEntrance(ShortcutEditorPanel);
     }

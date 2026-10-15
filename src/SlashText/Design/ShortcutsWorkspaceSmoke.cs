@@ -106,9 +106,9 @@ internal static partial class ShortcutsWorkspaceSmoke
                 Require(variables.Visibility == Visibility.Visible && variables.ActualWidth >= 240, "Showing variables restores a usable width");
                 var search = (TextBox)window.FindName("SearchBox"); search.Text = "sem resultado neste teste"; Layout();
                 Require(((Button)window.FindName("ShortcutSearchClearButton")).Visibility == Visibility.Visible, "Clear search is available when needed");
-                var list = (StackPanel)window.FindName("SnippetListPanel");
-                Require(list.Children.Count == 1 && list.Children[0] is StackPanel, "Empty search exposes recovery action");
-                search.Clear(); Layout(); Require(list.Children.Count == fixtures.Length, "Clearing search restores the list");
+                var list = (ShortcutListBox)window.FindName("SnippetListPanel");
+                Require(list.Items.Count == 0 && ((FrameworkElement)window.FindName("ShortcutListEmptyPanel")).Visibility == Visibility.Visible, "Empty search exposes recovery action");
+                search.Clear(); Layout(); Require(list.Items.Count == fixtures.Length, "Clearing search restores the list");
                 Require(((Button)window.FindName("ShortcutSearchClearButton")).Visibility == Visibility.Collapsed, "Empty search has no stray clear button");
                 window.SetShortcutProtectedForEvidence(true);
                 Require(!((Button)window.FindName("ShortcutSaveButton")).IsEnabled && !((Button)window.FindName("ShortcutDeleteButton")).IsEnabled && !((Button)window.FindName("ShortcutImportButton")).IsEnabled, "Protected storage blocks all snippet write actions");
@@ -140,6 +140,7 @@ internal static partial class ShortcutsWorkspaceSmoke
             checks.Add($"{theme}: native editor font selection/caret typing, ordered sizes, palette RGB validation and rich save/reopen OK");
             checks.Add($"{theme}: real owned modal layout, default cancel, inside/outside dismissal and no snippet changes OK");
         }
+        await ShortcutListSmoke.RunAsync(Path.Combine(output, "virtualized-list"));
         File.WriteAllLines(Path.Combine(output, "result.txt"), checks);
     }
 

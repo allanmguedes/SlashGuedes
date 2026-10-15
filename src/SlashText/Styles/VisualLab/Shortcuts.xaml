@@ -80,6 +80,45 @@
             </ControlTemplate.Triggers>
         </ControlTemplate></Setter.Value></Setter>
     </Style>
+    <Style x:Key="Lab.Shortcuts.List" TargetType="ListBox">
+        <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/><Setter Property="SelectionMode" Value="Single"/>
+        <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+        <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+        <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel"/>
+        <Setter Property="VirtualizingPanel.CacheLength" Value="1"/>
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="Once"/>
+        <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><VirtualizingStackPanel/></ItemsPanelTemplate></Setter.Value></Setter>
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBox">
+            <ScrollViewer Focusable="False" CanContentScroll="True" Padding="{TemplateBinding Padding}"
+                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <ItemsPresenter/>
+            </ScrollViewer>
+        </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="Lab.Shortcuts.ListItem" TargetType="ListBoxItem">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="13"/>
+        <Setter Property="Margin" Value="0,0,0,6"/><Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/><Setter Property="Foreground" Value="{DynamicResource Lab.text}"/>
+        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="1" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter TargetName="Surface" Property="Background" Value="{DynamicResource Lab.panel}"/>
+                    <Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Lab.line-strong}"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Background" Value="{DynamicResource Lab.raised}"/></Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="{DynamicResource Lab.accent-text}"/></Trigger>
+                <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate></Setter.Value></Setter>
+    </Style>
     <Style x:Key="Lab.Shortcuts.Variable" TargetType="Button" BasedOn="{StaticResource Lab.Button}">
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="MinHeight" Value="30"/>

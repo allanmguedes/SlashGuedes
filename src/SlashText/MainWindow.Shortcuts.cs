@@ -94,37 +94,6 @@ public partial class MainWindow
         return button;
     }
 
-    private Button CreateSnippetButton(Snippet snippet)
-    {
-        var selected = ReferenceEquals(snippet, _selected);
-        var content = new StackPanel();
-        var badges = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        foreach (var kind in new[] { snippet.IsFavorite ? "Star" : null, snippet.IsPinned ? "Pin" : null }.Where(kind => kind is not null))
-        {
-            var badge = new LabIcon { Kind = kind!, Width = 14, Height = 14, Margin = new Thickness(4, 0, 0, 0) };
-            badge.SetResourceReference(LabIcon.ForegroundProperty, "Lab.accent-text"); badges.Children.Add(badge);
-        }
-        var commandRow = new DockPanel(); DockPanel.SetDock(badges, Dock.Right); commandRow.Children.Add(badges); content.Children.Add(commandRow);
-        var command = new TextBlock { Text = snippet.Trigger, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis };
-        command.SetResourceReference(TextBlock.ForegroundProperty, "Lab.accent-text"); commandRow.Children.Add(command);
-        var name = new TextBlock { Text = snippet.Name, FontSize = 14, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 5, 0, 0) };
-        name.SetResourceReference(TextBlock.ForegroundProperty, "Lab.text"); content.Children.Add(name);
-        var excerpt = snippet.Content.Replace('\r', ' ').Replace('\n', ' ');
-        var preview = new TextBlock { Text = excerpt, FontSize = 11, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(0, 5, 0, 0) };
-        preview.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); content.Children.Add(preview);
-        if (!snippet.Enabled || snippet.HasLegacyIncompatibleTrigger)
-        {
-            var state = new TextBlock { Text = snippet.HasLegacyIncompatibleTrigger ? UiText.Get("Comando legado · revise para ativar") : UiText.Get("Pausado"), FontSize = 11, Margin = new Thickness(0, 4, 0, 0), TextWrapping = TextWrapping.Wrap };
-            state.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted"); content.Children.Add(state);
-        }
-        var button = new Button { Content = content, Tag = selected ? "Selected" : null, ToolTip = UiText.Format($"{snippet.Name}\n{snippet.Trigger}\nCategoria: {snippet.Category}") };
-        button.SetResourceReference(StyleProperty, "Lab.Shortcuts.Item");
-        AutomationProperties.SetName(button, UiText.Format($"{snippet.Name}, comando {snippet.Trigger}, categoria {snippet.Category}") + (selected ? UiText.Get(", selecionado") : ""));
-        button.Click += (_, _) => SelectSnippet(snippet);
-        button.PreviewMouseRightButtonUp += (_, e) => { e.Handled = true; ShowShortcutActions(button, snippet); };
-        return button;
-    }
-
     private void ShortcutContent_OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Tab || !Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) return;

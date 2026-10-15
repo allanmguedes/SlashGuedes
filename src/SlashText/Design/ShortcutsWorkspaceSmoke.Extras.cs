@@ -54,8 +54,10 @@ internal static partial class ShortcutsWorkspaceSmoke
             editor.Undo(); Require(Raw() == literal, "Undo restores previous code");
             editor.Redo(); Require(Raw() == edited, "Redo restores edited code");
             var copyCode = (Button)ShortcutCodeBlockView.Find(Block(), "CodeCopy")!;
+            string? copiedCode = null;
+            ShortcutCodeBlockView.SetCopySinkForEvidence(Block(), value => copiedCode = value);
             copyCode.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Require(Clipboard.GetText() == edited, "Code copy copies exact source after native redo");
+            Require(copiedCode == edited, "Code copy produces exact source after native redo without accessing the system clipboard");
             var editRequested = false;
             Block().AddHandler(ShortcutCodeBlockView.EditRequestedEvent, new RoutedEventHandler((_, args) => { editRequested = true; args.Handled = true; }));
             ((Button)ShortcutCodeBlockView.Find(Block(), "CodeEdit")!).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
@@ -108,10 +110,10 @@ internal static partial class ShortcutsWorkspaceSmoke
             Require(window.ShortcutsDraftDirtyForEvidence && window.ShortcutContentForEvidence == content, "Preference save never overwrites dirty draft");
             var preference = (await new SnippetMarkdownRepository().LoadAsync()).Single(s => s.Id == fixture.Id);
             Require(preference.IsFavorite && preference.IsPinned && preference.Content == fixture.Content, "Preference saves last committed content, not pending draft");
-            var list = (StackPanel)window.FindName("SnippetListPanel");
-            window.FilterShortcutForEvidence(true, false); Require(list.Children.Count == 1, "Favorites filter");
-            window.FilterShortcutForEvidence(false, true); Require(list.Children.Count == 1, "Pinned filter");
-            window.FilterShortcutForEvidence(false, false); Require(list.Children.Count == 2, "All restores list");
+            var list = (ShortcutListBox)window.FindName("SnippetListPanel");
+            window.FilterShortcutForEvidence(true, false); Require(list.Items.Count == 1, "Favorites filter");
+            window.FilterShortcutForEvidence(false, true); Require(list.Items.Count == 1, "Pinned filter");
+            window.FilterShortcutForEvidence(false, false); Require(list.Items.Count == 2, "All restores list");
             Require(await window.SaveShortcutForEvidence(), "Code persists with real main Save");
             var saved = (await new SnippetMarkdownRepository().LoadAsync()).Single(s => s.Id == fixture.Id);
             Require(saved.IsFavorite && saved.IsPinned && CodeBlockMarkdown.Read(saved.Content).Single().Content.Code == edited, "Save preserves code and preferences");

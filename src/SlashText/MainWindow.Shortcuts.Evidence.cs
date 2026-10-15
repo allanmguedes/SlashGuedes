@@ -11,7 +11,7 @@ namespace SlashText;
 
 public partial class MainWindow
 {
-    // Used only by the unshown smoke fixture. Normal startup never assigns this decision.
+    // Used only by isolated smoke fixtures. Normal startup never assigns this decision.
     private bool? _shortcutDiscardDecisionForEvidence;
 
     internal void PrepareShortcutsEvidence(double width, Snippet[] snippets)
@@ -33,6 +33,29 @@ public partial class MainWindow
     {
         _shortcutDiscardDecisionForEvidence = allowDiscard;
         try { SelectSnippet(snippet); }
+        finally { _shortcutDiscardDecisionForEvidence = null; }
+    }
+
+    internal void SelectShortcutThroughListForEvidence(Snippet snippet, bool allowDiscard)
+    {
+        _shortcutDiscardDecisionForEvidence = allowDiscard;
+        try { SnippetListPanel.SelectedItem = snippet; }
+        finally { _shortcutDiscardDecisionForEvidence = null; }
+    }
+
+    internal void BeginNewShortcutForEvidence() => BeginNewSnippet();
+
+    internal bool FocusShortcutWithoutSelectingForEvidence(Snippet snippet)
+    {
+        _syncShortcutListSelection = true;
+        try { return (SnippetListPanel.ItemContainerGenerator.ContainerFromItem(snippet) as UIElement)?.Focus() == true; }
+        finally { _syncShortcutListSelection = false; RefreshShortcutListSelection(); }
+    }
+
+    internal void WithShortcutDiscardDecisionForEvidence(bool allowDiscard, Action action)
+    {
+        _shortcutDiscardDecisionForEvidence = allowDiscard;
+        try { action(); }
         finally { _shortcutDiscardDecisionForEvidence = null; }
     }
 
