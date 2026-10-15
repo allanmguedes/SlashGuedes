@@ -41,14 +41,43 @@ internal static class ClipboardGuedesChecks
         Require(ClipboardShortcut.TryParse("Alt+Shift+F12", out normal,
             out modifiers, out key) && key == 0x7B,
             "atalho com função F12");
-        Require(!ClipboardShortcut.TryParse("Win+V", out _, out _, out _),
-            "não substituir o Win+V original");
-        Require(!ClipboardShortcut.TryParse("Ctrl+V", out _, out _, out _),
-            "não substituir Ctrl+V");
+        // Win+V and Ctrl+V are valid combinations syntactically. If another
+        // app or Windows reserves them, RegisterHotKey will reject them safely.
+        Require(ClipboardShortcut.TryParse("Win+V", out normal, out modifiers, out key)
+            && modifiers == 0x0008 && key == 0x56,
+            "permitir Win+tecla, sujeito à reserva do Windows");
+        Require(ClipboardShortcut.TryParse("Ctrl+V", out normal, out modifiers, out key)
+            && modifiers == 0x0002 && key == 0x56,
+            "permitir Ctrl+tecla único modificador");
+        Require(ClipboardShortcut.TryParse("Alt+Home", out normal, out modifiers, out key)
+            && key == 0x24, "permitir navegação");
+        Require(ClipboardShortcut.TryParse("Ctrl+Oem102", out normal, out modifiers, out key)
+            && key == 0xE2, "permitir tecla adicional do ABNT2");
+        Require(ClipboardShortcut.TryParse("Alt+OemPlus", out normal, out modifiers, out key)
+            && key == 0xBB, "permitir tecla + sem ambiguidade");
+        Require(ClipboardShortcut.TryParse("Win+Num7", out normal, out modifiers, out key)
+            && key == 0x67, "permitir teclado numérico");
+        Require(ClipboardShortcut.TryParse("Ctrl+F24", out normal, out modifiers, out key)
+            && key == 0x87, "permitir teclas de função até F24");
+        Require(ClipboardShortcut.TryParse("Ctrl+VK_E2", out normal, out modifiers, out key)
+            && normal == "Ctrl+Oem102" && key == 0xE2,
+            "normalizar virtual key OEM");
+        Require(ClipboardShortcut.TryParse("Ctrl+Alt+Shift+PrintScreen", out normal,
+            out modifiers, out key) && modifiers == 0x0007 && key == 0x2C,
+            "permitir três modificadores mais tecla especial");
+
+        Require(!ClipboardShortcut.TryParse("V", out _, out _, out _),
+            "rejeitar letra sozinha");
+        Require(!ClipboardShortcut.TryParse("Shift+V", out _, out _, out _),
+            "Shift sozinho não é modificador suficiente");
+        Require(!ClipboardShortcut.TryParse("Ctrl", out _, out _, out _),
+            "rejeitar Ctrl sem tecla final");
         Require(!ClipboardShortcut.TryParse("Ctrl+Ctrl+V", out _, out _, out _),
-            "não permitir modificador repetido");
-        Require(!ClipboardShortcut.TryParse("Ctrl+Alt+PrintScreen", out _, out _, out _),
-            "não misturar atalhos de captura");
+            "rejeitar modificador duplicado");
+        Require(!ClipboardShortcut.TryParse("Ctrl+Alt", out _, out _, out _),
+            "rejeitar combinação sem tecla não modificadora");
+        Require(!ClipboardShortcut.TryParse("Ctrl+Shift+VK_11", out _, out _, out _),
+            "rejeitar tecla modificadora como tecla final");
 
         // Explicit clear-all-except-favorites is different from automatic
         // retention: pinned-only copies must be deleted by this command.
