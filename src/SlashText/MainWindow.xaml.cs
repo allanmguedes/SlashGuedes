@@ -337,6 +337,17 @@ public partial class MainWindow : Window
 
             if (IsGuedesUiSmoke)
             {
+                if (startup.Failures.Count == 0)
+                {
+                    ShowView(ClipboardView, ClipboardTabButton);
+                    OpenClipboardQuickWindow();
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        if (_clipboardQuickWindow is not { IsVisible: true })
+                            throw new InvalidOperationException("O painel rápido não ficou visível.");
+                        _clipboardQuickWindow.Hide();
+                    }, System.Windows.Threading.DispatcherPriority.Background);
+                }
                 AppDiagnosticLog.Write("startup.module.ready", ("module", "GuedesUI"));
                 _exitRequested = true;
                 Application.Current.Shutdown(startup.Failures.Count == 0 ? 0 : 12);
