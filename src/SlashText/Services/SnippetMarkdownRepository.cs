@@ -54,14 +54,17 @@ public sealed partial class SnippetMarkdownRepository
         IEnumerable<Snippet> snippets,
         CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var ordered = snippets
             .OrderBy(item => item.Category, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(item => item.Trigger, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        for (var index = 0; index < ordered.Count; index++)
+        var triggers = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var snippet in ordered)
         {
-            Validate(ordered[index], ordered.Take(index));
+            cancellationToken.ThrowIfCancellationRequested();
+            Validate(snippet, triggers);
         }
 
         var markdown = Serialize(ordered);
@@ -96,7 +99,7 @@ public sealed partial class SnippetMarkdownRepository
         var normalized = markdown.TrimStart('\uFEFF').Replace("\r\n", "\n").Replace('\r', '\n');
         var lines = normalized.Split('\n');
         var snippets = new List<Snippet>();
-        var externalTriggers = new HashSet<string>(StringComparer.Ordinal);
+        var triggers = new HashSet<string>(StringComparer.Ordinal);
 
         for (var index = 0; index < lines.Length; index++)
         {
@@ -180,9 +183,7 @@ public sealed partial class SnippetMarkdownRepository
 
             snippet.HasLegacyIncompatibleTrigger = !TriggerRule.TryValidate(snippet.Trigger, out _);
             if (external) ExternalInputBudget.CheckSnippet(snippet, snippets.Count);
-            Validate(snippet, external ? [] : snippets);
-            if (external && !externalTriggers.Add(TriggerRule.Normalize(snippet.Trigger)))
-                throw new InvalidDataException(UiText.Format($"O atalho '{snippet.Trigger}' está duplicado."));
+            Validate(snippet, triggers);
             snippets.Add(snippet);
             index = closingFenceIndex;
         }
@@ -217,7 +218,7 @@ public sealed partial class SnippetMarkdownRepository
         return builder.ToString();
     }
 
-    private static void Validate(Snippet snippet, IEnumerable<Snippet> existing)
+    private static void Validate(Snippet snippet, HashSet<string> triggers)
     {
         if (!TriggerRule.TryValidate(snippet.Trigger, out var triggerError) &&
             !snippet.HasLegacyIncompatibleTrigger)
@@ -230,7 +231,7 @@ public sealed partial class SnippetMarkdownRepository
             throw new InvalidDataException(UiText.Format($"O atalho '{snippet.Trigger}' precisa de um nome."));
         }
 
-        if (TriggerRule.ConflictsWith(snippet.Trigger, existing.Select(item => item.Trigger)))
+        if (!triggers.Add(TriggerRule.Normalize(snippet.Trigger)))
         {
             throw new InvalidDataException(UiText.Format($"O atalho '{snippet.Trigger}' está duplicado."));
         }

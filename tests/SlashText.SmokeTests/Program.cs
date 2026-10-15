@@ -6,6 +6,15 @@ using System.IO.Compression;
 using System.Diagnostics;
 using ScreenRecorderLib;
 
+if (args.Length == 2 && args[0] == "--snippet-batch-smoke")
+{
+    await SnippetBatchChecks.RunAsync(args[1]); return;
+}
+if (args.Length == 2 && args[0] == "--snippet-batch-benchmark")
+{
+    await SnippetBatchBenchmark.RunAsync(args[1]); return;
+}
+
 if (args.Length == 2 && args[0] == "--gif-cancellation-smoke")
 {
     await GifCancellationChecks.RunAsync(args[1]); return;
@@ -93,6 +102,7 @@ if (args.Length == 2 && args[0] == "--clipboard-native-isolated")
 
 var root = Path.Combine(Path.GetTempPath(), $"slashtext-smoke-{Guid.NewGuid():N}");
 AppPaths.Initialize(new AppDataEnvironment(DistributionMode.Portable, Path.Combine(root, "initial-app"), root, isCapturePilot: true));
+await SnippetBatchChecks.RunAsync(Path.Combine(root, "snippet-batch"));
 await RecordingOperationChecks.RunAsync(Path.Combine(root, "recording-operation"));
 await GifCancellationChecks.RunAsync(Path.Combine(root, "gif-cancellation"));
 await UsageWriteFailureChecks.RunAsync(Path.Combine(root, "usage-writes"));
