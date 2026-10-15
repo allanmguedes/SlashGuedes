@@ -347,6 +347,18 @@ public partial class MainWindow : Window
                             throw new InvalidOperationException("O painel rápido não ficou visível.");
                         _clipboardQuickWindow.Hide();
                     }, System.Windows.Threading.DispatcherPriority.Background);
+
+                    var wizard = new ShortcutCreationWizardWindow(Array.Empty<string>())
+                    {
+                        Owner = this
+                    };
+                    wizard.Show();
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        if (!wizard.IsVisible)
+                            throw new InvalidOperationException("O assistente de atalhos não abriu.");
+                        wizard.Close();
+                    }, System.Windows.Threading.DispatcherPriority.Background);
                 }
                 AppDiagnosticLog.Write("startup.module.ready", ("module", "GuedesUI"));
                 _exitRequested = true;
