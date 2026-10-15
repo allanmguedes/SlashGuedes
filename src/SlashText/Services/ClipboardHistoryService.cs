@@ -44,6 +44,7 @@ public sealed class ClipboardHistoryService : IDisposable
     public event EventHandler? Changed;
     public event EventHandler? OpenRequested;
     public IReadOnlyList<ClipboardHistoryItem> Items => _state.Items;
+    public IReadOnlyList<string> Categories => _state.Categories;
     public bool Enabled { get; private set; }
     public bool CanSave => !_store.IsProtected;
     public bool HotkeyRegistered => _hotkeyRegistered;
@@ -55,6 +56,9 @@ public sealed class ClipboardHistoryService : IDisposable
         MaxEntries = ClipboardRetentionPolicy.NormalizeLimit(maxRecentEntries);
         _state = await _store.LoadAsync();
         _state.Items ??= [];
+        _state.Categories ??= [];
+        _state.Categories = ClipboardCategoryRules.Migrate(
+            _state.Categories, _state.Items.Select(i => i?.Category ?? string.Empty));
         _state.Items = _state.Items
             .Where(i => i is not null && (i.Kind is "text" or "image") &&
                         !string.IsNullOrEmpty(i.Id) &&
@@ -263,7 +267,14 @@ public sealed class ClipboardHistoryService : IDisposable
             if (!_state.Items.Contains(item) || !CanSave) return;
             if (favorite.HasValue) item.IsFavorite = favorite.Value;
             if (pinned.HasValue) item.IsPinned = pinned.Value;
-            if (category is not null) item.Category = category.Trim()[..Math.Min(50, category.Trim().Length)];
+            if (category is not null)
+            {
+                var normalized = category.Trim();
+                if (normalized.Length > 0 && !_state.Categories.Contains(
+                        normalized, StringComparer.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Essa categoria não existe. Crie a categoria antes de aplicá-la.");
+                item.Category = normalized;
+            }
             await SaveWithRetentionAsync();
         }
         finally { _gate.Release(); }
@@ -280,6 +291,84 @@ public sealed class ClipboardHistoryService : IDisposable
             Changed?.Invoke(this, EventArgs.Empty);
         }
         finally { _gate.Release(); }
+    }
+
+    public async Task ClearNonFavoritesAsync()
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            if (!CanSave) return;
+            // A pinned-only item is intentionally removed: only ★ favorite protects
+            // against this explicit action. Automatic expiry still protects pins.
+            var toDelete = _state.Items.Where(i => !i.IsFavorite).ToArray();
+            foreach (var item in toDelete) _state.Items.Remove(item);
+            await _store.SaveAsync(_state);
+            foreach (var item in toDelete) DeleteImage(item);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task AddCategoryAsync(string name)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            EnsureCategoryEditable();
+            var normalized = ClipboardCategoryRules.ValidateNew(name, _state.Categories);
+            _state.Categories.Add(normalized);
+            await _store.SaveAsync(_state);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task RenameCategoryAsync(string oldName, string newName)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            EnsureCategoryEditable();
+            var index = _state.Categories.FindIndex(x =>
+                x.Equals(oldName, StringComparison.OrdinalIgnoreCase));
+            if (index < 0) throw new InvalidOperationException("Categoria não encontrada.");
+            var normalized = ClipboardCategoryRules.ValidateNew(
+                newName, _state.Categories.Where((_, i) => i != index));
+            var original = _state.Categories[index];
+            _state.Categories[index] = normalized;
+            foreach (var item in _state.Items.Where(i =>
+                i.Category.Equals(original, StringComparison.OrdinalIgnoreCase)))
+                item.Category = normalized;
+            await _store.SaveAsync(_state);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task DeleteCategoryAsync(string name)
+    {
+        await _gate.WaitAsync();
+        try
+        {
+            EnsureCategoryEditable();
+            var removed = _state.Categories.RemoveAll(x =>
+                x.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (removed == 0) return;
+            // Removing a group never removes the copied content.
+            foreach (var item in _state.Items.Where(i =>
+                i.Category.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                item.Category = string.Empty;
+            await _store.SaveAsync(_state);
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+        finally { _gate.Release(); }
+    }
+
+    private void EnsureCategoryEditable()
+    {
+        if (!CanSave) throw new InvalidOperationException(
+            "O armazenamento está protegido. Nenhuma categoria foi alterada.");
     }
 
     public async Task ClearRecentsAsync()
