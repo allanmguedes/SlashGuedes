@@ -301,7 +301,8 @@ public sealed class ClipboardHistoryService : IDisposable
             if (!CanSave) return;
             // A pinned-only item is intentionally removed: only ★ favorite protects
             // against this explicit action. Automatic expiry still protects pins.
-            var toDelete = _state.Items.Where(i => !i.IsFavorite).ToArray();
+            var toDelete = ClipboardCategoryRules.SelectNonFavorites(
+                _state.Items, i => i.IsFavorite).ToArray();
             foreach (var item in toDelete) _state.Items.Remove(item);
             await _store.SaveAsync(_state);
             foreach (var item in toDelete) DeleteImage(item);
@@ -338,7 +339,7 @@ public sealed class ClipboardHistoryService : IDisposable
             var original = _state.Categories[index];
             _state.Categories[index] = normalized;
             foreach (var item in _state.Items.Where(i =>
-                i.Category.Equals(original, StringComparison.OrdinalIgnoreCase)))
+                string.Equals(i.Category, original, StringComparison.OrdinalIgnoreCase)))
                 item.Category = normalized;
             await _store.SaveAsync(_state);
             Changed?.Invoke(this, EventArgs.Empty);
@@ -357,7 +358,7 @@ public sealed class ClipboardHistoryService : IDisposable
             if (removed == 0) return;
             // Removing a group never removes the copied content.
             foreach (var item in _state.Items.Where(i =>
-                i.Category.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                string.Equals(i.Category, name, StringComparison.OrdinalIgnoreCase)))
                 item.Category = string.Empty;
             await _store.SaveAsync(_state);
             Changed?.Invoke(this, EventArgs.Empty);
