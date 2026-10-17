@@ -15,6 +15,9 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Single-line text fields use a shared readable overlay rather than
+        // relying on WPF's device-specific TextBox glyph rendering.
+        ReadableInputBehavior.Install();
         if (e.Args.Length == 2 && e.Args[0] == "--recording-operation-ui-smoke")
         {
             _helperMode = true; ShutdownMode = ShutdownMode.OnExplicitShutdown;
