@@ -351,6 +351,7 @@ public partial class MainWindow : Window
                             foreach (var theme in new[] { "Light", "Dark" })
                             {
                                 ThemeService.Apply(theme);
+                                _clipboardQuickWindow.ValidateSearchTextPresentation();
                                 _clipboardQuickWindow.ValidateContrast();
                                 AuxiliaryWindowTheme.RequireReadable(ClipboardSearchBox, "Main.ClipboardSearch");
                                 AuxiliaryWindowTheme.RequireReadable(ClipboardFilterBox, "Main.ClipboardFilter");
