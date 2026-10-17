@@ -353,15 +353,15 @@ public partial class MainWindow : Window
                                 ThemeService.Apply(theme);
                                 _clipboardQuickWindow.ValidateSearchTextPresentation();
                                 _clipboardQuickWindow.ValidateContrast();
-                                if (!ReadableInputBehavior.HasReadablePresentation(ClipboardSearchBox) ||
-                                    !ReadableInputBehavior.HasReadablePresentation(ClipboardNewCategoryBox))
+                                if (!AuxiliaryWindowTheme.HasReadablePresentation(ClipboardSearchBox) ||
+                                    !AuxiliaryWindowTheme.HasReadablePresentation(ClipboardNewCategoryBox))
                                     throw new InvalidOperationException(
                                         "Os campos simples não receberam a apresentação global de texto.");
                                 var originalSearch = ClipboardSearchBox.Text;
                                 try
                                 {
                                     ClipboardSearchBox.Text = "Guedes visível 123";
-                                    if (!ReadableInputBehavior.TryGetVisibleText(ClipboardSearchBox, out var shown) ||
+                                    if (!AuxiliaryWindowTheme.TryGetVisibleText(ClipboardSearchBox, out var shown) ||
                                         shown != ClipboardSearchBox.Text)
                                         throw new InvalidOperationException(
                                             "O overlay global não reproduziu o texto digitado.");
