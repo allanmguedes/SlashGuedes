@@ -2,6 +2,8 @@
     <SolidColorBrush x:Key="Lab.bg" Color="#080808"/>
     <SolidColorBrush x:Key="Lab.shell" Color="#101010"/>
     <SolidColorBrush x:Key="Lab.panel" Color="#181818"/>
+    <!-- Shared surface for floating windows, cards and auxiliary dialogs. -->
+    <SolidColorBrush x:Key="Lab.surface" Color="#181818"/>
     <SolidColorBrush x:Key="Lab.raised" Color="#242424"/>
     <SolidColorBrush x:Key="Lab.input" Color="#202020"/>
     <SolidColorBrush x:Key="Lab.canvas" Color="#0b0b0b"/>
