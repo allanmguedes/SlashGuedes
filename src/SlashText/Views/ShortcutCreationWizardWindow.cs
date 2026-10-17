@@ -144,6 +144,7 @@ public sealed class ShortcutCreationWizardWindow : Window
             Content = main, VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
         _page.Children.Add(scroll);
+        AuxiliaryWindowTheme.ApplyTree(_page);
     }
 
     private void AddChoice(Panel panel, string title, string description, Action action)
@@ -310,7 +311,23 @@ public sealed class ShortcutCreationWizardWindow : Window
         _name.TextChanged += RefreshValidity;
         _trigger.TextChanged += RefreshValidity;
         SyncFields();
+        // Pages can be recreated after Loaded, so theme their newly created
+        // controls immediately instead of only once in the constructor.
+        AuxiliaryWindowTheme.ApplyTree(_page);
         _name.Focus();
+    }
+
+    internal void OpenFormForContrastSmoke() => ShowEditor(formMode: true);
+
+    internal void ValidateVisibleFormContrast()
+    {
+        AuxiliaryWindowTheme.RequireReadable(_name, "Wizard.Name");
+        AuxiliaryWindowTheme.RequireReadable(_trigger, "Wizard.Trigger");
+        AuxiliaryWindowTheme.RequireReadable(_body, "Wizard.Body");
+        AuxiliaryWindowTheme.RequireReadable(_newField, "Wizard.NewField");
+        AuxiliaryWindowTheme.RequireReadable(_category, "Wizard.Category");
+        foreach (var child in _fieldPreview.Children.OfType<TextBox>())
+            AuxiliaryWindowTheme.RequireReadable(child, "Wizard.FieldPreview");
     }
 
     private static void SetupInput(TextBox box, string hint)
@@ -388,6 +405,7 @@ public sealed class ShortcutCreationWizardWindow : Window
             };
             _fieldPreview.Children.Add(input);
         }
+        AuxiliaryWindowTheme.ApplyTree(_fieldPreview);
         RefreshPreview();
     }
 
