@@ -79,8 +79,16 @@ internal static class AuxiliaryWindowTheme
 
     // Used by the Windows UI smoke test against actual bound brushes, not
     // screenshots or static hex codes. WCAG contrast >= 4.5 for normal text.
-    internal static void RequireReadable(Control control, string name) =>
-        RequireReadableBrushes(control.Foreground, control.Background, name);
+    internal static void RequireReadable(Control control, string name)
+    {
+        // The native text is intentionally transparent on fields using the
+        // shared readable overlay. Measure the brush that paints the glyphs.
+        if (control is TextBox box &&
+            ReadableInputBehavior.TryGetPresentationForeground(box, out var actual))
+            RequireReadableBrushes(actual, control.Background, name);
+        else
+            RequireReadableBrushes(control.Foreground, control.Background, name);
+    }
 
     internal static void RequireReadableText(TextBlock text, string name, string backgroundKey) =>
         RequireReadableBrushes(text.Foreground,
