@@ -79,10 +79,17 @@ internal static class AuxiliaryWindowTheme
 
     // Used by the Windows UI smoke test against actual bound brushes, not
     // screenshots or static hex codes. WCAG contrast >= 4.5 for normal text.
-    internal static void RequireReadable(Control control, string name)
+    internal static void RequireReadable(Control control, string name) =>
+        RequireReadableBrushes(control.Foreground, control.Background, name);
+
+    internal static void RequireReadableText(TextBlock text, string name, string backgroundKey) =>
+        RequireReadableBrushes(text.Foreground,
+            Application.Current.TryFindResource(backgroundKey) as Brush, name);
+
+    private static void RequireReadableBrushes(Brush? foreground, Brush? background, string name)
     {
-        if (control.Foreground is not SolidColorBrush ink ||
-            control.Background is not SolidColorBrush surface)
+        if (foreground is not SolidColorBrush ink ||
+            background is not SolidColorBrush surface)
             throw new InvalidOperationException(name + ": cores de entrada não foram resolvidas.");
         static double Luminance(Color color)
         {
