@@ -83,6 +83,9 @@ public sealed class ClipboardQuickWindow : Window
         _search = new TextBox { Height = 38, Margin = new Thickness(0, 0, 0, 12),
             VerticalContentAlignment = VerticalAlignment.Center,
             ToolTip = "Pesquise textos, imagens e categorias do histórico." };
+        // The popup already contains the proven inline TextBlock renderer.
+        // Do not add the app-wide adorner a second time on top of it.
+        ReadableInputBehavior.SetSkip(_search, true);
         _search.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Field");
         _search.SetResourceReference(Control.BackgroundProperty, "Lab.input");
         // Keep editing, IME, keyboard navigation and selection on the TextBox,
