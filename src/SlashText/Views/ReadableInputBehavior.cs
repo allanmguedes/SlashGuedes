@@ -39,8 +39,9 @@ internal static class ReadableInputBehavior
         _installed = true;
         EventManager.RegisterClassHandler(typeof(TextBox), FrameworkElement.LoadedEvent,
             new RoutedEventHandler(OnLoaded), true);
-        EventManager.RegisterClassHandler(typeof(TextBox), FrameworkElement.UnloadedEvent,
-            new RoutedEventHandler(OnUnloaded), true);
+        // Do not remove adorners synchronously during Unloaded/Window.Shutdown:
+        // WPF can already have disposed the compositor at that point. The
+        // ConditionalWeakTable and AdornerLayer share the Window lifetime.
     }
 
     private static bool Eligible(TextBox box) =>
@@ -84,18 +85,6 @@ internal static class ReadableInputBehavior
             box.Foreground = foreground;
             // Controls without a usable adorner keep native rendering.
         }
-    }
-
-    private static void OnUnloaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is not TextBox box || !Attached.TryGetValue(box, out var state)) return;
-        box.TextChanged -= OnTextChanged;
-        box.SizeChanged -= OnSizeChanged;
-        box.RemoveHandler(ScrollViewer.ScrollChangedEvent,
-            new ScrollChangedEventHandler(OnScrolled));
-        state.Layer.Remove(state.Presentation);
-        box.Foreground = state.OriginalForeground;
-        Attached.Remove(box);
     }
 
     private static void OnTextChanged(object sender, TextChangedEventArgs e) =>
