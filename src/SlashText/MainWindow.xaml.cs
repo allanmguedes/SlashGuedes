@@ -353,6 +353,20 @@ public partial class MainWindow : Window
                                 ThemeService.Apply(theme);
                                 _clipboardQuickWindow.ValidateSearchTextPresentation();
                                 _clipboardQuickWindow.ValidateContrast();
+                                if (!ReadableInputBehavior.HasReadablePresentation(ClipboardSearchBox) ||
+                                    !ReadableInputBehavior.HasReadablePresentation(ClipboardNewCategoryBox))
+                                    throw new InvalidOperationException(
+                                        "Os campos simples não receberam a apresentação global de texto.");
+                                var originalSearch = ClipboardSearchBox.Text;
+                                try
+                                {
+                                    ClipboardSearchBox.Text = "Guedes visível 123";
+                                    if (!ReadableInputBehavior.TryGetVisibleText(ClipboardSearchBox, out var shown) ||
+                                        shown != ClipboardSearchBox.Text)
+                                        throw new InvalidOperationException(
+                                            "O overlay global não reproduziu o texto digitado.");
+                                }
+                                finally { ClipboardSearchBox.Text = originalSearch; }
                                 AuxiliaryWindowTheme.RequireReadable(ClipboardSearchBox, "Main.ClipboardSearch");
                                 AuxiliaryWindowTheme.RequireReadable(ClipboardFilterBox, "Main.ClipboardFilter");
                                 AuxiliaryWindowTheme.RequireReadable(ClipboardNewCategoryBox, "Main.ClipboardNewCategory");
