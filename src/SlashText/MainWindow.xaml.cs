@@ -353,6 +353,21 @@ public partial class MainWindow : Window
                                 ThemeService.Apply(theme);
                                 _clipboardQuickWindow.ValidateSearchTextPresentation();
                                 _clipboardQuickWindow.ValidateContrast();
+                                AuxiliaryWindowTheme.RequireReadable(ClipboardItemsList, "Main.ClipboardHistoryList");
+                                if (ClipboardItemsList.ItemContainerStyle is not { } clipboardItemStyle)
+                                    throw new InvalidOperationException("Os itens do histórico não têm estilo próprio.");
+                                var sampleItem = new ListBoxItem
+                                {
+                                    Content = "Item de teste",
+                                    Style = clipboardItemStyle
+                                };
+                                sampleItem.ApplyTemplate();
+                                sampleItem.IsSelected = true;
+                                sampleItem.ApplyTemplate();
+                                if (sampleItem.Template.FindName("RowSurface", sampleItem) is not Border selectedSurface)
+                                    throw new InvalidOperationException("A seleção do histórico não tem superfície própria.");
+                                AuxiliaryWindowTheme.RequireReadableSurface(
+                                    sampleItem.Foreground, selectedSurface.Background, "Main.ClipboardSelectedRow");
                                 if (!AuxiliaryWindowTheme.HasReadablePresentation(ClipboardSearchBox) ||
                                     !AuxiliaryWindowTheme.HasReadablePresentation(ClipboardNewCategoryBox))
                                     throw new InvalidOperationException(
@@ -399,6 +414,11 @@ public partial class MainWindow : Window
                         }
                         finally { ThemeService.Apply(originalDark ? "Dark" : "Light"); }
                         wizard.Close();
+                        using var ocrTestBitmap = new System.Drawing.Bitmap(32, 32);
+                        var ocrWindow = new CaptureOcrWindow(ocrTestBitmap);
+                        if (!ocrWindow.HasDraggableTitle)
+                            throw new InvalidOperationException("Extrator OCR sem área de arraste.");
+                        ocrWindow.Close();
                     }, System.Windows.Threading.DispatcherPriority.Background);
                 }
                 AppDiagnosticLog.Write("startup.module.ready", ("module", "GuedesUI"));
