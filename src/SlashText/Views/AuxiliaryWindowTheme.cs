@@ -20,6 +20,9 @@ internal static class AuxiliaryWindowTheme
     internal static void Apply(Window window)
     {
         ApplyTree(window.Content as DependencyObject);
+        // Some windows build or replace their content after Apply() is called.
+        // Apply on Loaded too, when the complete logical tree exists.
+        window.Loaded += (_, _) => ApplyTree(window.Content as DependencyObject);
         if (!window.AllowsTransparency) window.SetResourceReference(Window.BackgroundProperty, "Lab.bg");
         window.SetResourceReference(Window.ForegroundProperty, "Lab.text");
         window.SetResourceReference(Window.FontFamilyProperty, "Lab.Font");
@@ -39,6 +42,22 @@ internal static class AuxiliaryWindowTheme
                 button.SetResourceReference(FrameworkElement.StyleProperty, ReferenceEquals(button.Style, Application.Current.TryFindResource("PrimaryButton")) ? "Lab.PrimaryButton" : "Lab.Button");
             if (element is TextBox box && box.ReadLocalValue(FrameworkElement.StyleProperty) == DependencyProperty.UnsetValue)
                 box.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Field");
+            if (element is ComboBox combo && combo.ReadLocalValue(FrameworkElement.StyleProperty) == DependencyProperty.UnsetValue)
+                combo.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Combo");
+            if (element is ComboBoxItem option && option.ReadLocalValue(FrameworkElement.StyleProperty) == DependencyProperty.UnsetValue)
+                option.SetResourceReference(FrameworkElement.StyleProperty, "Lab.ComboItem");
+            if (element is PasswordBox password && password.ReadLocalValue(Control.ForegroundProperty) == DependencyProperty.UnsetValue)
+            {
+                password.SetResourceReference(Control.ForegroundProperty, "Lab.text");
+                password.SetResourceReference(Control.BackgroundProperty, "Lab.input");
+                password.SetResourceReference(Control.BorderBrushProperty, "Lab.line");
+                password.SetResourceReference(PasswordBox.CaretBrushProperty, "Lab.text");
+            }
+            if (element is RichTextBox rich && rich.ReadLocalValue(Control.ForegroundProperty) == DependencyProperty.UnsetValue)
+            {
+                rich.SetResourceReference(Control.ForegroundProperty, "Lab.text");
+                rich.SetResourceReference(RichTextBox.CaretBrushProperty, "Lab.text");
+            }
             if (element is TextBlock text) text.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Text");
             if (element is Border border && ReferenceEquals(border.Style, Application.Current.TryFindResource("SettingsCard")))
                 border.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Card");
