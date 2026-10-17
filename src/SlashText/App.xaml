@@ -198,7 +198,9 @@
             <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+            <!-- Native glyphs hidden for short inputs; the independent TextBlock
+                 below draws them reliably on systems where TextBox text is invisible. -->
+            <Setter Property="Foreground" Value="Transparent"/>
             <Setter Property="CaretBrush" Value="{DynamicResource InkBrush}"/>
             <Setter Property="SelectionBrush" Value="{DynamicResource AccentBrush}"/>
             <Setter Property="SelectionOpacity" Value="0.3"/>
@@ -211,11 +213,33 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="8">
-                            <ScrollViewer x:Name="PART_ContentHost"
-                                          Margin="{TemplateBinding Padding}"
-                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                            <Grid ClipToBounds="True">
+                                <ScrollViewer x:Name="PART_ContentHost"
+                                              Margin="{TemplateBinding Padding}"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                <TextBlock x:Name="ReadableGlyphs" Text="{TemplateBinding Text}"
+                                           IsHitTestVisible="False" Focusable="False"
+                                           TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                           FontFamily="{TemplateBinding FontFamily}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           FontWeight="{TemplateBinding FontWeight}"
+                                           Foreground="{DynamicResource InkBrush}"
+                                           Margin="{TemplateBinding Padding}"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <Trigger Property="AcceptsReturn" Value="True">
+                                <Setter TargetName="ReadableGlyphs" Property="Visibility" Value="Collapsed"/>
+                                <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+                            </Trigger>
+                            <Trigger Property="TextWrapping" Value="Wrap">
+                                <Setter TargetName="ReadableGlyphs" Property="Visibility" Value="Collapsed"/>
+                                <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+                            </Trigger>
+                            <Trigger Property="Tag" Value="SkipReadableOverlay">
+                                <Setter TargetName="ReadableGlyphs" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="TextBoxSurface"
                                         Property="BorderBrush"
