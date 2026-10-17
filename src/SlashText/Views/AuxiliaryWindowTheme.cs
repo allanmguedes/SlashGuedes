@@ -77,6 +77,32 @@ internal static class AuxiliaryWindowTheme
             { element.SetResourceReference(property, pair.Value); return; }
     }
 
+    // Used by the Windows UI smoke test against actual bound brushes, not
+    // screenshots or static hex codes. WCAG contrast >= 4.5 for normal text.
+    internal static void RequireReadable(Control control, string name)
+    {
+        if (control.Foreground is not SolidColorBrush ink ||
+            control.Background is not SolidColorBrush surface)
+            throw new InvalidOperationException(name + ": cores de entrada não foram resolvidas.");
+        static double Luminance(Color color)
+        {
+            static double Channel(byte byteValue)
+            {
+                var value = byteValue / 255.0;
+                return value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+            }
+            return 0.2126 * Channel(color.R) +
+                   0.7152 * Channel(color.G) +
+                   0.0722 * Channel(color.B);
+        }
+        var a = Luminance(ink.Color);
+        var b = Luminance(surface.Color);
+        var ratio = (Math.Max(a, b) + 0.05) / (Math.Min(a, b) + 0.05);
+        if (ratio < 4.5)
+            throw new InvalidOperationException(name + ": contraste insuficiente para leitura (" +
+                ratio.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + ":1).");
+    }
+
     internal static MessageBoxResult ShowMessage(Window? owner, string message, string title,
         MessageBoxButton buttons = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.Information)
     {
