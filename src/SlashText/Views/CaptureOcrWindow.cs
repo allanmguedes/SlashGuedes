@@ -24,6 +24,8 @@ public sealed class CaptureOcrWindow : Window
     private readonly Button _copySelected;
     private readonly Button _retry;
     private readonly Button _close;
+    private readonly Border _dragHandle;
+    internal bool HasDraggableTitle => _dragHandle.Cursor == Cursors.SizeAll;
     private CancellationTokenSource? _cancellation;
     private bool _running, _closed;
     private readonly TaskCompletionSource _firstRead = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -51,8 +53,34 @@ public sealed class CaptureOcrWindow : Window
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(150) });
         root.RowDefinitions.Add(new RowDefinition());
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var header = new DockPanel(); _close = ActionButton(UiText.Get("Fechar"), Close); DockPanel.SetDock(_close, Dock.Right); header.Children.Add(_close);
-        header.Children.Add(new TextBlock { Text = UiText.Get("Extrair texto"), FontSize = 23, FontWeight = FontWeights.SemiBold }); root.Children.Add(header);
+        // Borderless OCR window needs an explicit drag region. Only the title
+        // is draggable: the close button, OCR text editor and action buttons
+        // keep their own mouse interactions.
+        var header = new DockPanel { LastChildFill = true };
+        _close = ActionButton(UiText.Get("Fechar"), Close);
+        DockPanel.SetDock(_close, Dock.Right);
+        header.Children.Add(_close);
+        _dragHandle = new Border
+        {
+            Background = Brushes.Transparent,
+            Cursor = Cursors.SizeAll,
+            ToolTip = "Segure e arraste para mover a janela do extrator de texto.",
+            Padding = new Thickness(0, 6, 12, 6),
+            Child = new TextBlock
+            {
+                Text = UiText.Get("Extrair texto"), FontSize = 23,
+                FontWeight = FontWeights.SemiBold, IsHitTestVisible = false
+            }
+        };
+        _dragHandle.MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ChangedButton != MouseButton.Left || e.ClickCount != 1) return;
+            e.Handled = true;
+            try { DragMove(); }
+            catch (InvalidOperationException) { /* Drag can be interrupted on closing. */ }
+        };
+        header.Children.Add(_dragHandle);
+        root.Children.Add(header);
         var statusPanel = new StackPanel { Margin = new Thickness(0, 8, 0, 12) };
         var language = _service.Options.Languages switch { "por" => UiText.Get("Português"), "eng" => UiText.Get("Inglês"), _ => UiText.Get("Português + inglês") };
         var subtitle = new TextBlock { Text = UiText.Format($"{language} · {_service.Options.Model} · processamento local"), FontSize = 12 };
