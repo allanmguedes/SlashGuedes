@@ -1522,11 +1522,11 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="180"/>
                             </Grid.ColumnDefinitions>
-                            <TextBox x:Name="ClipboardSearchBox" Grid.Column="0"
+                            <TextBox x:Name="ClipboardSearchBox" Grid.Column="0" Style="{StaticResource Lab.Field}"
                                      ToolTip="Pesquisar no conteúdo e nas categorias"
                                      Height="36" VerticalContentAlignment="Center"
                                      TextChanged="ClipboardSearch_OnChanged" Margin="0,0,10,0"/>
-                            <ComboBox x:Name="ClipboardFilterBox" Grid.Column="1"
+                            <ComboBox x:Name="ClipboardFilterBox" Grid.Column="1" Style="{StaticResource Lab.Combo}"
                                       Height="36" SelectedIndex="0"
                                       SelectionChanged="ClipboardFilter_OnChanged">
                                 <ComboBoxItem Content="Todos os itens" Tag="all"/>
@@ -1553,7 +1553,7 @@
                                 <TextBlock Text="Manter recentes" VerticalAlignment="Center"
                                            Foreground="{DynamicResource Lab.text}"
                                            Margin="0,0,10,0"/>
-                                <ComboBox Grid.Column="1" x:Name="ClipboardRetentionBox"
+                                <ComboBox Grid.Column="1" x:Name="ClipboardRetentionBox" Style="{StaticResource Lab.Combo}"
                                           Height="34" SelectionChanged="ClipboardRetention_OnChanged">
                                     <ComboBoxItem Tag="10" Content="10 itens"/>
                                     <ComboBoxItem Tag="25" Content="25 itens"/>
@@ -1565,7 +1565,7 @@
                                 </ComboBox>
                                 <TextBlock Grid.Column="3" Text="Atalho do pop-up" VerticalAlignment="Center"
                                            Margin="0,0,10,0" Foreground="{DynamicResource Lab.text}"/>
-                                <views:ClipboardShortcutRecorderBox x:Name="ClipboardShortcutBox" Grid.Column="4"
+                                <views:ClipboardShortcutRecorderBox x:Name="ClipboardShortcutBox" Grid.Column="4" Style="{StaticResource Lab.Field}"
                                          Text="Win+Shift+V" Height="34"
                                          VerticalContentAlignment="Center"
                                          ToolTip="Clique neste campo e pressione Ctrl, Alt ou Win + a tecla desejada. Shift é opcional. Depois clique em Salvar."/>
@@ -1592,10 +1592,10 @@
                                 <TextBlock Text="MINHAS CATEGORIAS" VerticalAlignment="Center"
                                            Foreground="{DynamicResource Lab.accent-text}"
                                            FontSize="12" FontWeight="SemiBold" Margin="0,0,12,0"/>
-                                <ComboBox x:Name="ClipboardCategoryManageBox"
+                                <ComboBox x:Name="ClipboardCategoryManageBox" Style="{StaticResource Lab.Combo}"
                                           Width="175" Height="34" Margin="0,0,10,0"
                                           ToolTip="Selecione uma categoria para renomear ou excluir."/>
-                                <TextBox x:Name="ClipboardNewCategoryBox" Width="175" Height="34"
+                                <TextBox x:Name="ClipboardNewCategoryBox" Style="{StaticResource Lab.Field}" Width="175" Height="34"
                                          MaxLength="50" VerticalContentAlignment="Center" Margin="0,0,8,0"
                                          ToolTip="Digite o nome da categoria. Ex.: Trabalho, Links, Imagens."/>
                                 <Button Content="Criar" Click="ClipboardCategoryCreate_OnClick" Margin="0,0,8,0"/>
@@ -1611,7 +1611,7 @@
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0" BorderThickness="1" CornerRadius="12"
                                     BorderBrush="{DynamicResource Lab.line}" Background="{DynamicResource Lab.surface}">
-                                <ListBox x:Name="ClipboardItemsList" DisplayMemberPath="Summary"
+                                <ListBox x:Name="ClipboardItemsList" DisplayMemberPath="Summary" Foreground="{DynamicResource Lab.text}"
                                          FontSize="13" Padding="12" BorderThickness="0"
                                          SelectionChanged="ClipboardSelected_OnChanged"/>
                             </Border>
@@ -1631,7 +1631,7 @@
                                         <TextBlock x:Name="ClipboardSelectionEmpty" Text="Selecione um item do histórico."
                                                    Foreground="{DynamicResource Lab.muted}" TextWrapping="Wrap"
                                                    VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                        <TextBox x:Name="ClipboardSelectionText" IsReadOnly="True" TextWrapping="Wrap"
+                                        <TextBox x:Name="ClipboardSelectionText" IsReadOnly="True" Style="{StaticResource Lab.Field}" TextWrapping="Wrap"
                                                  AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
                                                  Visibility="Collapsed" Padding="12"/>
                                         <Image x:Name="ClipboardSelectionImage" Visibility="Collapsed"
@@ -1644,7 +1644,7 @@
                                             <Button x:Name="ClipboardCategorySaveButton" DockPanel.Dock="Right"
                                                     Click="ClipboardCategorySave_OnClick" Content="Salvar"
                                                     Margin="8,0,0,0"/>
-                                            <ComboBox x:Name="ClipboardCategoryBox" Height="35" MinWidth="160"
+                                            <ComboBox x:Name="ClipboardCategoryBox" Height="35" MinWidth="160" Style="{StaticResource Lab.Combo}"
                                                       VerticalContentAlignment="Center"
                                                       ToolTip="Escolha uma categoria criada acima."/>
                                         </DockPanel>
