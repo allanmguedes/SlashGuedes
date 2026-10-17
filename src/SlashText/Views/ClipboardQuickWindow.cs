@@ -44,7 +44,9 @@ public sealed class ClipboardQuickWindow : Window
         ShowInTaskbar = false;
         Topmost = true;
         WindowStartupLocation = WindowStartupLocation.Manual;
-        Background = (Brush)Application.Current.Resources["Lab.bg"];
+        // Theme-aware resources must remain dynamic: never snapshot a color
+        // when constructing a popup that survives theme switches.
+        SetResourceReference(BackgroundProperty, "Lab.bg");
 
         var root = new Border
         {
@@ -75,7 +77,13 @@ public sealed class ClipboardQuickWindow : Window
         grid.Children.Add(header);
 
         _search = new TextBox { Height = 38, Margin = new Thickness(0, 0, 0, 12),
-            VerticalContentAlignment = VerticalAlignment.Center };
+            VerticalContentAlignment = VerticalAlignment.Center,
+            ToolTip = "Pesquise textos, imagens e categorias do histórico." };
+        _search.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Field");
+        _search.SetResourceReference(Control.ForegroundProperty, "Lab.text");
+        _search.SetResourceReference(Control.BackgroundProperty, "Lab.input");
+        _search.SetResourceReference(TextBox.CaretBrushProperty, "Lab.text");
+        _search.SetResourceReference(TextBox.SelectionBrushProperty, "Lab.accent");
         _search.TextChanged += (_, _) => Refresh();
         _search.PreviewKeyDown += (_, e) =>
         {
@@ -84,10 +92,12 @@ public sealed class ClipboardQuickWindow : Window
         };
         var filterRow = new Grid();
         filterRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        filterRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+        filterRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(165) });
         Grid.SetColumn(_search, 0);
         filterRow.Children.Add(_search);
         _categoryFilter = new ComboBox { Height = 38, Margin = new Thickness(8, 0, 0, 12) };
+        _categoryFilter.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Combo");
+        _categoryFilter.SetResourceReference(Control.ForegroundProperty, "Lab.text");
         _categoryFilter.SelectionChanged += (_, _) =>
         {
             if (!_refreshingCategories) Refresh();
@@ -104,6 +114,7 @@ public sealed class ClipboardQuickWindow : Window
             HorizontalContentAlignment = HorizontalAlignment.Stretch
         };
         _list.SetResourceReference(Control.BackgroundProperty, "Lab.surface");
+        _list.SetResourceReference(Control.ForegroundProperty, "Lab.text");
         _list.MouseDoubleClick += (_, _) => SelectCurrent();
         _list.PreviewKeyDown += (_, e) =>
         {
@@ -167,6 +178,8 @@ public sealed class ClipboardQuickWindow : Window
             Margin = new Thickness(0, 0, 8, 0),
             ToolTip = "Mova o item selecionado para uma das suas categorias."
         };
+        _moveToCategory.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Combo");
+        _moveToCategory.SetResourceReference(Control.ForegroundProperty, "Lab.text");
         DockPanel.SetDock(_moveToCategory, Dock.Left);
         categoriesRow.Children.Add(_moveToCategory);
         _moveButton = new Button { Content = "Mover", Margin = new Thickness(0, 0, 8, 0) };
@@ -226,6 +239,9 @@ public sealed class ClipboardQuickWindow : Window
         Grid.SetRow(footer, 3);
         grid.Children.Add(footer);
 
+        // All footer buttons and cards share the same palette; don't apply
+        // AuxiliaryWindowTheme.Apply(), which would Close rather than Hide on Esc.
+        AuxiliaryWindowTheme.ApplyTree(root);
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape) { Hide(); e.Handled = true; }
@@ -377,6 +393,7 @@ public sealed class ClipboardQuickWindow : Window
                 Padding = new Thickness(3),
                 HorizontalContentAlignment = HorizontalAlignment.Stretch
             };
+            control.SetResourceReference(Control.ForegroundProperty, "Lab.text");
             _list.Items.Add(control);
         }
         _emptyMessage.Visibility = _list.Items.Count == 0
