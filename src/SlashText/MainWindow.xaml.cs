@@ -345,6 +345,21 @@ public partial class MainWindow : Window
                     {
                         if (_clipboardQuickWindow is not { IsVisible: true })
                             throw new InvalidOperationException("O painel rápido não ficou visível.");
+                        var originalDark = ThemeService.IsDark;
+                        try
+                        {
+                            foreach (var theme in new[] { "Light", "Dark" })
+                            {
+                                ThemeService.Apply(theme);
+                                _clipboardQuickWindow.ValidateContrast();
+                                AuxiliaryWindowTheme.RequireReadable(ClipboardSearchBox, "Main.ClipboardSearch");
+                                AuxiliaryWindowTheme.RequireReadable(ClipboardFilterBox, "Main.ClipboardFilter");
+                                AuxiliaryWindowTheme.RequireReadable(ClipboardNewCategoryBox, "Main.ClipboardNewCategory");
+                                AuxiliaryWindowTheme.RequireReadable(ClipboardCategoryManageBox, "Main.ClipboardCategory");
+                                AuxiliaryWindowTheme.RequireReadable(ClipboardShortcutBox, "Main.ClipboardShortcut");
+                            }
+                        }
+                        finally { ThemeService.Apply(originalDark ? "Dark" : "Light"); }
                         _clipboardQuickWindow.Hide();
                     }, System.Windows.Threading.DispatcherPriority.Background);
 
@@ -357,6 +372,17 @@ public partial class MainWindow : Window
                     {
                         if (!wizard.IsVisible)
                             throw new InvalidOperationException("O assistente de atalhos não abriu.");
+                        wizard.OpenFormForContrastSmoke();
+                        var originalDark = ThemeService.IsDark;
+                        try
+                        {
+                            foreach (var theme in new[] { "Light", "Dark" })
+                            {
+                                ThemeService.Apply(theme);
+                                wizard.ValidateVisibleFormContrast();
+                            }
+                        }
+                        finally { ThemeService.Apply(originalDark ? "Dark" : "Light"); }
                         wizard.Close();
                     }, System.Windows.Threading.DispatcherPriority.Background);
                 }
