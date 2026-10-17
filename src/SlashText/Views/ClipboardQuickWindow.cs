@@ -17,6 +17,10 @@ public sealed class ClipboardQuickWindow : Window
     private readonly Action<ClipboardHistoryItem> _copyOnly;
     private readonly Action _manage;
     private readonly TextBox _search;
+    // WPF text editing stays on the real TextBox; this independent TextBlock
+    // makes the query legible even on machines where PART_ContentHost paints
+    // editable text invisibly despite a correct effective Foreground brush.
+    private readonly TextBlock _searchVisibleText;
     private readonly ListBox _list;
     private readonly TextBlock _hint;
     private readonly Button _enable;
@@ -80,11 +84,30 @@ public sealed class ClipboardQuickWindow : Window
             VerticalContentAlignment = VerticalAlignment.Center,
             ToolTip = "Pesquise textos, imagens e categorias do histórico." };
         _search.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Field");
-        _search.SetResourceReference(Control.ForegroundProperty, "Lab.text");
         _search.SetResourceReference(Control.BackgroundProperty, "Lab.input");
-        _search.SetResourceReference(TextBox.CaretBrushProperty, "Lab.text");
+        // Keep editing, IME, keyboard navigation and selection on the TextBox,
+        // but render the query via a TextBlock like the visible header labels.
+        // Its text is intentionally transparent so a broken native text
+        // renderer cannot duplicate or clash with the overlay.
+        _search.Foreground = Brushes.Transparent;
+        _search.SetResourceReference(TextBox.CaretBrushProperty, "Lab.accent-text");
         _search.SetResourceReference(TextBox.SelectionBrushProperty, "Lab.accent");
-        _search.TextChanged += (_, _) => Refresh();
+        _searchVisibleText = new TextBlock
+        {
+            Text = "Pesquisar no histórico...",
+            IsHitTestVisible = false,
+            Focusable = false,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            FontSize = 14,
+            Margin = new Thickness(12, 0, 15, 12)
+        };
+        _searchVisibleText.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
+        _search.TextChanged += (_, _) =>
+        {
+            UpdateSearchTextDisplay();
+            Refresh();
+        };
         _search.PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.Down && _list is { } list) { list.Focus(); if (list.Items.Count > 0) list.SelectedIndex = 0; e.Handled = true; }
@@ -95,6 +118,10 @@ public sealed class ClipboardQuickWindow : Window
         filterRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(165) });
         Grid.SetColumn(_search, 0);
         filterRow.Children.Add(_search);
+        // Layer after the TextBox: the user still types into the real input,
+        // while visible glyphs come from the reliable TextBlock renderer.
+        Grid.SetColumn(_searchVisibleText, 0);
+        filterRow.Children.Add(_searchVisibleText);
         _categoryFilter = new ComboBox { Height = 38, Margin = new Thickness(8, 0, 0, 12) };
         _categoryFilter.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Combo");
         _categoryFilter.SetResourceReference(Control.ForegroundProperty, "Lab.text");
@@ -262,9 +289,43 @@ public sealed class ClipboardQuickWindow : Window
         _search.SelectAll();
     }
 
+    private void UpdateSearchTextDisplay()
+    {
+        var hasText = _search.Text.Length != 0;
+        _searchVisibleText.Text = hasText ? _search.Text : "Pesquisar no histórico...";
+        _searchVisibleText.SetResourceReference(TextBlock.ForegroundProperty,
+            hasText ? "Lab.text" : "Lab.muted");
+    }
+
+    // UI regression: verify the ACTUAL visible presentation is synchronized
+    // with the input. Testing TextBox.Foreground alone missed this bug.
+    internal void ValidateSearchTextPresentation()
+    {
+        var original = _search.Text;
+        try
+        {
+            _search.Text = "Texto visível 123";
+            if (_searchVisibleText.Text != _search.Text ||
+                _searchVisibleText.Visibility != Visibility.Visible ||
+                !_searchVisibleText.IsHitTestVisible == false)
+                throw new InvalidOperationException(
+                    "A pesquisa não está sincronizada com o texto visível.");
+            AuxiliaryWindowTheme.RequireReadableText(
+                _searchVisibleText, "Clipboard.SearchText", "Lab.input");
+            _search.Text = "";
+            if (_searchVisibleText.Text != "Pesquisar no histórico...")
+                throw new InvalidOperationException(
+                    "O placeholder da pesquisa não foi restaurado.");
+        }
+        finally { _search.Text = original; }
+    }
+
     internal void ValidateContrast()
     {
-        AuxiliaryWindowTheme.RequireReadable(_search, "Clipboard.Search");
+        // The editable TextBox foreground is deliberately transparent.
+        // The visible text is drawn by an accessible high-contrast TextBlock.
+        AuxiliaryWindowTheme.RequireReadableText(
+            _searchVisibleText, "Clipboard.SearchText", "Lab.input");
         AuxiliaryWindowTheme.RequireReadable(_categoryFilter, "Clipboard.Filter");
         AuxiliaryWindowTheme.RequireReadable(_moveToCategory, "Clipboard.MoveCategory");
     }
