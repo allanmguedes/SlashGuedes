@@ -307,7 +307,7 @@ public sealed class ClipboardQuickWindow : Window
             _search.Text = "Texto visível 123";
             if (_searchVisibleText.Text != _search.Text ||
                 _searchVisibleText.Visibility != Visibility.Visible ||
-                !_searchVisibleText.IsHitTestVisible == false)
+                _searchVisibleText.IsHitTestVisible)
                 throw new InvalidOperationException(
                     "A pesquisa não está sincronizada com o texto visível.");
             AuxiliaryWindowTheme.RequireReadableText(
