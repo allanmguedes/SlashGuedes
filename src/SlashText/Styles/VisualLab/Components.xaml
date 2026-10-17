@@ -105,6 +105,43 @@
    </ControlTemplate.Triggers>
   </ControlTemplate></Setter.Value></Setter>
  </Style>
+ <!-- Dedicated history rows: never inherit the Windows white ListBoxItem
+      selection surface when SlashGuedes runs in dark mode. -->
+ <Style x:Key="Lab.ClipboardHistoryItem" TargetType="ListBoxItem">
+  <Setter Property="Foreground" Value="{DynamicResource Lab.text}"/>
+  <Setter Property="Background" Value="{DynamicResource Lab.surface}"/>
+  <Setter Property="Padding" Value="8,5"/>
+  <Setter Property="Margin" Value="0,1"/>
+  <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+  <Setter Property="FocusVisualStyle" Value="{StaticResource Lab.Focus}"/>
+  <Setter Property="Template">
+   <Setter.Value><ControlTemplate TargetType="ListBoxItem">
+    <Border x:Name="RowSurface" Background="{TemplateBinding Background}"
+            Padding="{TemplateBinding Padding}" CornerRadius="5">
+     <ContentPresenter ContentSource="Content" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+          TextElement.Foreground="{TemplateBinding Foreground}"/>
+    </Border>
+    <ControlTemplate.Triggers>
+     <Trigger Property="IsMouseOver" Value="True">
+      <Setter TargetName="RowSurface" Property="Background" Value="{DynamicResource Lab.raised}"/>
+     </Trigger>
+     <Trigger Property="IsSelected" Value="True">
+      <Setter TargetName="RowSurface" Property="Background" Value="{DynamicResource Lab.tint}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Lab.text}"/>
+     </Trigger>
+     <MultiTrigger>
+      <MultiTrigger.Conditions>
+       <Condition Property="IsSelected" Value="True"/>
+       <Condition Property="IsMouseOver" Value="True"/>
+      </MultiTrigger.Conditions>
+      <Setter TargetName="RowSurface" Property="Background" Value="{DynamicResource Lab.tint}"/>
+     </MultiTrigger>
+     <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.6"/></Trigger>
+    </ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value>
+  </Setter>
+ </Style>
  <Style x:Key="Lab.ComboItem" TargetType="ComboBoxItem">
   <Setter Property="Foreground" Value="{DynamicResource Lab.text}"/><Setter Property="Background" Value="Transparent"/>
   <Setter Property="Padding" Value="11,9"/><Setter Property="FocusVisualStyle" Value="{StaticResource Lab.Focus}"/>
