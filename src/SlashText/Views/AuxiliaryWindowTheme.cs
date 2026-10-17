@@ -79,13 +79,33 @@ internal static class AuxiliaryWindowTheme
 
     // Used by the Windows UI smoke test against actual bound brushes, not
     // screenshots or static hex codes. WCAG contrast >= 4.5 for normal text.
+    // Templates provide independent TextBlock glyphs for ordinary TextBoxes.
+    // Check exactly what the user sees, not the transparent native foreground.
+    internal static TextBlock? GetReadableText(TextBox box)
+    {
+        box.ApplyTemplate();
+        return box.Template.FindName("ReadableGlyphs", box) as TextBlock;
+    }
+
+    internal static bool HasReadablePresentation(TextBox box)
+        => GetReadableText(box) is { Visibility: Visibility.Visible, IsHitTestVisible: false };
+
+    internal static bool TryGetVisibleText(TextBox box, out string visible)
+    {
+        if (GetReadableText(box) is { Visibility: Visibility.Visible } presentation)
+        {
+            visible = presentation.Text;
+            return true;
+        }
+        visible = string.Empty;
+        return false;
+    }
+
     internal static void RequireReadable(Control control, string name)
     {
-        // The native text is intentionally transparent on fields using the
-        // shared readable overlay. Measure the brush that paints the glyphs.
         if (control is TextBox box &&
-            ReadableInputBehavior.TryGetPresentationForeground(box, out var actual))
-            RequireReadableBrushes(actual, control.Background, name);
+            GetReadableText(box) is { Visibility: Visibility.Visible } actual)
+            RequireReadableBrushes(actual.Foreground, control.Background, name);
         else
             RequireReadableBrushes(control.Foreground, control.Background, name);
     }
