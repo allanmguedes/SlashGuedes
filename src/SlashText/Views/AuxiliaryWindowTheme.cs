@@ -114,6 +114,9 @@ internal static class AuxiliaryWindowTheme
         RequireReadableBrushes(text.Foreground,
             Application.Current.TryFindResource(backgroundKey) as Brush, name);
 
+    internal static void RequireReadableSurface(Brush? foreground, Brush? background, string name) =>
+        RequireReadableBrushes(foreground, background, name);
+
     private static void RequireReadableBrushes(Brush? foreground, Brush? background, string name)
     {
         if (foreground is not SolidColorBrush ink ||
