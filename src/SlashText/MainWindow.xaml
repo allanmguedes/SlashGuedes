@@ -1611,7 +1611,10 @@
                             </Grid.ColumnDefinitions>
                             <Border Grid.Column="0" BorderThickness="1" CornerRadius="12"
                                     BorderBrush="{DynamicResource Lab.line}" Background="{DynamicResource Lab.surface}">
-                                <ListBox x:Name="ClipboardItemsList" DisplayMemberPath="Summary" Foreground="{DynamicResource Lab.text}"
+                                <ListBox x:Name="ClipboardItemsList" DisplayMemberPath="Summary"
+                                         Background="{DynamicResource Lab.surface}"
+                                         Foreground="{DynamicResource Lab.text}"
+                                         ItemContainerStyle="{StaticResource Lab.ClipboardHistoryItem}"
                                          FontSize="13" Padding="12" BorderThickness="0"
                                          SelectionChanged="ClipboardSelected_OnChanged"/>
                             </Border>
