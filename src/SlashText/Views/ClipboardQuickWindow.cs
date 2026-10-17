@@ -262,6 +262,13 @@ public sealed class ClipboardQuickWindow : Window
         _search.SelectAll();
     }
 
+    internal void ValidateContrast()
+    {
+        AuxiliaryWindowTheme.RequireReadable(_search, "Clipboard.Search");
+        AuxiliaryWindowTheme.RequireReadable(_categoryFilter, "Clipboard.Filter");
+        AuxiliaryWindowTheme.RequireReadable(_moveToCategory, "Clipboard.MoveCategory");
+    }
+
     public void Refresh()
     {
         if (_list is null || _search is null || _categoryFilter is null) return;
