@@ -129,6 +129,17 @@ internal static class ReadableInputBehavior
            state.Presentation.IsHitTestVisible == false &&
            state.Presentation.ReadableForeground is SolidColorBrush;
 
+    internal static bool TryGetPresentationForeground(TextBox box, out Brush? brush)
+    {
+        if (Attached.TryGetValue(box, out var state))
+        {
+            brush = state.Presentation.ReadableForeground;
+            return true;
+        }
+        brush = null;
+        return false;
+    }
+
     private sealed class TextPresentation : Adorner
     {
         private readonly TextBox _owner;
