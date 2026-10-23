@@ -261,10 +261,8 @@ public partial class MainWindow
             StatusText.Text = "O histórico ainda está carregando. Aguarde um instante.";
             return;
         }
-        var popupStage = 0;
         try
         {
-        popupStage = 1; // constructing
         // Remember the external target BEFORE we activate the popup.
         // Opening from the main window deliberately uses copy-only behavior.
         _clipboardPasteTarget = capturedExternalTarget ??
@@ -280,9 +278,7 @@ public partial class MainWindow
                 ShowView(ClipboardView, ClipboardTabButton);
             },
             () => ClipboardToggle_OnClick(this, new RoutedEventArgs()));
-        popupStage = 2; // opening / data template rendering
         _clipboardQuickWindow.Open();
-        popupStage = 3; // successful
         StatusText.Text = "Painel rápido aberto. Use Esc para fechar.";
         }
         catch (Exception error)
@@ -291,8 +287,7 @@ public partial class MainWindow
             StatusText.Text = "Não foi possível abrir o painel rápido.";
             AppDiagnosticLog.Write("clipboard.popup.failed",
                 ("exceptionType", error.GetType().Name),
-                ("hresult", $"0x{error.HResult:X8}"),
-                ("count", popupStage));
+                ("hresult", $"0x{error.HResult:X8}"));
         }
     }
 
