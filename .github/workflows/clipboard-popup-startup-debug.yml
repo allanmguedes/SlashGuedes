@@ -1,0 +1,39 @@
+name: Clipboard popup startup debug
+on:
+  push:
+    branches:
+      - fix/clipboard-popup-startup
+permissions:
+  contents: read
+jobs:
+  startup:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore src/SlashText/SlashText.csproj --runtime win-x64 -p:Platform=x64 -p:SlashGuedesBuild=true
+      - name: Build
+        shell: pwsh
+        run: dotnet build src/SlashText/SlashText.csproj --configuration Release -p:Platform=x64 -p:SlashGuedesBuild=true --no-restore
+      - name: UI startup smoke
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path src/SlashText/bin -Recurse -Filter SlashGuedes.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          if (-not $exe) { throw 'Missing executable' }
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList '--guedes-ui-smoke' -PassThru
+          if (-not $process.WaitForExit(45000)) { $process.Kill(); throw 'Startup smoke timeout' }
+          Write-Output "Startup exit code: $($process.ExitCode)"
+          $roots = @("$env:LOCALAPPDATA/SlashGuedes/Logs", "$($exe.DirectoryName)/SlashGuedesData/Logs", "$($exe.DirectoryName)/SlashDeskData/Logs")
+          foreach ($root in $roots) {
+            if (Test-Path $root) { Get-ChildItem $root -Filter '*.jsonl' -File | ForEach-Object { Get-Content $_.FullName | Select-Object -Last 20 } }
+          }
+          if ($process.ExitCode -ne 0) { throw "Startup UI failed: $($process.ExitCode)" }
