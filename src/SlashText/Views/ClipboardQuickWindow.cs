@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -167,7 +168,10 @@ public sealed class ClipboardQuickWindow : Window
         // Cards and thumbnails are created only when scrolled into view.
         var cardTemplate = new DataTemplate(typeof(ClipboardHistoryItem));
         var cardFactory = new FrameworkElementFactory(typeof(ClipboardCardView));
-        cardFactory.SetValue(ClipboardCardView.OwnerProperty, this);
+        // Binding keeps a Window reference out of shared template values.
+        cardFactory.SetBinding(ClipboardCardView.OwnerProperty,
+            new Binding { RelativeSource = new RelativeSource(
+                RelativeSourceMode.FindAncestor, typeof(ClipboardQuickWindow), 1) });
         cardTemplate.VisualTree = cardFactory;
         _list.ItemTemplate = cardTemplate;
         _list.MouseDoubleClick += (_, e) =>
