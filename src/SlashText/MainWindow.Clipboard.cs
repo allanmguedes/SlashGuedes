@@ -285,9 +285,17 @@ public partial class MainWindow
         {
             ClipboardShortcutHint.Text = "Erro ao abrir o painel rápido. Consulte o diagnóstico.";
             StatusText.Text = "Não foi possível abrir o painel rápido.";
+            // Diagnostic method names only: never record clipboard payloads or paths.
+            var frames = new System.Diagnostics.StackTrace(error).GetFrames();
+            var methods = string.Join(" > ", (frames ?? [])
+                .Take(8)
+                .Select(frame => frame.GetMethod() is { } method
+                    ? (method.DeclaringType?.Name ?? "?") + "." + method.Name
+                    : "?"));
             AppDiagnosticLog.Write("clipboard.popup.failed",
                 ("exceptionType", error.GetType().Name),
-                ("hresult", $"0x{error.HResult:X8}"));
+                ("hresult", $"0x{error.HResult:X8}"),
+                ("sourceMethod", methods));
         }
     }
 
