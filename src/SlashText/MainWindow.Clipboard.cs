@@ -119,7 +119,8 @@ public partial class MainWindow
         ClipboardToggleButton.Content = _clipboardHistory.Enabled ? "Pausar histórico" : "Ativar histórico";
         ClipboardQuickWindowButton.IsEnabled = _clipboardReady;
         ClipboardSelected_OnChanged(null!, null!);
-        _clipboardQuickWindow?.Refresh();
+        // Clipboard copies must not rebuild a hidden popup in the background.
+        if (_clipboardQuickWindow?.IsVisible == true) _clipboardQuickWindow.Refresh();
     }
 
     private void ClipboardSelected_OnChanged(object sender, SelectionChangedEventArgs e)
