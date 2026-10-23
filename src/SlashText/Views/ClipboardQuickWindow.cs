@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using SlashText.Models;
 using SlashText.Services;
 using Forms = System.Windows.Forms;
@@ -31,6 +32,10 @@ public sealed class ClipboardQuickWindow : Window
     private readonly Button _deleteButton;
     private readonly TextBlock _emptyMessage;
     private bool _refreshingCategories;
+    private readonly DispatcherTimer _searchRefreshTimer = new()
+    {
+        Interval = TimeSpan.FromMilliseconds(140)
+    };
 
     public ClipboardQuickWindow(ClipboardHistoryService history,
         Action<ClipboardHistoryItem> choose, Action<ClipboardHistoryItem> copyOnly,
@@ -40,9 +45,10 @@ public sealed class ClipboardQuickWindow : Window
         _choose = choose;
         _copyOnly = copyOnly;
         _manage = manage;
-        Width = 540;
-        Height = 640;
+        Width = 560;
+        Height = 630;
         MinWidth = 480;
+        MinHeight = 420;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = false;
@@ -106,10 +112,17 @@ public sealed class ClipboardQuickWindow : Window
             Margin = new Thickness(12, 0, 15, 12)
         };
         _searchVisibleText.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
+        // Throttle filtering rather than allocating new cards on every keystroke.
+        _searchRefreshTimer.Tick += (_, _) =>
+        {
+            _searchRefreshTimer.Stop();
+            if (IsVisible) Refresh();
+        };
         _search.TextChanged += (_, _) =>
         {
             UpdateSearchTextDisplay();
-            Refresh();
+            _searchRefreshTimer.Stop();
+            _searchRefreshTimer.Start();
         };
         _search.PreviewKeyDown += (_, e) =>
         {
@@ -145,7 +158,23 @@ public sealed class ClipboardQuickWindow : Window
         };
         _list.SetResourceReference(Control.BackgroundProperty, "Lab.surface");
         _list.SetResourceReference(Control.ForegroundProperty, "Lab.text");
-        _list.MouseDoubleClick += (_, _) => SelectCurrent();
+        ScrollViewer.SetHorizontalScrollBarVisibility(_list, ScrollBarVisibility.Disabled);
+        ScrollViewer.SetVerticalScrollBarVisibility(_list, ScrollBarVisibility.Auto);
+        ScrollViewer.SetCanContentScroll(_list, true);
+        VirtualizingPanel.SetIsVirtualizing(_list, true);
+        VirtualizingPanel.SetVirtualizationMode(_list, VirtualizationMode.Recycling);
+        VirtualizingPanel.SetScrollUnit(_list, ScrollUnit.Pixel);
+        // Cards and thumbnails are created only when scrolled into view.
+        var cardTemplate = new DataTemplate(typeof(ClipboardHistoryItem));
+        var cardFactory = new FrameworkElementFactory(typeof(ClipboardCardView));
+        cardFactory.SetValue(ClipboardCardView.OwnerProperty, this);
+        cardTemplate.VisualTree = cardFactory;
+        _list.ItemTemplate = cardTemplate;
+        _list.MouseDoubleClick += (_, e) =>
+        {
+            // A double-click on a star or pin should not paste into another app.
+            if (!IsInsideButton(e.OriginalSource as DependencyObject)) SelectCurrent();
+        };
         _list.PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.Enter) { SelectCurrent(); e.Handled = true; }
@@ -173,7 +202,7 @@ public sealed class ClipboardQuickWindow : Window
             Margin = new Thickness(0, 0, 0, 8) };
         _hint.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
         footer.Children.Add(_hint);
-        var actions = new StackPanel { Orientation = Orientation.Horizontal };
+        var actions = new WrapPanel { Orientation = Orientation.Horizontal };
         var paste = new Button
         {
             Content = "Colar no aplicativo", Margin = new Thickness(0, 0, 7, 0),
@@ -215,7 +244,7 @@ public sealed class ClipboardQuickWindow : Window
         _moveButton = new Button { Content = "Mover", Margin = new Thickness(0, 0, 8, 0) };
         _moveButton.Click += async (_, _) =>
         {
-            if (_list.SelectedItem is not ListBoxItem { Tag: ClipboardHistoryItem current }) return;
+            if (_list.SelectedItem is not ClipboardHistoryItem current) return;
             var category = _moveToCategory.SelectedItem as string ?? "Sem categoria";
             try
             {
@@ -234,7 +263,7 @@ public sealed class ClipboardQuickWindow : Window
         };
         _deleteButton.Click += async (_, _) =>
         {
-            if (_list.SelectedItem is not ListBoxItem { Tag: ClipboardHistoryItem current }) return;
+            if (_list.SelectedItem is not ClipboardHistoryItem current) return;
             try { await _history.DeleteAsync(current); Refresh(); }
             catch (Exception) { /* Item remains on disk if the write failed. */ }
         };
@@ -268,6 +297,12 @@ public sealed class ClipboardQuickWindow : Window
         footer.Children.Add(clean);
         Grid.SetRow(footer, 3);
         grid.Children.Add(footer);
+        _list.SelectionChanged += (_, _) =>
+        {
+            var canEdit = _list.SelectedItem is ClipboardHistoryItem;
+            _moveButton.IsEnabled = canEdit;
+            _deleteButton.IsEnabled = canEdit;
+        };
 
         // All footer buttons and cards share the same palette; don't apply
         // AuxiliaryWindowTheme.Apply(), which would Close rather than Hide on Esc.
@@ -276,14 +311,19 @@ public sealed class ClipboardQuickWindow : Window
         {
             if (e.Key == Key.Escape) { Hide(); e.Handled = true; }
         };
-        Deactivated += (_, _) => Hide();
+        Deactivated += (_, _) => { _searchRefreshTimer.Stop(); Hide(); };
     }
 
     public void Open()
     {
+        _searchRefreshTimer.Stop();
         Refresh();
         var cursor = Forms.Control.MousePosition;
         var screen = Forms.Screen.FromPoint(cursor).WorkingArea;
+        // Adapt popup size to the current monitor's available DIP space.
+        var dpi = VisualTreeHelper.GetDpi(this);
+        Width = Math.Min(560, Math.Max(MinWidth, screen.Width / dpi.DpiScaleX - 24));
+        Height = Math.Min(630, Math.Max(MinHeight, screen.Height / dpi.DpiScaleY - 24));
         Left = Math.Clamp(cursor.X - Width / 2, screen.Left, Math.Max(screen.Left, screen.Right - Width));
         Top = Math.Clamp(cursor.Y - 28, screen.Top, Math.Max(screen.Top, screen.Bottom - Height));
         Show();
@@ -363,8 +403,7 @@ public sealed class ClipboardQuickWindow : Window
         }
         var filterCategory = _categoryFilter.SelectedItem as string ?? "Todas as categorias";
         var query = _search.Text.Trim();
-        var selectedId = (_list.SelectedItem as ListBoxItem)?.Tag is ClipboardHistoryItem active
-            ? active.Id : null;
+        var selectedId = (_list.SelectedItem as ClipboardHistoryItem)?.Id;
         var candidates = _history.Items
             .Where(i => (filterCategory == "Todas as categorias" ||
                          i.Category.Equals(filterCategory, StringComparison.OrdinalIgnoreCase)) &&
@@ -375,103 +414,12 @@ public sealed class ClipboardQuickWindow : Window
             .ThenByDescending(i => i.CopiedUtc)
             .Take(70)
             .ToArray();
-        _list.Items.Clear();
-        foreach (var item in candidates)
-        {
-            var row = new DockPanel { Margin = new Thickness(2, 4, 2, 4),
-                LastChildFill = true };
-            var star = new Button
-            {
-                Content = item.IsFavorite ? "★" : "☆",
-                ToolTip = item.IsFavorite ? "Remover dos favoritos" : "Favoritar e proteger da limpeza",
-                FontSize = 19,
-                MinWidth = 36,
-                Margin = new Thickness(5, 0, 2, 0),
-                Padding = new Thickness(4, 1, 4, 1)
-            };
-            DockPanel.SetDock(star, Dock.Right);
-            star.Click += async (_, _) =>
-            {
-                star.IsEnabled = false;
-                try { await _history.ChangeAsync(item, favorite: !item.IsFavorite); }
-                catch (Exception) { /* A aba principal continua disponível. */ }
-                finally { star.IsEnabled = true; }
-                Refresh();
-            };
-            row.Children.Add(star);
-            var pin = new Button
-            {
-                Content = item.IsPinned ? "◆" : "◇",
-                ToolTip = item.IsPinned ? "Desafixar" : "Fixar",
-                MinWidth = 30, FontSize = 16,
-                Margin = new Thickness(1, 0, 4, 0),
-                Padding = new Thickness(3, 1, 3, 1)
-            };
-            DockPanel.SetDock(pin, Dock.Right);
-            pin.Click += async (_, _) =>
-            {
-                pin.IsEnabled = false;
-                try { await _history.ChangeAsync(item, pinned: !item.IsPinned); }
-                catch (Exception) { /* No change on failure. */ }
-                finally { pin.IsEnabled = true; }
-                Refresh();
-            };
-            row.Children.Add(pin);
-            if (item.Kind == "image" && _history.LoadThumbnail(item) is { } bitmap)
-            {
-                var image = new System.Windows.Controls.Image
-                {
-                    Source = bitmap, Width = 94, Height = 65,
-                    Stretch = Stretch.UniformToFill,
-                    Margin = new Thickness(4, 0, 10, 0)
-                };
-                DockPanel.SetDock(image, Dock.Left);
-                row.Children.Add(image);
-            }
-            var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-            var label = new TextBlock
-            {
-                Text = item.Kind == "image" ? "Imagem copiada" : item.Summary,
-                MaxHeight = 48, FontSize = 13, TextTrimming = TextTrimming.CharacterEllipsis,
-                TextWrapping = TextWrapping.Wrap
-            };
-            label.SetResourceReference(TextBlock.ForegroundProperty, "Lab.text");
-            text.Children.Add(label);
-            var note = new TextBlock
-            {
-                Text = (item.IsPinned ? "FIXADO · " : "") +
-                       (item.IsFavorite ? "FAVORITO · " : "") +
-                       (!string.IsNullOrWhiteSpace(item.Category) ? item.Category + " · " : "") +
-                       item.CopiedUtc.ToLocalTime().ToString("dd/MM HH:mm"),
-                FontSize = 10
-            };
-            note.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
-            text.Children.Add(note);
-            row.Children.Add(text);
-            var card = new Border
-            {
-                CornerRadius = new CornerRadius(10),
-                BorderThickness = new Thickness(1),
-                Padding = new Thickness(9, 5, 9, 5),
-                Child = row,
-                Margin = new Thickness(0, 2, 0, 2)
-            };
-            card.SetResourceReference(Border.BackgroundProperty, "Lab.bg");
-            card.SetResourceReference(Border.BorderBrushProperty, "Lab.line");
-            var control = new ListBoxItem
-            {
-                Tag = item, Content = card,
-                Padding = new Thickness(3),
-                HorizontalContentAlignment = HorizontalAlignment.Stretch
-            };
-            control.SetResourceReference(Control.ForegroundProperty, "Lab.text");
-            _list.Items.Add(control);
-        }
+        // Virtualized data binding avoids eagerly decoding every offscreen card.
+        _list.ItemsSource = candidates;
         _emptyMessage.Visibility = _list.Items.Count == 0
             ? Visibility.Visible : Visibility.Collapsed;
-        _list.SelectedItem = _list.Items.Cast<ListBoxItem>()
-            .FirstOrDefault(entry => ((ClipboardHistoryItem)entry.Tag).Id == selectedId)
-            ?? _list.Items.Cast<ListBoxItem>().FirstOrDefault();
+        _list.SelectedItem = candidates.FirstOrDefault(item => item.Id == selectedId)
+            ?? candidates.FirstOrDefault();
         var protectedCount = _history.Items.Count(i => i.IsFavorite || i.IsPinned);
         var recentCount = _history.Items.Count - protectedCount;
         _hint.Text = !_history.Enabled ? "Histórico pausado · itens salvos permanecem disponíveis."
@@ -485,9 +433,139 @@ public sealed class ClipboardQuickWindow : Window
         _enable.Visibility = Visibility.Visible;
     }
 
+    // The grid reserves fixed columns for ☆ / ◇ so long text cannot hide them.
+    private FrameworkElement BuildCardRow(ClipboardHistoryItem item)
+    {
+        var row = new Grid { Margin = new Thickness(2, 4, 2, 4) };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var star = new Button
+        {
+            Content = item.IsFavorite ? "★" : "☆",
+            ToolTip = item.IsFavorite ? "Remover dos favoritos" : "Favoritar e proteger da limpeza",
+            FontSize = 19, MinWidth = 36,
+            Margin = new Thickness(4, 0, 2, 0),
+            Padding = new Thickness(4, 1, 4, 1)
+        };
+        Grid.SetColumn(star, 2);
+        star.Click += async (_, e) =>
+        {
+            e.Handled = true;
+            _list.SelectedItem = item;
+            star.IsEnabled = false;
+            try { await _history.ChangeAsync(item, favorite: !item.IsFavorite); }
+            catch (Exception) { /* Item remains unchanged on failures. */ }
+            finally { star.IsEnabled = true; }
+            Refresh();
+        };
+        row.Children.Add(star);
+        var pin = new Button
+        {
+            Content = item.IsPinned ? "◆" : "◇",
+            ToolTip = item.IsPinned ? "Desafixar" : "Fixar",
+            FontSize = 16, MinWidth = 32,
+            Margin = new Thickness(1, 0, 2, 0),
+            Padding = new Thickness(3, 1, 3, 1)
+        };
+        Grid.SetColumn(pin, 3);
+        pin.Click += async (_, e) =>
+        {
+            e.Handled = true;
+            _list.SelectedItem = item;
+            pin.IsEnabled = false;
+            try { await _history.ChangeAsync(item, pinned: !item.IsPinned); }
+            catch (Exception) { /* Item remains unchanged on failures. */ }
+            finally { pin.IsEnabled = true; }
+            Refresh();
+        };
+        row.Children.Add(pin);
+        if (item.Kind == "image" && _history.LoadThumbnail(item) is { } bitmap)
+        {
+            var image = new System.Windows.Controls.Image
+            {
+                Source = bitmap, Width = 90, Height = 62,
+                Stretch = Stretch.UniformToFill, Margin = new Thickness(3, 0, 8, 0)
+            };
+            Grid.SetColumn(image, 0);
+            row.Children.Add(image);
+        }
+        var text = new StackPanel
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(4, 0, 5, 0)
+        };
+        var label = new TextBlock
+        {
+            Text = item.Kind == "image" ? "Imagem copiada" : item.Summary,
+            MaxHeight = 48, FontSize = 13,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            TextWrapping = TextWrapping.Wrap
+        };
+        label.SetResourceReference(TextBlock.ForegroundProperty, "Lab.text");
+        text.Children.Add(label);
+        var note = new TextBlock
+        {
+            Text = (item.IsPinned ? "FIXADO · " : "") +
+                   (item.IsFavorite ? "FAVORITO · " : "") +
+                   (!string.IsNullOrWhiteSpace(item.Category) ? item.Category + " · " : "") +
+                   item.CopiedUtc.ToLocalTime().ToString("dd/MM HH:mm"),
+            FontSize = 10, TextTrimming = TextTrimming.CharacterEllipsis
+        };
+        note.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
+        text.Children.Add(note);
+        Grid.SetColumn(text, 1);
+        row.Children.Add(text);
+        return row;
+    }
+
+    private static bool IsInsideButton(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (source is Button) return true;
+            source = source is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(source) : null;
+        }
+        return false;
+    }
+
+    // Recycled WPF template presenter: builds an item only when visible.
+    public sealed class ClipboardCardView : Border
+    {
+        public static readonly DependencyProperty OwnerProperty =
+            DependencyProperty.Register(nameof(Owner), typeof(ClipboardQuickWindow),
+                typeof(ClipboardCardView), new PropertyMetadata(null,
+                    (d, _) => ((ClipboardCardView)d).UpdateContent()));
+
+        public ClipboardQuickWindow? Owner
+        {
+            get => (ClipboardQuickWindow?)GetValue(OwnerProperty);
+            set => SetValue(OwnerProperty, value);
+        }
+
+        public ClipboardCardView()
+        {
+            CornerRadius = new CornerRadius(10);
+            BorderThickness = new Thickness(1);
+            Padding = new Thickness(9, 5, 9, 5);
+            Margin = new Thickness(0, 2, 0, 2);
+            SetResourceReference(BackgroundProperty, "Lab.bg");
+            SetResourceReference(BorderBrushProperty, "Lab.line");
+            DataContextChanged += (_, _) => UpdateContent();
+        }
+
+        private void UpdateContent()
+        {
+            Child = Owner is { } popup && DataContext is ClipboardHistoryItem item
+                ? popup.BuildCardRow(item) : null;
+        }
+    }
+
     private void SelectCurrent(bool copyOnly = false)
     {
-        if (_list.SelectedItem is not ListBoxItem { Tag: ClipboardHistoryItem item }) return;
+        if (_list.SelectedItem is not ClipboardHistoryItem item) return;
         Hide();
         if (copyOnly) _copyOnly(item);
         else _choose(item);
