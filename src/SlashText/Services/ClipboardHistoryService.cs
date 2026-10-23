@@ -21,11 +21,15 @@ public sealed class ClipboardHistoryService : IDisposable
     private const uint ModNoRepeat = 0x4000;
     private const long MaxImageUncompressed = 48L * 1024 * 1024;
     private const int MaxImagePng = 8 * 1024 * 1024;
+    // Bound thumbnail cache so scrolling and repeated searches avoid disk decode.
+    private const int MaxCachedThumbnails = 24;
 
     private readonly string _folder = Path.Combine(AppPaths.DataDirectory, "ClipboardHistory");
     private readonly JsonFileStore<ClipboardHistoryState> _store;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private ClipboardHistoryState _state = new();
+    private readonly Dictionary<string, BitmapImage> _thumbnailCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Queue<string> _thumbnailOrder = new();
     private HwndSource? _source;
     private IntPtr _handle;
     private uint _lastSequence;
@@ -55,6 +59,8 @@ public sealed class ClipboardHistoryService : IDisposable
     {
         MaxEntries = ClipboardRetentionPolicy.NormalizeLimit(maxRecentEntries);
         _state = await _store.LoadAsync();
+        _thumbnailCache.Clear();
+        _thumbnailOrder.Clear();
         _state.Items ??= [];
         _state.Categories ??= [];
         _state.Categories = ClipboardCategoryRules.Migrate(
@@ -421,7 +427,12 @@ public sealed class ClipboardHistoryService : IDisposable
     {
         if (item.Kind != "image" || !IsSafeImageName(item.ImageFile)) return null;
         var path = Path.Combine(_folder, "images", item.ImageFile);
-        if (!File.Exists(path)) return null;
+        if (!File.Exists(path))
+        {
+            _thumbnailCache.Remove(item.ImageFile);
+            return null;
+        }
+        if (_thumbnailCache.TryGetValue(item.ImageFile, out var cached)) return cached;
         try
         {
             var image = new BitmapImage();
@@ -431,6 +442,10 @@ public sealed class ClipboardHistoryService : IDisposable
             image.UriSource = new Uri(path);
             image.EndInit();
             image.Freeze();
+            _thumbnailCache[item.ImageFile] = image;
+            _thumbnailOrder.Enqueue(item.ImageFile);
+            while (_thumbnailOrder.Count > MaxCachedThumbnails)
+                _thumbnailCache.Remove(_thumbnailOrder.Dequeue());
             return image;
         }
         catch (Exception error) when (error is IOException or NotSupportedException)
@@ -451,6 +466,7 @@ public sealed class ClipboardHistoryService : IDisposable
     private void DeleteImage(ClipboardHistoryItem item)
     {
         if (!IsSafeImageName(item.ImageFile)) return;
+        _thumbnailCache.Remove(item.ImageFile);
         var path = Path.Combine(_folder, "images", item.ImageFile);
         try { File.Delete(path); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
