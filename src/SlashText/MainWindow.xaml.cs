@@ -351,6 +351,15 @@ public partial class MainWindow : Window
                             foreach (var theme in new[] { "Light", "Dark" })
                             {
                                 ThemeService.Apply(theme);
+                                // The shortcuts search uses native editable glyphs.
+                                // A duplicate overlay makes mouse selection/caret position diverge.
+                                SearchBox.ApplyTemplate();
+                                if (!string.Equals(SearchBox.Tag as string, "SkipReadableOverlay", StringComparison.Ordinal) ||
+                                    SearchBox.Template.FindName("ReadableGlyphs", SearchBox) is not TextBlock
+                                        { Visibility: Visibility.Collapsed } ||
+                                    System.Windows.Media.Brushes.Transparent.Equals(SearchBox.Foreground))
+                                    throw new InvalidOperationException("A pesquisa dos atalhos deve usar texto editável nativo.");
+                                AuxiliaryWindowTheme.RequireReadable(SearchBox, "Main.ShortcutsSearch");
                                 _clipboardQuickWindow.ValidateSearchTextPresentation();
                                 _clipboardQuickWindow.ValidateContrast();
                                 AuxiliaryWindowTheme.RequireReadable(ClipboardItemsList, "Main.ClipboardHistoryList");
