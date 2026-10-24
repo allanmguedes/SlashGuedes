@@ -14,7 +14,10 @@ public sealed class UpdateService
     internal static string ActiveRepository => AppPaths.IsSlashGuedes ? GuedesRepository : Repository;
     internal static readonly Uri ReleasesApi =
         new($"https://api.github.com/repos/{Repository}/releases?per_page=20");
+    // Keep upstream SlashDesk's original cadence. The Guedes Preview is checked
+    // more often so short-lived test releases are announced promptly.
     internal static readonly TimeSpan AutomaticCheckInterval = TimeSpan.FromHours(6);
+    internal static readonly TimeSpan GuedesAutomaticCheckInterval = TimeSpan.FromMinutes(30);
     internal static readonly TimeSpan RemindLaterInterval = TimeSpan.FromHours(24);
 
     private readonly HttpClient _client;
@@ -60,15 +63,16 @@ public sealed class UpdateService
 
     public async Task<UpdateCheckResult> CheckAsync(
         bool force = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool bypassCache = false)
     {
         await _checkGate.WaitAsync(cancellationToken);
         try
         {
             var state = await _stateStore.LoadAsync(cancellationToken);
             var now = _utcNow();
-            if (!force && state.LastCheckedUtc is { } checkedAt &&
-                now - checkedAt < AutomaticCheckInterval)
+            if (!force && !bypassCache && state.LastCheckedUtc is { } checkedAt &&
+                now - checkedAt < (_isGuedes ? GuedesAutomaticCheckInterval : AutomaticCheckInterval))
             {
                 return FromCachedState(state);
             }
