@@ -251,8 +251,9 @@ public partial class MainWindow : Window
             RefreshAboutPresentation();
             SettingsVersionText.Text =
                 UiText.Format($"Versão atual: {ProductVersion()}");
-            UpdateChannelText.Text =
-                UiText.Format($"Canal: estável · modo {AppPaths.Mode.ToString().ToLowerInvariant()}");
+            UpdateChannelText.Text = AppPaths.IsSlashGuedes
+                ? UiText.Format($"Canal: Preview do SlashGuedes · modo {AppPaths.Mode.ToString().ToLowerInvariant()}")
+                : UiText.Format($"Canal: estável · modo {AppPaths.Mode.ToString().ToLowerInvariant()}");
             BackupLocationText.Text =
                 UiText.Format($"Backups em {AppPaths.BackupsDirectory}. Nenhum arquivo é enviado para a nuvem.");
 
@@ -4205,7 +4206,10 @@ public partial class MainWindow : Window
     {
         try
         {
-            await CheckUpdatesSilentlyAsync(cancellation.Token);
+            // A new Guedes release may have appeared while the application was
+            // closed. Refresh on each launch without overriding "remind later"
+            // or "ignore version" preferences.
+            await CheckUpdatesSilentlyAsync(cancellation.Token, bypassCache: AppPaths.IsSlashGuedes);
             using var timer = new PeriodicTimer(UpdateMonitorInterval);
             while (await timer.WaitForNextTickAsync(cancellation.Token))
             {
@@ -4230,11 +4234,12 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task CheckUpdatesSilentlyAsync(CancellationToken cancellationToken)
+    private async Task CheckUpdatesSilentlyAsync(CancellationToken cancellationToken, bool bypassCache = false)
     {
         try
         {
-            var result = await _updateService.CheckAsync(cancellationToken: cancellationToken);
+            var result = await _updateService.CheckAsync(
+                cancellationToken: cancellationToken, bypassCache: bypassCache);
             UpdateUpdateDisplay(await _updateService.LoadStateAsync(cancellationToken));
             if (result.UpdateAvailable &&
                 result.Release is not null &&

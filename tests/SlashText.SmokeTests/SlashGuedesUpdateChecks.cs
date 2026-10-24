@@ -46,6 +46,39 @@ internal static class SlashGuedesUpdateChecks
         Require(noUpdate.Status == UpdateCheckStatus.UpToDate && !noUpdate.UpdateAvailable,
             "Nunca instalar Preview mais antiga");
 
+        // Automatic preview checks refresh after 30 minutes. Startup may
+        // bypass the cache, but must still honor an explicit deferral/ignore.
+        var clock = DateTimeOffset.UtcNow;
+        var handler = new FakeHandler(json);
+        using var alertClient = new HttpClient(handler);
+        var alertService = new UpdateService(alertClient,
+            Path.Combine(root, "alert-state.json"), "3.2.1-preview.7",
+            () => clock, TimeSpan.FromSeconds(8), isSlashGuedes: true);
+        var firstAlert = await alertService.CheckAsync();
+        Require(firstAlert.UpdateAvailable && handler.RequestCount == 1,
+            "A primeira consulta automática encontra a Preview nova");
+        _ = await alertService.CheckAsync();
+        Require(handler.RequestCount == 1, "Consultas dentro de 30 minutos reutilizam o cache");
+        clock = clock.AddMinutes(31);
+        _ = await alertService.CheckAsync();
+        Require(handler.RequestCount == 2, "Preview é consultada novamente após 30 minutos");
+        clock = clock.AddMinutes(1);
+        _ = await alertService.CheckAsync(bypassCache: true);
+        Require(handler.RequestCount == 3,
+            "Inicialização pode consultar uma Preview mais recente sem aguardar o cache");
+
+        await alertService.RemindLaterAsync(version);
+        var deferred = await alertService.CheckAsync(bypassCache: true);
+        Require(deferred.Status == UpdateCheckStatus.Deferred && !deferred.UpdateAvailable &&
+                handler.RequestCount == 4,
+            "Consulta na inicialização respeita a opção Lembrar depois");
+        var manual = await alertService.CheckAsync(force: true);
+        Require(manual.UpdateAvailable, "Verificação manual permite revisar uma versão adiada");
+        await alertService.IgnoreVersionAsync(version);
+        var ignored = await alertService.CheckAsync(bypassCache: true);
+        Require(ignored.Status == UpdateCheckStatus.Ignored && !ignored.UpdateAvailable,
+            "Versão ignorada não reaparece no alerta automático");
+
         var operation = Path.Combine(AppPaths.DataDirectory, "Updates", Guid.NewGuid().ToString("N"));
         var manifest = new PortableUpdateManifest
         {
@@ -72,12 +105,15 @@ internal static class SlashGuedesUpdateChecks
 
     private sealed class FakeHandler(string payload) : HttpMessageHandler
     {
+        public int RequestCount { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
             if (request.RequestUri?.AbsoluteUri !=
                 "https://api.github.com/repos/allanmguedes/SlashGuedes/releases?per_page=30")
                 throw new InvalidOperationException("Updater tentou consultar o repositório errado.");
+            RequestCount++;
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json")
