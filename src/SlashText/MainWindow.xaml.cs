@@ -351,6 +351,24 @@ public partial class MainWindow : Window
                             foreach (var theme in new[] { "Light", "Dark" })
                             {
                                 ThemeService.Apply(theme);
+                                // QA regression: native caret and selection must use
+                                // the same glyph renderer (no independent overlay).
+                                SearchBox.ApplyTemplate();
+                                var searchOverlay = SearchBox.Template.FindName("ReadableGlyphs", SearchBox) as TextBlock;
+                                if (searchOverlay is not { Visibility: Visibility.Collapsed })
+                                    throw new InvalidOperationException("Pesquisa de atalhos ainda usa texto sobreposto ao cursor.");
+                                AuxiliaryWindowTheme.RequireReadable(SearchBox, "Shortcuts.NativeSearch");
+                                if (SearchBox.ToolTip is not null)
+                                    throw new InvalidOperationException("Tooltip da pesquisa cobre o cabeçalho Categorias.");
+                                var previousShortcutSearch = SearchBox.Text;
+                                try
+                                {
+                                    SearchBox.Text = "acesso";
+                                    SearchBox.Select(1, 3);
+                                    if (SearchBox.SelectedText != "ces")
+                                        throw new InvalidOperationException("Seleção da pesquisa não corresponde ao texto real.");
+                                }
+                                finally { SearchBox.Text = previousShortcutSearch; }
                                 _clipboardQuickWindow.ValidateSearchTextPresentation();
                                 _clipboardQuickWindow.ValidateContrast();
                                 AuxiliaryWindowTheme.RequireReadable(ClipboardItemsList, "Main.ClipboardHistoryList");
@@ -709,9 +727,9 @@ public partial class MainWindow : Window
     }
 
     private void SearchBox_OnTextChanged(object sender, TextChangedEventArgs e) =>
-        RefreshNavigation();
+        RefreshNavigation(updateCategories: false);
 
-    private void RefreshNavigation()
+    private void RefreshNavigation(bool updateCategories = true)
     {
         if (CategoriesPanel is null || SnippetListPanel is null)
         {
@@ -756,12 +774,17 @@ public partial class MainWindow : Window
 
         var visible = filtered.OrderByDescending(item => item.IsPinned).ToList();
 
-        CategoriesPanel.Children.Clear();
-        CategoriesPanel.Children.Add(CreateCategoryButton(null, UiText.Get("Todos"), _snippets.Count));
-        foreach (var category in ShortcutCategories.All)
+        // Typing in search only filters snippets; categories and their counts do
+        // not change. Preserve category controls and scroll position on each key.
+        if (updateCategories || CategoriesPanel.Children.Count == 0)
         {
-            var count = _snippets.Count(item => ShortcutCategories.Resolve(item.Category).Name == category.Name);
-            CategoriesPanel.Children.Add(CreateCategoryButton(category.Name, category.DisplayName, count));
+            CategoriesPanel.Children.Clear();
+            CategoriesPanel.Children.Add(CreateCategoryButton(null, UiText.Get("Todos"), _snippets.Count));
+            foreach (var category in ShortcutCategories.All)
+            {
+                var count = _snippets.Count(item => ShortcutCategories.Resolve(item.Category).Name == category.Name);
+                CategoriesPanel.Children.Add(CreateCategoryButton(category.Name, category.DisplayName, count));
+            }
         }
 
         UpdateShortcutItems(visible);

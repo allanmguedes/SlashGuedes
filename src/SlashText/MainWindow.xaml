@@ -212,7 +212,9 @@
                                 <Grid x:Name="ShortcutSidebarContent" Margin="18" SizeChanged="ShortcutSidebarContent_OnSizeChanged">
                                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition x:Name="ShortcutSidebarSearchGap" Height="24"/><RowDefinition Height="Auto"/><RowDefinition x:Name="ShortcutSidebarCategoryGap" Height="24"/><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                                     <Grid>
-                                        <TextBox x:Name="SearchBox" Style="{StaticResource Lab.Field}" Padding="32,9,28,9" TextChanged="SearchBox_OnTextChanged" ToolTip="{DynamicResource Ui.0D0E43169FAADACA}" AutomationProperties.Name="{DynamicResource Ui.02859A9360AD38AB}"/>
+                                        <TextBox x:Name="SearchBox" Style="{StaticResource Lab.Field}" Padding="32,9,28,9"
+                                                 Tag="SkipReadableOverlay" Foreground="{DynamicResource Lab.text}"
+                                                 TextChanged="SearchBox_OnTextChanged" AutomationProperties.Name="{DynamicResource Ui.02859A9360AD38AB}"/>
                                         <lab:LabIcon Kind="Search" Width="16" Height="16" Margin="11,0,0,0" HorizontalAlignment="Left" IsHitTestVisible="False" Foreground="{DynamicResource Lab.muted}"/>
                                         <TextBlock x:Name="ShortcutSearchHint" Text="{DynamicResource Ui.02859A9360AD38AB}" Margin="33,0,0,0" FontSize="12" Foreground="{DynamicResource Lab.muted}" VerticalAlignment="Center" IsHitTestVisible="False"/>
                                         <Button x:Name="ShortcutSearchClearButton" Style="{StaticResource Lab.Shortcuts.Ghost}" Width="28" Height="28" Visibility="Collapsed" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,5,0" Click="ClearShortcutSearch_OnClick" ToolTip="{DynamicResource Ui.9F3EBBDE555A2C21}" AutomationProperties.Name="{DynamicResource Ui.9F3EBBDE555A2C21}">
