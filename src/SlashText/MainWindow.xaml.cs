@@ -717,6 +717,7 @@ public partial class MainWindow : Window
         }));
     }
 
+    private string? _shortcutCategoryVisualKey;
     private void SearchBox_OnTextChanged(object sender, TextChangedEventArgs e) =>
         RefreshNavigation();
 
@@ -765,12 +766,22 @@ public partial class MainWindow : Window
 
         var visible = filtered.OrderByDescending(item => item.IsPinned).ToList();
 
-        CategoriesPanel.Children.Clear();
-        CategoriesPanel.Children.Add(CreateCategoryButton(null, UiText.Get("Todos"), _snippets.Count));
-        foreach (var category in ShortcutCategories.All)
+        // Typing changes the list, but normally not the categories. Keep the
+        // sidebar buttons and their focus instead of recreating them per keypress.
+        var categoryCounts = ShortcutCategories.All
+            .Select(category => (Category: category, Count: _snippets.Count(item =>
+                ShortcutCategories.Resolve(item.Category).Name == category.Name)))
+            .ToArray();
+        var visualKey = (_selectedCategory ?? "") + "|" + _snippets.Count + "|" +
+                        string.Join("|", categoryCounts.Select(x => x.Count));
+        if (!string.Equals(_shortcutCategoryVisualKey, visualKey, StringComparison.Ordinal))
         {
-            var count = _snippets.Count(item => ShortcutCategories.Resolve(item.Category).Name == category.Name);
-            CategoriesPanel.Children.Add(CreateCategoryButton(category.Name, category.DisplayName, count));
+            CategoriesPanel.Children.Clear();
+            CategoriesPanel.Children.Add(CreateCategoryButton(null, UiText.Get("Todos"), _snippets.Count));
+            foreach (var entry in categoryCounts)
+                CategoriesPanel.Children.Add(CreateCategoryButton(
+                    entry.Category.Name, entry.Category.DisplayName, entry.Count));
+            _shortcutCategoryVisualKey = visualKey;
         }
 
         UpdateShortcutItems(visible);
