@@ -513,8 +513,15 @@ public sealed class ClipboardHistoryService : IDisposable
     private async Task SaveWithRetentionAsync()
     {
         var toDrop = ClipboardRetentionPolicy.SelectExpired(_state.Items, MaxEntries);
+        var previousOrder = _state.Items.ToList();
         foreach (var item in toDrop) _state.Items.Remove(item);
-        await _store.SaveAsync(_state);
+        try { await _store.SaveAsync(_state); }
+        catch
+        {
+            // A failed write must not silently expire items in memory.
+            _state.Items = previousOrder;
+            throw;
+        }
         foreach (var item in toDrop) DeleteImage(item);
         Changed?.Invoke(this, EventArgs.Empty);
     }
