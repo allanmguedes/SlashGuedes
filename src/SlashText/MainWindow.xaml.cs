@@ -372,6 +372,12 @@ public partial class MainWindow : Window
                                 finally { SearchBox.Text = previousShortcutSearch; }
                                 _clipboardQuickWindow.ValidateSearchTextPresentation();
                                 _clipboardQuickWindow.ValidateContrast();
+                                _clipboardQuickWindow.EnableMultiSelectionForSmoke();
+                                if (!_clipboardQuickWindow.MultiSelectionEnabled)
+                                    throw new InvalidOperationException("Modo de seleção múltipla não iniciou.");
+                                _clipboardQuickWindow.CancelMultiSelectionForSmoke();
+                                if (_clipboardQuickWindow.MultiSelectionEnabled)
+                                    throw new InvalidOperationException("Modo de seleção múltipla não encerrou.");
                                 AuxiliaryWindowTheme.RequireReadable(ClipboardItemsList, "Main.ClipboardHistoryList");
                                 if (ClipboardItemsList.ItemContainerStyle is not { } clipboardItemStyle)
                                     throw new InvalidOperationException("Os itens do histórico não têm estilo próprio.");
