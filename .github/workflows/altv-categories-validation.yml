@@ -25,10 +25,10 @@ jobs:
         run: dotnet restore src/SlashText/SlashText.csproj --runtime win-x64 -p:Platform=x64 -p:SlashGuedesBuild=true -p:SlashGuedesVersion=3.2.1-preview.0
       - name: Build Windows
         run: dotnet build src/SlashText/SlashText.csproj --configuration Release --no-restore -p:Platform=x64 -p:SlashGuedesBuild=true -p:SlashGuedesVersion=3.2.1-preview.0
-      - name: Clipboard categories, retention and multiple prints
-        run: dotnet run --project tests/SlashText.SmokeTests/SlashText.SmokeTests.csproj --configuration Release -p:Platform=x64 -p:SlashGuedesBuild=true -p:SlashGuedesVersion=3.2.1-preview.0 -- --guedes-clipboard-checks
       - name: Build portable Windows executable
         run: dotnet publish src/SlashText/SlashText.csproj --configuration Release -p:Platform=x64 -p:SlashGuedesBuild=true -p:SlashGuedesVersion=3.2.1-preview.0 -p:PublishProfile=Portable --no-restore --output publish-altv
+      - name: Clipboard categories, retention and multiple prints
+        run: dotnet run --project tests/SlashText.SmokeTests/SlashText.SmokeTests.csproj --configuration Release -p:Platform=x64 -p:SlashGuedesBuild=true -p:SlashGuedesVersion=3.2.1-preview.0 -- --guedes-clipboard-checks
       - name: UI smoke including selection modes
         shell: pwsh
         run: |
