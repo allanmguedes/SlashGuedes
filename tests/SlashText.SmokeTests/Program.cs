@@ -9,6 +9,7 @@ using ScreenRecorderLib;
 if (args.Length == 1 && args[0] == "--guedes-clipboard-checks")
 {
     ClipboardGuedesChecks.Run();
+    await ClipboardSequentialGuedesChecks.RunAsync();
     ShortcutWizardGuedesChecks.Run();
     await SlashGuedesUpdateChecks.RunAsync();
     return;
