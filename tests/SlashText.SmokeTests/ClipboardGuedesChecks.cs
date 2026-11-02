@@ -130,7 +130,7 @@ internal static class ClipboardGuedesChecks
                 Items =
                 [
                     new() { Id = "texto", Kind = "text", Text = "Texto de teste" },
-                    new() { Id = "print", Kind = "image", ImageFile = "print.png" },
+                    new() { Id = "print", Kind = "image", ImageFile = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png" },
                     new() { Id = "outro", Kind = "text", Text = "Sem categoria" }
                 ],
                 Categories = ["Trabalho"]
