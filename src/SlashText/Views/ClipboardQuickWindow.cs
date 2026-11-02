@@ -19,9 +19,12 @@ public sealed class ClipboardQuickWindow : Window
     private readonly Action<ClipboardHistoryItem> _copyOnly;
     private readonly Action<IReadOnlyList<ClipboardHistoryItem>> _pasteMany;
     private readonly List<string> _orderedImageIds = [];
+    private readonly HashSet<string> _selectedOrganizeIds = new(StringComparer.Ordinal);
     private bool _multiSelectMode;
+    private bool _organizeMode;
     private bool _restoringMultiSelection;
     private readonly Button _multiButton;
+    private readonly Button _organizeButton;
     private readonly Button _pasteManyButton;
     private readonly TextBlock _multiHint;
     private readonly Action _manage;
@@ -36,6 +39,19 @@ public sealed class ClipboardQuickWindow : Window
     private readonly TextBlock _subtitle;
     private readonly ComboBox _categoryFilter;
     private readonly ComboBox _moveToCategory;
+    private readonly Button _renameCategoryButton;
+    private readonly Button _deleteCategoryButton;
+    private readonly StackPanel _categoryEditor;
+    private readonly TextBox _categoryNameBox;
+    private string? _editingCategory;
+    private sealed record CategoryFilter(string Name, bool All, string Label)
+    {
+        public override string ToString() => Label;
+    }
+    private sealed record CategoryTarget(string Name, string Label)
+    {
+        public override string ToString() => Label;
+    }
     private readonly Button _moveButton;
     private readonly Button _deleteButton;
     private readonly TextBlock _emptyMessage;
@@ -77,6 +93,7 @@ public sealed class ClipboardQuickWindow : Window
         root.SetResourceReference(Border.BackgroundProperty, "Lab.surface");
         root.SetResourceReference(Border.BorderBrushProperty, "Lab.line");
         var grid = new Grid();
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -140,7 +157,7 @@ public sealed class ClipboardQuickWindow : Window
             if (e.Key == Key.Enter)
             {
                 if (_multiSelectMode) PasteSelectedImages();
-                else SelectCurrent();
+                else if (!_organizeMode) SelectCurrent();
                 e.Handled = true;
             }
         };
@@ -153,7 +170,11 @@ public sealed class ClipboardQuickWindow : Window
         // while visible glyphs come from the reliable TextBlock renderer.
         Grid.SetColumn(_searchVisibleText, 0);
         filterRow.Children.Add(_searchVisibleText);
-        _categoryFilter = new ComboBox { Height = 38, Margin = new Thickness(8, 0, 0, 12) };
+        _categoryFilter = new ComboBox
+        {
+            Height = 38, Margin = new Thickness(8, 0, 0, 12),
+            ToolTip = "Exiba todas as cópias, as sem categoria ou uma categoria específica."
+        };
         _categoryFilter.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Combo");
         _categoryFilter.SetResourceReference(Control.ForegroundProperty, "Lab.text");
         _categoryFilter.SelectionChanged += (_, _) =>
@@ -164,6 +185,73 @@ public sealed class ClipboardQuickWindow : Window
         filterRow.Children.Add(_categoryFilter);
         Grid.SetRow(filterRow, 1);
         grid.Children.Add(filterRow);
+
+        // Category management stays INSIDE Alt+V, avoiding focus loss to a dialog.
+        var categoryTools = new StackPanel { Margin = new Thickness(0, 0, 0, 7) };
+        var categoryButtons = new WrapPanel();
+        var createCategoryButton = new Button
+        {
+            Content = "+ Nova categoria", Margin = new Thickness(0, 0, 7, 0),
+            ToolTip = "Crie uma pasta de cópias sem abrir o gerenciador."
+        };
+        createCategoryButton.Click += (_, _) => BeginCategoryEdit(rename: false);
+        categoryButtons.Children.Add(createCategoryButton);
+        _renameCategoryButton = new Button
+        {
+            Content = "Renomear", Margin = new Thickness(0, 0, 7, 0),
+            ToolTip = "Renomear a categoria exibida (mantém todas as cópias)."
+        };
+        _renameCategoryButton.Click += (_, _) => BeginCategoryEdit(rename: true);
+        categoryButtons.Children.Add(_renameCategoryButton);
+        _deleteCategoryButton = new Button
+        {
+            Content = "Excluir categoria",
+            ToolTip = "Apaga somente a categoria; os itens permanecem salvos."
+        };
+        _deleteCategoryButton.Click += async (_, _) => await DeleteCurrentCategoryAsync();
+        categoryButtons.Children.Add(_deleteCategoryButton);
+        categoryTools.Children.Add(categoryButtons);
+
+        _categoryEditor = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 6, 0, 0),
+            Visibility = Visibility.Collapsed
+        };
+        _categoryNameBox = new TextBox
+        {
+            Width = 290, Height = 32, MaxLength = ClipboardCategoryRules.MaximumNameLength,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 7, 0),
+            ToolTip = "Nome da categoria (1 a 50 caracteres)."
+        };
+        _categoryNameBox.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Field");
+        _categoryNameBox.PreviewKeyDown += async (_, e) =>
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                await SaveCategoryEditAsync();
+            }
+            else if (e.Key == Key.Escape)
+            {
+                e.Handled = true;
+                CancelCategoryEdit();
+            }
+        };
+        _categoryEditor.Children.Add(_categoryNameBox);
+        var saveCategoryButton = new Button
+        {
+            Content = "Salvar", Margin = new Thickness(0, 0, 7, 0)
+        };
+        saveCategoryButton.Click += async (_, _) => await SaveCategoryEditAsync();
+        _categoryEditor.Children.Add(saveCategoryButton);
+        var cancelCategoryButton = new Button { Content = "Cancelar" };
+        cancelCategoryButton.Click += (_, _) => CancelCategoryEdit();
+        _categoryEditor.Children.Add(cancelCategoryButton);
+        categoryTools.Children.Add(_categoryEditor);
+        Grid.SetRow(categoryTools, 2);
+        grid.Children.Add(categoryTools);
 
         _list = new ListBox
         {
@@ -191,12 +279,17 @@ public sealed class ClipboardQuickWindow : Window
         _list.MouseDoubleClick += (_, e) =>
         {
             // A double-click on a star or pin should not paste into another app.
-            if (!_multiSelectMode && !IsInsideButton(e.OriginalSource as DependencyObject))
+            if (!_multiSelectMode && !_organizeMode &&
+                !IsInsideButton(e.OriginalSource as DependencyObject))
                 SelectCurrent();
         };
         _list.PreviewKeyDown += (_, e) =>
         {
-            if (e.Key == Key.Enter) { SelectCurrent(); e.Handled = true; }
+            if (e.Key == Key.Enter)
+            {
+                if (!_organizeMode) SelectCurrent();
+                e.Handled = true;
+            }
             if (e.Key == Key.Escape) { Hide(); e.Handled = true; }
         };
         var listArea = new Grid();
@@ -213,7 +306,7 @@ public sealed class ClipboardQuickWindow : Window
         _emptyMessage.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
         listArea.Children.Add(_list);
         listArea.Children.Add(_emptyMessage);
-        Grid.SetRow(listArea, 2);
+        Grid.SetRow(listArea, 3);
         grid.Children.Add(listArea);
 
         var footer = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
@@ -244,6 +337,13 @@ public sealed class ClipboardQuickWindow : Window
         // An explicit mode prevents accidental multi-paste when the user
         // simply wants to select/copy a single text item.
         var multiActions = new WrapPanel { Margin = new Thickness(0, 9, 0, 0) };
+        _organizeButton = new Button
+        {
+            Content = "Selecionar cópias", Margin = new Thickness(0, 0, 8, 0),
+            ToolTip = "Selecione textos e imagens para mover juntos, sem colar nada."
+        };
+        _organizeButton.Click += (_, _) => SetOrganizeMode(!_organizeMode);
+        multiActions.Children.Add(_organizeButton);
         _multiButton = new Button
         {
             Content = "Selecionar vários prints", Margin = new Thickness(0, 0, 8, 0),
@@ -281,7 +381,7 @@ public sealed class ClipboardQuickWindow : Window
         {
             Width = 190, Height = 32,
             Margin = new Thickness(0, 0, 8, 0),
-            ToolTip = "Mova o item selecionado para uma das suas categorias."
+            ToolTip = "Escolha a categoria para o item ou as cópias selecionadas."
         };
         _moveToCategory.SetResourceReference(FrameworkElement.StyleProperty, "Lab.Combo");
         _moveToCategory.SetResourceReference(Control.ForegroundProperty, "Lab.text");
@@ -290,15 +390,26 @@ public sealed class ClipboardQuickWindow : Window
         _moveButton = new Button { Content = "Mover", Margin = new Thickness(0, 0, 8, 0) };
         _moveButton.Click += async (_, _) =>
         {
-            if (_list.SelectedItem is not ClipboardHistoryItem current) return;
-            var category = _moveToCategory.SelectedItem as string ?? "Sem categoria";
+            string[] ids;
+            if (_organizeMode) ids = _selectedOrganizeIds.ToArray();
+            else if (_list.SelectedItem is ClipboardHistoryItem current) ids = [current.Id];
+            else return;
+            if (ids.Length == 0) return;
+            var target = (_moveToCategory.SelectedItem as CategoryTarget)?.Name ?? string.Empty;
+            _moveButton.IsEnabled = false;
             try
             {
-                await _history.ChangeAsync(current,
-                    category: category == "Sem categoria" ? string.Empty : category);
+                await _history.MoveItemsAsync(ids, target);
+                if (_organizeMode) SetOrganizeMode(false);
                 Refresh();
+                SelectCategoryFilter(target);
             }
-            catch (Exception) { /* Item remains unchanged on failures. */ }
+            catch (Exception error)
+            {
+                MessageBox.Show(this, "Não foi possível mover as cópias: " + error.Message,
+                    "SlashGuedes", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally { UpdateMultiControls(); }
         };
         DockPanel.SetDock(_moveButton, Dock.Left);
         categoriesRow.Children.Add(_moveButton);
@@ -341,7 +452,7 @@ public sealed class ClipboardQuickWindow : Window
             }
         };
         footer.Children.Add(clean);
-        Grid.SetRow(footer, 3);
+        Grid.SetRow(footer, 4);
         grid.Children.Add(footer);
         _list.SelectionChanged += OnListSelectionChanged;
 
@@ -358,6 +469,8 @@ public sealed class ClipboardQuickWindow : Window
     public void Open()
     {
         _searchRefreshTimer.Stop();
+        // A previously dismissed organizer must not intercept Enter on the next Alt+V.
+        if (_organizeMode) SetOrganizeMode(false);
         Refresh();
         var cursor = Forms.Control.MousePosition;
         var screen = Forms.Screen.FromPoint(cursor).WorkingArea;
@@ -417,38 +530,48 @@ public sealed class ClipboardQuickWindow : Window
     public void Refresh()
     {
         if (_list is null || _search is null || _categoryFilter is null) return;
-        var chosenCategory = _categoryFilter.SelectedItem as string ?? "";
-        var categories = new[] { "Todas as categorias" }
-            .Concat(_history.Categories).ToArray();
-        var availableTargets = new[] { "Sem categoria" }
-            .Concat(_history.Categories).ToArray();
-        var selectedTarget = _moveToCategory.SelectedItem as string ?? "Sem categoria";
-        if (!_moveToCategory.Items.OfType<string>().SequenceEqual(availableTargets))
+        var chosen = _categoryFilter.SelectedItem as CategoryFilter;
+        var categories = new[]
+        {
+            new CategoryFilter(string.Empty, true, $"Todas as categorias ({_history.Items.Count})"),
+            new CategoryFilter(string.Empty, false,
+                $"Sem categoria ({_history.Items.Count(item => string.IsNullOrEmpty(item.Category))})")
+        }.Concat(_history.Categories.Select(name => new CategoryFilter(name, false,
+            $"{name} ({_history.Items.Count(item => item.Category.Equals(name, StringComparison.OrdinalIgnoreCase))})")))
+            .ToArray();
+        var availableTargets = new[] { new CategoryTarget(string.Empty, "Sem categoria") }
+            .Concat(_history.Categories.Select(name => new CategoryTarget(name, name))).ToArray();
+        var selectedTarget = (_moveToCategory.SelectedItem as CategoryTarget)?.Name ?? string.Empty;
+        if (!_moveToCategory.Items.OfType<CategoryTarget>().SequenceEqual(availableTargets))
         {
             _moveToCategory.ItemsSource = availableTargets;
             _moveToCategory.SelectedItem = availableTargets.FirstOrDefault(c =>
-                c.Equals(selectedTarget, StringComparison.OrdinalIgnoreCase))
+                c.Name.Equals(selectedTarget, StringComparison.OrdinalIgnoreCase))
                 ?? availableTargets[0];
         }
-        if (!_categoryFilter.Items.OfType<string>().SequenceEqual(categories))
+        if (!_categoryFilter.Items.OfType<CategoryFilter>().SequenceEqual(categories))
         {
             _refreshingCategories = true;
             try
             {
                 _categoryFilter.ItemsSource = categories;
                 _categoryFilter.SelectedItem = categories.FirstOrDefault(c =>
-                    c.Equals(chosenCategory, StringComparison.OrdinalIgnoreCase))
-                    ?? categories[0];
+                    chosen is not null && c.All == chosen.All &&
+                    c.Name.Equals(chosen.Name, StringComparison.OrdinalIgnoreCase)) ?? categories[0];
             }
             finally { _refreshingCategories = false; }
         }
-        var filterCategory = _categoryFilter.SelectedItem as string ?? "Todas as categorias";
+        var filter = _categoryFilter.SelectedItem as CategoryFilter ?? categories[0];
+        var editableCategory = !filter.All && filter.Name.Length > 0;
+        _renameCategoryButton.IsEnabled = editableCategory;
+        _deleteCategoryButton.IsEnabled = editableCategory;
         var query = _search.Text.Trim();
         var selectedId = (_list.SelectedItem as ClipboardHistoryItem)?.Id;
         _orderedImageIds.RemoveAll(id => !_history.Items.Any(i => i.Id == id && i.Kind == "image"));
+        _selectedOrganizeIds.RemoveWhere(id => !_history.Items.Any(i => i.Id == id));
         var candidates = _history.Items
-            .Where(i => (filterCategory == "Todas as categorias" ||
-                         i.Category.Equals(filterCategory, StringComparison.OrdinalIgnoreCase)) &&
+            .Where(i => (filter.All ||
+                         i.Category.Equals(filter.Name, StringComparison.OrdinalIgnoreCase)) &&
                         (string.IsNullOrEmpty(query) ||
                          i.Summary.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
                          i.Category.Contains(query, StringComparison.CurrentCultureIgnoreCase)))
@@ -463,10 +586,11 @@ public sealed class ClipboardQuickWindow : Window
             _list.ItemsSource = candidates;
             _emptyMessage.Visibility = _list.Items.Count == 0
                 ? Visibility.Visible : Visibility.Collapsed;
-            if (_multiSelectMode)
+            if (_multiSelectMode || _organizeMode)
             {
                 _list.SelectedItems.Clear();
-                foreach (var item in candidates.Where(i => _orderedImageIds.Contains(i.Id)))
+                foreach (var item in candidates.Where(i => _multiSelectMode
+                             ? _orderedImageIds.Contains(i.Id) : _selectedOrganizeIds.Contains(i.Id)))
                     _list.SelectedItems.Add(item);
             }
             else
@@ -482,29 +606,109 @@ public sealed class ClipboardQuickWindow : Window
             : $"{recentCount}/{_history.MaxEntries} recentes · {protectedCount} favoritos ou fixados protegidos";
         _subtitle.Text = _history.Shortcut.Replace("+", " + ") +
                          " · Enter: colar · ☆: favorito · ◇: fixar · Esc: fechar";
-        _moveButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
-        _deleteButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
         _enable.Content = _history.Enabled ? "Pausar histórico" : "Ativar histórico";
         _enable.Visibility = Visibility.Visible;
+    }
+
+    private void BeginCategoryEdit(bool rename)
+    {
+        var filter = _categoryFilter.SelectedItem as CategoryFilter;
+        if (rename && (filter is null || filter.All || filter.Name.Length == 0)) return;
+        _editingCategory = rename ? filter!.Name : null;
+        _categoryNameBox.Text = _editingCategory ?? string.Empty;
+        _categoryEditor.Visibility = Visibility.Visible;
+        _categoryNameBox.Focus();
+        _categoryNameBox.SelectAll();
+    }
+
+    private void CancelCategoryEdit()
+    {
+        _categoryEditor.Visibility = Visibility.Collapsed;
+        _categoryNameBox.Clear();
+        _editingCategory = null;
+    }
+
+    private async Task SaveCategoryEditAsync()
+    {
+        if (_categoryEditor.Visibility != Visibility.Visible) return;
+        var name = _categoryNameBox.Text.Trim();
+        try
+        {
+            if (_editingCategory is { } original)
+                await _history.RenameCategoryAsync(original, name);
+            else
+                await _history.AddCategoryAsync(name);
+            var hasSelectedCopies = _organizeMode
+                ? _selectedOrganizeIds.Count > 0
+                : !_multiSelectMode && _list.SelectedItem is ClipboardHistoryItem;
+            CancelCategoryEdit();
+            Refresh();
+            // Creating a category while copies are selected should prepare the
+            // destination, not hide the selected copies behind an empty filter.
+            if (hasSelectedCopies)
+                _moveToCategory.SelectedItem = _moveToCategory.Items
+                    .OfType<CategoryTarget>().FirstOrDefault(target =>
+                        target.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            else
+                SelectCategoryFilter(name);
+        }
+        catch (Exception error)
+        {
+            MessageBox.Show(this, "Não foi possível salvar a categoria: " + error.Message,
+                "SlashGuedes", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private async Task DeleteCurrentCategoryAsync()
+    {
+        if (_categoryFilter.SelectedItem is not CategoryFilter filter ||
+            filter.All || filter.Name.Length == 0) return;
+        if (MessageBox.Show(this,
+            $"Excluir a categoria \"{filter.Name}\"? As cópias serão mantidas sem categoria.",
+            "SlashGuedes", MessageBoxButton.YesNo, MessageBoxImage.Question,
+            MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try
+        {
+            await _history.DeleteCategoryAsync(filter.Name);
+            CancelCategoryEdit();
+            Refresh();
+            SelectCategoryFilter(string.Empty);
+        }
+        catch (Exception error)
+        {
+            MessageBox.Show(this, "Não foi possível excluir a categoria: " + error.Message,
+                "SlashGuedes", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void SelectCategoryFilter(string name)
+    {
+        if (_categoryFilter.Items.OfType<CategoryFilter>().FirstOrDefault(option =>
+            !option.All && option.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) is { } filter)
+        {
+            _categoryFilter.SelectedItem = filter;
+            Refresh();
+        }
     }
 
     // The grid reserves fixed columns for ☆ / ◇ so long text cannot hide them.
     private FrameworkElement BuildCardRow(ClipboardHistoryItem item)
     {
         var row = new Grid { Margin = new Thickness(2, 4, 2, 4) };
-        var extraColumn = _multiSelectMode ? 1 : 0;
-        if (_multiSelectMode)
+        var extraColumn = _multiSelectMode || _organizeMode ? 1 : 0;
+        if (_multiSelectMode || _organizeMode)
         {
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(35) });
             var ordinal = _orderedImageIds.IndexOf(item.Id) + 1;
             var marker = new TextBlock
             {
-                Text = item.Kind != "image" ? "—" : ordinal > 0 ? ordinal.ToString() : "□",
+                Text = _organizeMode ? (_selectedOrganizeIds.Contains(item.Id) ? "☑" : "□")
+                    : item.Kind != "image" ? "—" : ordinal > 0 ? ordinal.ToString() : "□",
                 FontWeight = FontWeights.Bold, FontSize = 16,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                ToolTip = item.Kind == "image"
-                    ? "Clique para adicionar este print à sequência."
+                ToolTip = _organizeMode ? "Clique para incluir ou remover esta cópia da organização."
+                    : item.Kind == "image" ? "Clique para adicionar este print à sequência."
                     : "Seleção múltipla disponível apenas para imagens."
             };
             marker.SetResourceReference(TextBlock.ForegroundProperty, "Lab.accent-text");
@@ -526,7 +730,7 @@ public sealed class ClipboardQuickWindow : Window
         star.Click += async (_, e) =>
         {
             e.Handled = true;
-            if (!_multiSelectMode) _list.SelectedItem = item;
+            if (!_multiSelectMode && !_organizeMode) _list.SelectedItem = item;
             star.IsEnabled = false;
             try { await _history.ChangeAsync(item, favorite: !item.IsFavorite); }
             catch (Exception) { /* Item remains unchanged on failures. */ }
@@ -546,7 +750,7 @@ public sealed class ClipboardQuickWindow : Window
         pin.Click += async (_, e) =>
         {
             e.Handled = true;
-            if (!_multiSelectMode) _list.SelectedItem = item;
+            if (!_multiSelectMode && !_organizeMode) _list.SelectedItem = item;
             pin.IsEnabled = false;
             try { await _history.ChangeAsync(item, pinned: !item.IsPinned); }
             catch (Exception) { /* Item remains unchanged on failures. */ }
@@ -640,11 +844,21 @@ public sealed class ClipboardQuickWindow : Window
 
     private void OnListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!_multiSelectMode || _restoringMultiSelection)
+        if (_restoringMultiSelection) return;
+        if (_organizeMode)
         {
-            var canEdit = !_multiSelectMode && _list.SelectedItem is ClipboardHistoryItem;
-            _moveButton.IsEnabled = canEdit;
-            _deleteButton.IsEnabled = canEdit;
+            foreach (var item in e.RemovedItems.OfType<ClipboardHistoryItem>())
+                _selectedOrganizeIds.Remove(item.Id);
+            foreach (var item in e.AddedItems.OfType<ClipboardHistoryItem>())
+                _selectedOrganizeIds.Add(item.Id);
+            UpdateMultiControls();
+            RefreshVisibleCardMarkers(_list);
+            return;
+        }
+        if (!_multiSelectMode)
+        {
+            _moveButton.IsEnabled = _list.SelectedItem is ClipboardHistoryItem;
+            _deleteButton.IsEnabled = _list.SelectedItem is ClipboardHistoryItem;
             return;
         }
         // WPF SelectionMode.Multiple makes plain clicks toggle selection.
@@ -690,6 +904,7 @@ public sealed class ClipboardQuickWindow : Window
 
     private void SetMultiSelectMode(bool active)
     {
+        if (active && _organizeMode) SetOrganizeMode(false);
         _restoringMultiSelection = true;
         try
         {
@@ -715,20 +930,54 @@ public sealed class ClipboardQuickWindow : Window
         Refresh();
     }
 
+    private void SetOrganizeMode(bool active)
+    {
+        if (active && _multiSelectMode) SetMultiSelectMode(false);
+        _restoringMultiSelection = true;
+        try
+        {
+            _selectedOrganizeIds.Clear();
+            if (active)
+            {
+                _list.SelectionMode = SelectionMode.Multiple;
+                _list.SelectedItems.Clear();
+            }
+            else
+            {
+                _list.SelectedItems.Clear();
+                _list.SelectionMode = SelectionMode.Single;
+                _list.SelectedItem = null;
+            }
+            _organizeMode = active;
+        }
+        finally { _restoringMultiSelection = false; }
+        Refresh();
+    }
+
     private void UpdateMultiControls()
     {
         _multiButton.Content = _multiSelectMode ? "Cancelar seleção" : "Selecionar vários prints";
+        _organizeButton.Content = _organizeMode
+            ? $"Cancelar organização ({_selectedOrganizeIds.Count})" : "Selecionar cópias";
         _pasteManyButton.Visibility = _multiSelectMode ? Visibility.Visible : Visibility.Collapsed;
         _pasteManyButton.IsEnabled = _multiSelectMode && _orderedImageIds.Count >= 2;
         _pasteManyButton.Content = _orderedImageIds.Count >= 2
             ? $"Colar {_orderedImageIds.Count} prints" : "Colar prints em sequência";
-        _multiHint.Visibility = _multiSelectMode ? Visibility.Visible : Visibility.Collapsed;
-        if (_multiSelectMode)
+        _multiHint.Visibility = _multiSelectMode || _organizeMode
+            ? Visibility.Visible : Visibility.Collapsed;
+        if (_organizeMode)
+            _multiHint.Text = _selectedOrganizeIds.Count == 0
+                ? "Clique nas cópias (textos ou prints) para selecionar. Depois escolha a categoria e toque em Mover."
+                : $"{_selectedOrganizeIds.Count} cópia(s) selecionada(s). Mover não cola nem envia mensagens.";
+        else if (_multiSelectMode)
             _multiHint.Text = _orderedImageIds.Count == 0
                 ? "Clique nos prints na ordem desejada (mínimo 2, máximo 15)."
                 : $"{_orderedImageIds.Count} selecionado(s) na ordem dos cliques · Esc durante a colagem cancela o restante. Nenhuma mensagem será enviada.";
-        _moveButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
-        _deleteButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
+        _moveButton.IsEnabled = !_multiSelectMode &&
+            (_organizeMode ? _selectedOrganizeIds.Count > 0 : _list.SelectedItem is ClipboardHistoryItem);
+        _deleteButton.IsEnabled = !_multiSelectMode && !_organizeMode &&
+            _list.SelectedItem is ClipboardHistoryItem;
+        _moveToCategory.IsEnabled = !_multiSelectMode;
     }
 
     private void PasteSelectedImages()
@@ -743,11 +992,15 @@ public sealed class ClipboardQuickWindow : Window
     }
 
     internal bool MultiSelectionEnabled => _multiSelectMode;
+    internal bool OrganizeSelectionEnabled => _organizeMode;
     internal void EnableMultiSelectionForSmoke() => SetMultiSelectMode(true);
     internal void CancelMultiSelectionForSmoke() => SetMultiSelectMode(false);
+    internal void EnableOrganizeSelectionForSmoke() => SetOrganizeMode(true);
+    internal void CancelOrganizeSelectionForSmoke() => SetOrganizeMode(false);
 
     private void SelectCurrent(bool copyOnly = false)
     {
+        if (_organizeMode) return; // Organizing must NEVER paste.
         if (_multiSelectMode) { PasteSelectedImages(); return; }
         if (_list.SelectedItem is not ClipboardHistoryItem item) return;
         Hide();

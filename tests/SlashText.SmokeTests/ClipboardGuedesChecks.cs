@@ -103,6 +103,7 @@ internal static class ClipboardGuedesChecks
         Require(Throws<ArgumentException>(() =>
             ClipboardCategoryRules.ValidateNew(new string('X', 51), normalized)),
             "categoria com mais de 50 caracteres rejeitada");
+        CheckCategoryPersistenceAsync().GetAwaiter().GetResult();
 
         Require(!ClipboardPasteService.IsExternalTarget(IntPtr.Zero),
             "não enviar colagem quando não existe uma janela de destino");
@@ -112,6 +113,66 @@ internal static class ClipboardGuedesChecks
         Require(new AppSettings().ClipboardAutoPasteEnabled,
             "novas instalações ativam colagem com fallback seguro");
         Console.WriteLine("SlashGuedes clipboard: retenção, categorias, pop-up e colagem segura OK.");
+    }
+
+    private static async Task CheckCategoryPersistenceAsync()
+    {
+        var originalEnvironment = AppPaths.Current;
+        var sandbox = Path.Combine(Path.GetTempPath(),
+            "slashguedes-category-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            AppPaths.Initialize(new AppDataEnvironment(
+                DistributionMode.Portable, sandbox, sandbox, isSlashGuedes: true));
+            var file = Path.Combine(AppPaths.DataDirectory, "ClipboardHistory", "history.json");
+            await new JsonFileStore<ClipboardHistoryState>(file).SaveAsync(new ClipboardHistoryState
+            {
+                Items =
+                [
+                    new() { Id = "texto", Kind = "text", Text = "Texto de teste" },
+                    new() { Id = "print", Kind = "image", ImageFile = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png" },
+                    new() { Id = "outro", Kind = "text", Text = "Sem categoria" }
+                ],
+                Categories = ["Trabalho"]
+            });
+            using (var history = new ClipboardHistoryService())
+            {
+                await history.LoadAsync(25);
+                await history.AddCategoryAsync("Jogos");
+                var updated = await history.MoveItemsAsync(
+                    ["texto", "print", "inexistente"], "Jogos");
+                Require(updated == 2, "movimentação em lote considera apenas itens existentes");
+                Require(history.Items.Single(i => i.Id == "outro").Category == "",
+                    "itens não selecionados permanecem intactos");
+                await history.RenameCategoryAsync("Jogos", "Capturas");
+                Require(history.Items.Count(i => i.Category == "Capturas") == 2,
+                    "renomear categoria atualiza todas as cópias associadas");
+            }
+            using (var reloaded = new ClipboardHistoryService())
+            {
+                await reloaded.LoadAsync(25);
+                Require(reloaded.Categories.Contains("Capturas") &&
+                    reloaded.Items.Count(i => i.Category == "Capturas") == 2,
+                    "categorias e movimentos sobrevivem à reinicialização");
+                var rejected = false;
+                try { await reloaded.MoveItemsAsync(["texto"], "Inexistente"); }
+                catch (InvalidOperationException) { rejected = true; }
+                Require(rejected && reloaded.Items.Single(i => i.Id == "texto").Category == "Capturas",
+                    "destino inválido é rejeitado sem alterar o histórico");
+                await reloaded.DeleteCategoryAsync("Capturas");
+                Require(reloaded.Items.Count == 3 &&
+                    reloaded.Items.All(i => i.Category != "Capturas") &&
+                    reloaded.Items.Count(i => i.Category == "") == 3,
+                    "excluir categoria preserva todos os textos e prints");
+            }
+        }
+        finally
+        {
+            AppPaths.Initialize(originalEnvironment);
+            try { if (Directory.Exists(sandbox)) Directory.Delete(sandbox, true); }
+            catch (IOException) { /* Isolated fixture is safe to clean later. */ }
+            catch (UnauthorizedAccessException) { }
+        }
     }
 
     private static bool Throws<T>(Action callback) where T : Exception
