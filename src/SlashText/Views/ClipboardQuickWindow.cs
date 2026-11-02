@@ -638,9 +638,19 @@ public sealed class ClipboardQuickWindow : Window
                 await _history.RenameCategoryAsync(original, name);
             else
                 await _history.AddCategoryAsync(name);
+            var hasSelectedCopies = _organizeMode
+                ? _selectedOrganizeIds.Count > 0
+                : !_multiSelectMode && _list.SelectedItem is ClipboardHistoryItem;
             CancelCategoryEdit();
             Refresh();
-            SelectCategoryFilter(name);
+            // Creating a category while copies are selected should prepare the
+            // destination, not hide the selected copies behind an empty filter.
+            if (hasSelectedCopies)
+                _moveToCategory.SelectedItem = _moveToCategory.Items
+                    .OfType<CategoryTarget>().FirstOrDefault(target =>
+                        target.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            else
+                SelectCategoryFilter(name);
         }
         catch (Exception error)
         {
