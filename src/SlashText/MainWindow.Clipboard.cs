@@ -315,6 +315,7 @@ public partial class MainWindow
         _clipboardPasteInProgress = true;
         using var cancellation = new CancellationTokenSource();
         _clipboardBatchCancellation = cancellation;
+        var firstImage = true;
         try
         {
             // No Enter, no mouse click, no submission: only Ctrl+V per image.
@@ -324,8 +325,15 @@ public partial class MainWindow
                     ? ClipboardPasteService.IsExternalTarget(target)
                     : ClipboardPasteService.IsForegroundTarget(target),
                 item => _clipboardHistory.CopyToClipboard(item),
-                token => ClipboardPasteService.TryPasteAsync(target, token,
-                    restoreFocus: false),
+                token =>
+                {
+                    // Only the first paste may bring the original destination
+                    // back from the popup. Never steal focus on subsequent prints.
+                    var allowRestore = firstImage;
+                    firstImage = false;
+                    return ClipboardPasteService.TryPasteAsync(target, token,
+                        restoreFocus: allowRestore);
+                },
                 async token =>
                 {
                     // Keep a predictable one-second gap, watching Esc for a
