@@ -693,10 +693,23 @@ public sealed class ClipboardQuickWindow : Window
         _restoringMultiSelection = true;
         try
         {
-            _multiSelectMode = active;
             _orderedImageIds.Clear();
-            _list.SelectionMode = active ? SelectionMode.Multiple : SelectionMode.Single;
-            _list.SelectedItems.Clear();
+            if (active)
+            {
+                // SelectedItems cannot be manipulated while SelectionMode.Single
+                // is active. First switch to Multiple, then clear the old item.
+                _list.SelectionMode = SelectionMode.Multiple;
+                _list.SelectedItems.Clear();
+            }
+            else
+            {
+                // Clear while STILL in Multiple mode; only then go back to
+                // Single. Windows UI smoke caught this ordering regression.
+                _list.SelectedItems.Clear();
+                _list.SelectionMode = SelectionMode.Single;
+                _list.SelectedItem = null;
+            }
+            _multiSelectMode = active;
         }
         finally { _restoringMultiSelection = false; }
         Refresh();
