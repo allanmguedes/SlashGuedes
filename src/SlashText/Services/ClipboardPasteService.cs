@@ -30,15 +30,20 @@ public static class ClipboardPasteService
         return pid != 0 && pid != (uint)Environment.ProcessId;
     }
 
+    public static bool IsForegroundTarget(IntPtr capturedTarget) =>
+        IsExternalTarget(capturedTarget) && GetForegroundWindow() == capturedTarget;
+
+    public static bool IsEscapeHeld() => (GetAsyncKeyState(0x1B) & 0x8000) != 0;
+
     public static async Task<Result> TryPasteAsync(IntPtr capturedTarget,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, bool restoreFocus = true)
     {
         if (!IsExternalTarget(capturedTarget)) return Result.NoExternalTarget;
 
         // Give WPF one dispatcher turn to hide the popup, then restore focus.
         await Task.Delay(65, cancellationToken);
         if (!IsExternalTarget(capturedTarget)) return Result.TargetUnavailable;
-        if (GetForegroundWindow() != capturedTarget)
+        if (GetForegroundWindow() != capturedTarget && restoreFocus)
         {
             _ = SetForegroundWindow(capturedTarget);
             await Task.Delay(100, cancellationToken);
