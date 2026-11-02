@@ -390,8 +390,10 @@ public sealed class ClipboardQuickWindow : Window
         _moveButton = new Button { Content = "Mover", Margin = new Thickness(0, 0, 8, 0) };
         _moveButton.Click += async (_, _) =>
         {
-            string[] ids = _organizeMode ? _selectedOrganizeIds.ToArray()
-                : _list.SelectedItem is ClipboardHistoryItem current ? [current.Id] : [];
+            string[] ids;
+            if (_organizeMode) ids = _selectedOrganizeIds.ToArray();
+            else if (_list.SelectedItem is ClipboardHistoryItem current) ids = [current.Id];
+            else return;
             if (ids.Length == 0) return;
             var target = (_moveToCategory.SelectedItem as CategoryTarget)?.Name ?? string.Empty;
             _moveButton.IsEnabled = false;
@@ -467,6 +469,8 @@ public sealed class ClipboardQuickWindow : Window
     public void Open()
     {
         _searchRefreshTimer.Stop();
+        // A previously dismissed organizer must not intercept Enter on the next Alt+V.
+        if (_organizeMode) SetOrganizeMode(false);
         Refresh();
         var cursor = Forms.Control.MousePosition;
         var screen = Forms.Screen.FromPoint(cursor).WorkingArea;
