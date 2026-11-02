@@ -526,38 +526,48 @@ public sealed class ClipboardQuickWindow : Window
     public void Refresh()
     {
         if (_list is null || _search is null || _categoryFilter is null) return;
-        var chosenCategory = _categoryFilter.SelectedItem as string ?? "";
-        var categories = new[] { "Todas as categorias" }
-            .Concat(_history.Categories).ToArray();
-        var availableTargets = new[] { "Sem categoria" }
-            .Concat(_history.Categories).ToArray();
-        var selectedTarget = _moveToCategory.SelectedItem as string ?? "Sem categoria";
-        if (!_moveToCategory.Items.OfType<string>().SequenceEqual(availableTargets))
+        var chosen = _categoryFilter.SelectedItem as CategoryFilter;
+        var categories = new[]
+        {
+            new CategoryFilter(string.Empty, true, $"Todas as categorias ({_history.Items.Count})"),
+            new CategoryFilter(string.Empty, false,
+                $"Sem categoria ({_history.Items.Count(item => string.IsNullOrEmpty(item.Category))})")
+        }.Concat(_history.Categories.Select(name => new CategoryFilter(name, false,
+            $"{name} ({_history.Items.Count(item => item.Category.Equals(name, StringComparison.OrdinalIgnoreCase))})")))
+            .ToArray();
+        var availableTargets = new[] { new CategoryTarget(string.Empty, "Sem categoria") }
+            .Concat(_history.Categories.Select(name => new CategoryTarget(name, name))).ToArray();
+        var selectedTarget = (_moveToCategory.SelectedItem as CategoryTarget)?.Name ?? string.Empty;
+        if (!_moveToCategory.Items.OfType<CategoryTarget>().SequenceEqual(availableTargets))
         {
             _moveToCategory.ItemsSource = availableTargets;
             _moveToCategory.SelectedItem = availableTargets.FirstOrDefault(c =>
-                c.Equals(selectedTarget, StringComparison.OrdinalIgnoreCase))
+                c.Name.Equals(selectedTarget, StringComparison.OrdinalIgnoreCase))
                 ?? availableTargets[0];
         }
-        if (!_categoryFilter.Items.OfType<string>().SequenceEqual(categories))
+        if (!_categoryFilter.Items.OfType<CategoryFilter>().SequenceEqual(categories))
         {
             _refreshingCategories = true;
             try
             {
                 _categoryFilter.ItemsSource = categories;
                 _categoryFilter.SelectedItem = categories.FirstOrDefault(c =>
-                    c.Equals(chosenCategory, StringComparison.OrdinalIgnoreCase))
-                    ?? categories[0];
+                    chosen is not null && c.All == chosen.All &&
+                    c.Name.Equals(chosen.Name, StringComparison.OrdinalIgnoreCase)) ?? categories[0];
             }
             finally { _refreshingCategories = false; }
         }
-        var filterCategory = _categoryFilter.SelectedItem as string ?? "Todas as categorias";
+        var filter = _categoryFilter.SelectedItem as CategoryFilter ?? categories[0];
+        var editableCategory = !filter.All && filter.Name.Length > 0;
+        _renameCategoryButton.IsEnabled = editableCategory;
+        _deleteCategoryButton.IsEnabled = editableCategory;
         var query = _search.Text.Trim();
         var selectedId = (_list.SelectedItem as ClipboardHistoryItem)?.Id;
         _orderedImageIds.RemoveAll(id => !_history.Items.Any(i => i.Id == id && i.Kind == "image"));
+        _selectedOrganizeIds.RemoveWhere(id => !_history.Items.Any(i => i.Id == id));
         var candidates = _history.Items
-            .Where(i => (filterCategory == "Todas as categorias" ||
-                         i.Category.Equals(filterCategory, StringComparison.OrdinalIgnoreCase)) &&
+            .Where(i => (filter.All ||
+                         i.Category.Equals(filter.Name, StringComparison.OrdinalIgnoreCase)) &&
                         (string.IsNullOrEmpty(query) ||
                          i.Summary.Contains(query, StringComparison.CurrentCultureIgnoreCase) ||
                          i.Category.Contains(query, StringComparison.CurrentCultureIgnoreCase)))
@@ -572,10 +582,11 @@ public sealed class ClipboardQuickWindow : Window
             _list.ItemsSource = candidates;
             _emptyMessage.Visibility = _list.Items.Count == 0
                 ? Visibility.Visible : Visibility.Collapsed;
-            if (_multiSelectMode)
+            if (_multiSelectMode || _organizeMode)
             {
                 _list.SelectedItems.Clear();
-                foreach (var item in candidates.Where(i => _orderedImageIds.Contains(i.Id)))
+                foreach (var item in candidates.Where(i => _multiSelectMode
+                             ? _orderedImageIds.Contains(i.Id) : _selectedOrganizeIds.Contains(i.Id)))
                     _list.SelectedItems.Add(item);
             }
             else
@@ -591,8 +602,6 @@ public sealed class ClipboardQuickWindow : Window
             : $"{recentCount}/{_history.MaxEntries} recentes · {protectedCount} favoritos ou fixados protegidos";
         _subtitle.Text = _history.Shortcut.Replace("+", " + ") +
                          " · Enter: colar · ☆: favorito · ◇: fixar · Esc: fechar";
-        _moveButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
-        _deleteButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
         _enable.Content = _history.Enabled ? "Pausar histórico" : "Ativar histórico";
         _enable.Visibility = Visibility.Visible;
     }
@@ -601,19 +610,20 @@ public sealed class ClipboardQuickWindow : Window
     private FrameworkElement BuildCardRow(ClipboardHistoryItem item)
     {
         var row = new Grid { Margin = new Thickness(2, 4, 2, 4) };
-        var extraColumn = _multiSelectMode ? 1 : 0;
-        if (_multiSelectMode)
+        var extraColumn = _multiSelectMode || _organizeMode ? 1 : 0;
+        if (_multiSelectMode || _organizeMode)
         {
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(35) });
             var ordinal = _orderedImageIds.IndexOf(item.Id) + 1;
             var marker = new TextBlock
             {
-                Text = item.Kind != "image" ? "—" : ordinal > 0 ? ordinal.ToString() : "□",
+                Text = _organizeMode ? (_selectedOrganizeIds.Contains(item.Id) ? "☑" : "□")
+                    : item.Kind != "image" ? "—" : ordinal > 0 ? ordinal.ToString() : "□",
                 FontWeight = FontWeights.Bold, FontSize = 16,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                ToolTip = item.Kind == "image"
-                    ? "Clique para adicionar este print à sequência."
+                ToolTip = _organizeMode ? "Clique para incluir ou remover esta cópia da organização."
+                    : item.Kind == "image" ? "Clique para adicionar este print à sequência."
                     : "Seleção múltipla disponível apenas para imagens."
             };
             marker.SetResourceReference(TextBlock.ForegroundProperty, "Lab.accent-text");
@@ -635,7 +645,7 @@ public sealed class ClipboardQuickWindow : Window
         star.Click += async (_, e) =>
         {
             e.Handled = true;
-            if (!_multiSelectMode) _list.SelectedItem = item;
+            if (!_multiSelectMode && !_organizeMode) _list.SelectedItem = item;
             star.IsEnabled = false;
             try { await _history.ChangeAsync(item, favorite: !item.IsFavorite); }
             catch (Exception) { /* Item remains unchanged on failures. */ }
@@ -655,7 +665,7 @@ public sealed class ClipboardQuickWindow : Window
         pin.Click += async (_, e) =>
         {
             e.Handled = true;
-            if (!_multiSelectMode) _list.SelectedItem = item;
+            if (!_multiSelectMode && !_organizeMode) _list.SelectedItem = item;
             pin.IsEnabled = false;
             try { await _history.ChangeAsync(item, pinned: !item.IsPinned); }
             catch (Exception) { /* Item remains unchanged on failures. */ }
