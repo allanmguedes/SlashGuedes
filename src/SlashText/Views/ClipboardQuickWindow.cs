@@ -731,6 +731,7 @@ public sealed class ClipboardQuickWindow : Window
 
     internal bool MultiSelectionEnabled => _multiSelectMode;
     internal void EnableMultiSelectionForSmoke() => SetMultiSelectMode(true);
+    internal void CancelMultiSelectionForSmoke() => SetMultiSelectMode(false);
 
     private void SelectCurrent(bool copyOnly = false)
     {
