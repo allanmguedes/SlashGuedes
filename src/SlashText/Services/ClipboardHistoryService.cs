@@ -271,6 +271,9 @@ public sealed class ClipboardHistoryService : IDisposable
         try
         {
             if (!_state.Items.Contains(item) || !CanSave) return;
+            var previousFavorite = item.IsFavorite;
+            var previousPinned = item.IsPinned;
+            var previousCategory = item.Category;
             if (favorite.HasValue) item.IsFavorite = favorite.Value;
             if (pinned.HasValue) item.IsPinned = pinned.Value;
             if (category is not null)
@@ -281,7 +284,45 @@ public sealed class ClipboardHistoryService : IDisposable
                     throw new InvalidOperationException("Essa categoria não existe. Crie a categoria antes de aplicá-la.");
                 item.Category = normalized;
             }
-            await SaveWithRetentionAsync();
+            try { await SaveWithRetentionAsync(); }
+            catch
+            {
+                item.IsFavorite = previousFavorite;
+                item.IsPinned = previousPinned;
+                item.Category = previousCategory;
+                throw;
+            }
+        }
+        finally { _gate.Release(); }
+    }
+
+    // Move a group of text/image copies in one atomic history write.
+    // Item ids come from the quick picker, not the current visible filter.
+    public async Task<int> MoveItemsAsync(IEnumerable<string> ids, string? category)
+    {
+        var requested = ids.Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.Ordinal);
+        if (requested.Count == 0) return 0;
+        await _gate.WaitAsync();
+        try
+        {
+            EnsureCategoryEditable();
+            var normalized = (category ?? string.Empty).Trim();
+            if (normalized.Length > 0 &&
+                !_state.Categories.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Essa categoria não existe. Crie a categoria antes de aplicá-la.");
+            var selected = _state.Items.Where(item => requested.Contains(item.Id)).ToArray();
+            if (selected.Length == 0) return 0;
+            var previous = selected.Select(item => item.Category).ToArray();
+            for (var i = 0; i < selected.Length; i++) selected[i].Category = normalized;
+            try { await _store.SaveAsync(_state); }
+            catch
+            {
+                for (var i = 0; i < selected.Length; i++) selected[i].Category = previous[i];
+                throw;
+            }
+            Changed?.Invoke(this, EventArgs.Empty);
+            return selected.Length;
         }
         finally { _gate.Release(); }
     }
@@ -325,7 +366,8 @@ public sealed class ClipboardHistoryService : IDisposable
             EnsureCategoryEditable();
             var normalized = ClipboardCategoryRules.ValidateNew(name, _state.Categories);
             _state.Categories.Add(normalized);
-            await _store.SaveAsync(_state);
+            try { await _store.SaveAsync(_state); }
+            catch { _state.Categories.Remove(normalized); throw; }
             Changed?.Invoke(this, EventArgs.Empty);
         }
         finally { _gate.Release(); }
@@ -343,11 +385,17 @@ public sealed class ClipboardHistoryService : IDisposable
             var normalized = ClipboardCategoryRules.ValidateNew(
                 newName, _state.Categories.Where((_, i) => i != index));
             var original = _state.Categories[index];
+            var affected = _state.Items.Where(i =>
+                string.Equals(i.Category, original, StringComparison.OrdinalIgnoreCase)).ToArray();
             _state.Categories[index] = normalized;
-            foreach (var item in _state.Items.Where(i =>
-                string.Equals(i.Category, original, StringComparison.OrdinalIgnoreCase)))
-                item.Category = normalized;
-            await _store.SaveAsync(_state);
+            foreach (var item in affected) item.Category = normalized;
+            try { await _store.SaveAsync(_state); }
+            catch
+            {
+                _state.Categories[index] = original;
+                foreach (var item in affected) item.Category = original;
+                throw;
+            }
             Changed?.Invoke(this, EventArgs.Empty);
         }
         finally { _gate.Release(); }
@@ -359,14 +407,22 @@ public sealed class ClipboardHistoryService : IDisposable
         try
         {
             EnsureCategoryEditable();
-            var removed = _state.Categories.RemoveAll(x =>
+            var index = _state.Categories.FindIndex(x =>
                 x.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (removed == 0) return;
+            if (index < 0) return;
+            var original = _state.Categories[index];
+            var affected = _state.Items.Where(i =>
+                string.Equals(i.Category, original, StringComparison.OrdinalIgnoreCase)).ToArray();
+            _state.Categories.RemoveAt(index);
             // Removing a group never removes the copied content.
-            foreach (var item in _state.Items.Where(i =>
-                string.Equals(i.Category, name, StringComparison.OrdinalIgnoreCase)))
-                item.Category = string.Empty;
-            await _store.SaveAsync(_state);
+            foreach (var item in affected) item.Category = string.Empty;
+            try { await _store.SaveAsync(_state); }
+            catch
+            {
+                _state.Categories.Insert(index, original);
+                foreach (var item in affected) item.Category = original;
+                throw;
+            }
             Changed?.Invoke(this, EventArgs.Empty);
         }
         finally { _gate.Release(); }
