@@ -15,6 +15,7 @@ public partial class MainWindow
     private bool _refreshingClipboardCategories;
     private IntPtr _clipboardPasteTarget;
     private bool _clipboardPasteInProgress;
+    private CancellationTokenSource? _clipboardBatchCancellation;
 
     private void InitializeClipboard()
     {
@@ -251,6 +252,14 @@ public partial class MainWindow
 
     private void OpenClipboardQuickWindow(IntPtr? capturedExternalTarget = null)
     {
+        // Pressing the popup shortcut again is a deliberate stop command.
+        // Do not steal focus from the target while cancelling an active batch.
+        if (_clipboardBatchCancellation is { IsCancellationRequested: false })
+        {
+            _clipboardBatchCancellation.Cancel();
+            StatusText.Text = "Cancelando sequência de prints após a última colagem enviada.";
+            return;
+        }
         if (_clipboardQuickWindow is { IsVisible: true })
         {
             _clipboardQuickWindow.Hide();
@@ -271,6 +280,7 @@ public partial class MainWindow
             _clipboardHistory,
             item => _ = UseClipboardQuickItemAsync(item, copyOnly: false),
             item => _ = UseClipboardQuickItemAsync(item, copyOnly: true),
+            images => _ = UseClipboardQuickImagesAsync(images),
             () =>
             {
                 ShowFromTray();
@@ -288,6 +298,79 @@ public partial class MainWindow
             AppDiagnosticLog.Write("clipboard.popup.failed",
                 ("exceptionType", error.GetType().Name),
                 ("hresult", $"0x{error.HResult:X8}"));
+        }
+    }
+
+    private async Task UseClipboardQuickImagesAsync(IReadOnlyList<ClipboardHistoryItem> images)
+    {
+        if (_clipboardPasteInProgress || images.Count < 2) return;
+        var target = _clipboardPasteTarget;
+        _clipboardPasteTarget = IntPtr.Zero;
+        if (!ClipboardPasteService.IsExternalTarget(target))
+        {
+            StatusText.Text = "Abra Alt + V a partir do aplicativo que receberá os prints. Nenhuma imagem foi colada.";
+            return;
+        }
+
+        _clipboardPasteInProgress = true;
+        using var cancellation = new CancellationTokenSource();
+        _clipboardBatchCancellation = cancellation;
+        try
+        {
+            // No Enter, no mouse click, no submission: only Ctrl+V per image.
+            var result = await ClipboardSequentialPasteService.RunAsync(
+                images,
+                index => index == 0
+                    ? ClipboardPasteService.IsExternalTarget(target)
+                    : ClipboardPasteService.IsForegroundTarget(target),
+                item => _clipboardHistory.CopyToClipboard(item),
+                token => ClipboardPasteService.TryPasteAsync(target, token,
+                    restoreFocus: false),
+                async token =>
+                {
+                    // Keep a predictable one-second gap, watching Esc for a
+                    // cancel request without altering the external app's UI.
+                    for (var ticks = 0; ticks < 20; ticks++)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (ClipboardPasteService.IsEscapeHeld())
+                            throw new OperationCanceledException("Cancelado com Esc.");
+                        await Task.Delay(50, token);
+                    }
+                },
+                cancellation.Token,
+                (done, total) => StatusText.Text =
+                    $"Colagem de prints: {done}/{total}. Alt + V novamente ou Esc para cancelar.");
+
+            StatusText.Text = result.Reason switch
+            {
+                ClipboardSequentialPasteService.StopReason.Completed =>
+                    $"{result.Pasted} prints enviados em sequência. Nenhuma mensagem foi enviada.",
+                ClipboardSequentialPasteService.StopReason.Cancelled =>
+                    $"Sequência interrompida: {result.Pasted}/{result.Total} prints enviados.",
+                ClipboardSequentialPasteService.StopReason.TargetChanged =>
+                    $"O aplicativo perdeu o foco. Paramos após {result.Pasted}/{result.Total} prints.",
+                ClipboardSequentialPasteService.StopReason.CopyFailed =>
+                    $"Não foi possível carregar outro print. {result.Pasted}/{result.Total} enviados.",
+                ClipboardSequentialPasteService.StopReason.PasteFailed =>
+                    $"Colagem bloqueada pelo aplicativo. {result.Pasted}/{result.Total} enviados.",
+                _ => "Não foi possível iniciar a colagem múltipla. Nenhuma mensagem foi enviada."
+            };
+            if (result.Reason != ClipboardSequentialPasteService.StopReason.Completed)
+                AppDiagnosticLog.Write("clipboard.paste.fallback",
+                    ("reason", "batch_" + result.Reason),
+                    ("pasted", result.Pasted.ToString()));
+        }
+        catch (Exception error)
+        {
+            StatusText.Text = "Colagem múltipla interrompida. Verifique os prints no aplicativo de destino.";
+            AppDiagnosticLog.Write("clipboard.paste.fallback",
+                ("reason", "batch_" + error.GetType().Name));
+        }
+        finally
+        {
+            _clipboardBatchCancellation = null;
+            _clipboardPasteInProgress = false;
         }
     }
 
