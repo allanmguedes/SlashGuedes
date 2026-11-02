@@ -390,7 +390,7 @@ public sealed class ClipboardQuickWindow : Window
         _moveButton = new Button { Content = "Mover", Margin = new Thickness(0, 0, 8, 0) };
         _moveButton.Click += async (_, _) =>
         {
-            var ids = _organizeMode ? _selectedOrganizeIds.ToArray()
+            string[] ids = _organizeMode ? _selectedOrganizeIds.ToArray()
                 : _list.SelectedItem is ClipboardHistoryItem current ? [current.Id] : [];
             if (ids.Length == 0) return;
             var target = (_moveToCategory.SelectedItem as CategoryTarget)?.Name ?? string.Empty;
@@ -606,6 +606,77 @@ public sealed class ClipboardQuickWindow : Window
         _enable.Visibility = Visibility.Visible;
     }
 
+    private void BeginCategoryEdit(bool rename)
+    {
+        var filter = _categoryFilter.SelectedItem as CategoryFilter;
+        if (rename && (filter is null || filter.All || filter.Name.Length == 0)) return;
+        _editingCategory = rename ? filter!.Name : null;
+        _categoryNameBox.Text = _editingCategory ?? string.Empty;
+        _categoryEditor.Visibility = Visibility.Visible;
+        _categoryNameBox.Focus();
+        _categoryNameBox.SelectAll();
+    }
+
+    private void CancelCategoryEdit()
+    {
+        _categoryEditor.Visibility = Visibility.Collapsed;
+        _categoryNameBox.Clear();
+        _editingCategory = null;
+    }
+
+    private async Task SaveCategoryEditAsync()
+    {
+        if (_categoryEditor.Visibility != Visibility.Visible) return;
+        var name = _categoryNameBox.Text.Trim();
+        try
+        {
+            if (_editingCategory is { } original)
+                await _history.RenameCategoryAsync(original, name);
+            else
+                await _history.AddCategoryAsync(name);
+            CancelCategoryEdit();
+            Refresh();
+            SelectCategoryFilter(name);
+        }
+        catch (Exception error)
+        {
+            MessageBox.Show(this, "Não foi possível salvar a categoria: " + error.Message,
+                "SlashGuedes", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private async Task DeleteCurrentCategoryAsync()
+    {
+        if (_categoryFilter.SelectedItem is not CategoryFilter filter ||
+            filter.All || filter.Name.Length == 0) return;
+        if (MessageBox.Show(this,
+            $"Excluir a categoria \"{filter.Name}\"? As cópias serão mantidas sem categoria.",
+            "SlashGuedes", MessageBoxButton.YesNo, MessageBoxImage.Question,
+            MessageBoxResult.No) != MessageBoxResult.Yes) return;
+        try
+        {
+            await _history.DeleteCategoryAsync(filter.Name);
+            CancelCategoryEdit();
+            Refresh();
+            SelectCategoryFilter(string.Empty);
+        }
+        catch (Exception error)
+        {
+            MessageBox.Show(this, "Não foi possível excluir a categoria: " + error.Message,
+                "SlashGuedes", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void SelectCategoryFilter(string name)
+    {
+        if (_categoryFilter.Items.OfType<CategoryFilter>().FirstOrDefault(option =>
+            !option.All && option.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) is { } filter)
+        {
+            _categoryFilter.SelectedItem = filter;
+            Refresh();
+        }
+    }
+
     // The grid reserves fixed columns for ☆ / ◇ so long text cannot hide them.
     private FrameworkElement BuildCardRow(ClipboardHistoryItem item)
     {
@@ -759,11 +830,21 @@ public sealed class ClipboardQuickWindow : Window
 
     private void OnListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!_multiSelectMode || _restoringMultiSelection)
+        if (_restoringMultiSelection) return;
+        if (_organizeMode)
         {
-            var canEdit = !_multiSelectMode && _list.SelectedItem is ClipboardHistoryItem;
-            _moveButton.IsEnabled = canEdit;
-            _deleteButton.IsEnabled = canEdit;
+            foreach (var item in e.RemovedItems.OfType<ClipboardHistoryItem>())
+                _selectedOrganizeIds.Remove(item.Id);
+            foreach (var item in e.AddedItems.OfType<ClipboardHistoryItem>())
+                _selectedOrganizeIds.Add(item.Id);
+            UpdateMultiControls();
+            RefreshVisibleCardMarkers(_list);
+            return;
+        }
+        if (!_multiSelectMode)
+        {
+            _moveButton.IsEnabled = _list.SelectedItem is ClipboardHistoryItem;
+            _deleteButton.IsEnabled = _list.SelectedItem is ClipboardHistoryItem;
             return;
         }
         // WPF SelectionMode.Multiple makes plain clicks toggle selection.
@@ -809,6 +890,7 @@ public sealed class ClipboardQuickWindow : Window
 
     private void SetMultiSelectMode(bool active)
     {
+        if (active && _organizeMode) SetOrganizeMode(false);
         _restoringMultiSelection = true;
         try
         {
@@ -834,20 +916,54 @@ public sealed class ClipboardQuickWindow : Window
         Refresh();
     }
 
+    private void SetOrganizeMode(bool active)
+    {
+        if (active && _multiSelectMode) SetMultiSelectMode(false);
+        _restoringMultiSelection = true;
+        try
+        {
+            _selectedOrganizeIds.Clear();
+            if (active)
+            {
+                _list.SelectionMode = SelectionMode.Multiple;
+                _list.SelectedItems.Clear();
+            }
+            else
+            {
+                _list.SelectedItems.Clear();
+                _list.SelectionMode = SelectionMode.Single;
+                _list.SelectedItem = null;
+            }
+            _organizeMode = active;
+        }
+        finally { _restoringMultiSelection = false; }
+        Refresh();
+    }
+
     private void UpdateMultiControls()
     {
         _multiButton.Content = _multiSelectMode ? "Cancelar seleção" : "Selecionar vários prints";
+        _organizeButton.Content = _organizeMode
+            ? $"Cancelar organização ({_selectedOrganizeIds.Count})" : "Selecionar cópias";
         _pasteManyButton.Visibility = _multiSelectMode ? Visibility.Visible : Visibility.Collapsed;
         _pasteManyButton.IsEnabled = _multiSelectMode && _orderedImageIds.Count >= 2;
         _pasteManyButton.Content = _orderedImageIds.Count >= 2
             ? $"Colar {_orderedImageIds.Count} prints" : "Colar prints em sequência";
-        _multiHint.Visibility = _multiSelectMode ? Visibility.Visible : Visibility.Collapsed;
-        if (_multiSelectMode)
+        _multiHint.Visibility = _multiSelectMode || _organizeMode
+            ? Visibility.Visible : Visibility.Collapsed;
+        if (_organizeMode)
+            _multiHint.Text = _selectedOrganizeIds.Count == 0
+                ? "Clique nas cópias (textos ou prints) para selecionar. Depois escolha a categoria e toque em Mover."
+                : $"{_selectedOrganizeIds.Count} cópia(s) selecionada(s). Mover não cola nem envia mensagens.";
+        else if (_multiSelectMode)
             _multiHint.Text = _orderedImageIds.Count == 0
                 ? "Clique nos prints na ordem desejada (mínimo 2, máximo 15)."
                 : $"{_orderedImageIds.Count} selecionado(s) na ordem dos cliques · Esc durante a colagem cancela o restante. Nenhuma mensagem será enviada.";
-        _moveButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
-        _deleteButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
+        _moveButton.IsEnabled = !_multiSelectMode &&
+            (_organizeMode ? _selectedOrganizeIds.Count > 0 : _list.SelectedItem is ClipboardHistoryItem);
+        _deleteButton.IsEnabled = !_multiSelectMode && !_organizeMode &&
+            _list.SelectedItem is ClipboardHistoryItem;
+        _moveToCategory.IsEnabled = !_multiSelectMode;
     }
 
     private void PasteSelectedImages()
@@ -862,11 +978,15 @@ public sealed class ClipboardQuickWindow : Window
     }
 
     internal bool MultiSelectionEnabled => _multiSelectMode;
+    internal bool OrganizeSelectionEnabled => _organizeMode;
     internal void EnableMultiSelectionForSmoke() => SetMultiSelectMode(true);
     internal void CancelMultiSelectionForSmoke() => SetMultiSelectMode(false);
+    internal void EnableOrganizeSelectionForSmoke() => SetOrganizeMode(true);
+    internal void CancelOrganizeSelectionForSmoke() => SetOrganizeMode(false);
 
     private void SelectCurrent(bool copyOnly = false)
     {
+        if (_organizeMode) return; // Organizing must NEVER paste.
         if (_multiSelectMode) { PasteSelectedImages(); return; }
         if (_list.SelectedItem is not ClipboardHistoryItem item) return;
         Hide();
