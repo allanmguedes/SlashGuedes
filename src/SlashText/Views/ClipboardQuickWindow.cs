@@ -17,6 +17,13 @@ public sealed class ClipboardQuickWindow : Window
     private readonly ClipboardHistoryService _history;
     private readonly Action<ClipboardHistoryItem> _choose;
     private readonly Action<ClipboardHistoryItem> _copyOnly;
+    private readonly Action<IReadOnlyList<ClipboardHistoryItem>> _pasteMany;
+    private readonly List<string> _orderedImageIds = [];
+    private bool _multiSelectMode;
+    private bool _restoringMultiSelection;
+    private readonly Button _multiButton;
+    private readonly Button _pasteManyButton;
+    private readonly TextBlock _multiHint;
     private readonly Action _manage;
     private readonly TextBox _search;
     // WPF text editing stays on the real TextBox; this independent TextBlock
@@ -40,11 +47,13 @@ public sealed class ClipboardQuickWindow : Window
 
     public ClipboardQuickWindow(ClipboardHistoryService history,
         Action<ClipboardHistoryItem> choose, Action<ClipboardHistoryItem> copyOnly,
+        Action<IReadOnlyList<ClipboardHistoryItem>> pasteMany,
         Action manage, Action enable)
     {
         _history = history;
         _choose = choose;
         _copyOnly = copyOnly;
+        _pasteMany = pasteMany;
         _manage = manage;
         Width = 560;
         Height = 630;
@@ -128,7 +137,12 @@ public sealed class ClipboardQuickWindow : Window
         _search.PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.Down && _list is { } list) { list.Focus(); if (list.Items.Count > 0) list.SelectedIndex = 0; e.Handled = true; }
-            if (e.Key == Key.Enter) { SelectCurrent(); e.Handled = true; }
+            if (e.Key == Key.Enter)
+            {
+                if (_multiSelectMode) PasteSelectedImages();
+                else SelectCurrent();
+                e.Handled = true;
+            }
         };
         var filterRow = new Grid();
         filterRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -177,7 +191,8 @@ public sealed class ClipboardQuickWindow : Window
         _list.MouseDoubleClick += (_, e) =>
         {
             // A double-click on a star or pin should not paste into another app.
-            if (!IsInsideButton(e.OriginalSource as DependencyObject)) SelectCurrent();
+            if (!_multiSelectMode && !IsInsideButton(e.OriginalSource as DependencyObject))
+                SelectCurrent();
         };
         _list.PreviewKeyDown += (_, e) =>
         {
@@ -225,6 +240,33 @@ public sealed class ClipboardQuickWindow : Window
         _enable.Click += (_, _) => { enable(); Refresh(); };
         actions.Children.Add(_enable);
         footer.Children.Add(actions);
+
+        // An explicit mode prevents accidental multi-paste when the user
+        // simply wants to select/copy a single text item.
+        var multiActions = new WrapPanel { Margin = new Thickness(0, 9, 0, 0) };
+        _multiButton = new Button
+        {
+            Content = "Selecionar vários prints", Margin = new Thickness(0, 0, 8, 0),
+            ToolTip = "Escolha os prints pela ordem em que devem ser colados."
+        };
+        _multiButton.Click += (_, _) => SetMultiSelectMode(!_multiSelectMode);
+        multiActions.Children.Add(_multiButton);
+        _pasteManyButton = new Button
+        {
+            Content = "Colar prints em sequência", IsEnabled = false,
+            ToolTip = "Cola cada imagem separada no programa anterior, sem pressionar Enter."
+        };
+        _pasteManyButton.Click += (_, _) => PasteSelectedImages();
+        multiActions.Children.Add(_pasteManyButton);
+        footer.Children.Add(multiActions);
+        _multiHint = new TextBlock
+        {
+            Margin = new Thickness(0, 5, 0, 0),
+            TextWrapping = TextWrapping.Wrap, FontSize = 11,
+            Visibility = Visibility.Collapsed
+        };
+        _multiHint.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
+        footer.Children.Add(_multiHint);
 
         var categoriesRow = new DockPanel { Margin = new Thickness(0, 9, 0, 0) };
         var categoryLabel = new TextBlock
@@ -301,12 +343,7 @@ public sealed class ClipboardQuickWindow : Window
         footer.Children.Add(clean);
         Grid.SetRow(footer, 3);
         grid.Children.Add(footer);
-        _list.SelectionChanged += (_, _) =>
-        {
-            var canEdit = _list.SelectedItem is ClipboardHistoryItem;
-            _moveButton.IsEnabled = canEdit;
-            _deleteButton.IsEnabled = canEdit;
-        };
+        _list.SelectionChanged += OnListSelectionChanged;
 
         // All footer buttons and cards share the same palette; don't apply
         // AuxiliaryWindowTheme.Apply(), which would Close rather than Hide on Esc.
@@ -408,6 +445,7 @@ public sealed class ClipboardQuickWindow : Window
         var filterCategory = _categoryFilter.SelectedItem as string ?? "Todas as categorias";
         var query = _search.Text.Trim();
         var selectedId = (_list.SelectedItem as ClipboardHistoryItem)?.Id;
+        _orderedImageIds.RemoveAll(id => !_history.Items.Any(i => i.Id == id && i.Kind == "image"));
         var candidates = _history.Items
             .Where(i => (filterCategory == "Todas as categorias" ||
                          i.Category.Equals(filterCategory, StringComparison.OrdinalIgnoreCase)) &&
@@ -419,11 +457,24 @@ public sealed class ClipboardQuickWindow : Window
             .Take(70)
             .ToArray();
         // Virtualized data binding avoids eagerly decoding every offscreen card.
-        _list.ItemsSource = candidates;
-        _emptyMessage.Visibility = _list.Items.Count == 0
-            ? Visibility.Visible : Visibility.Collapsed;
-        _list.SelectedItem = candidates.FirstOrDefault(item => item.Id == selectedId)
-            ?? candidates.FirstOrDefault();
+        _restoringMultiSelection = true;
+        try
+        {
+            _list.ItemsSource = candidates;
+            _emptyMessage.Visibility = _list.Items.Count == 0
+                ? Visibility.Visible : Visibility.Collapsed;
+            if (_multiSelectMode)
+            {
+                _list.SelectedItems.Clear();
+                foreach (var item in candidates.Where(i => _orderedImageIds.Contains(i.Id)))
+                    _list.SelectedItems.Add(item);
+            }
+            else
+                _list.SelectedItem = candidates.FirstOrDefault(item => item.Id == selectedId)
+                    ?? candidates.FirstOrDefault();
+        }
+        finally { _restoringMultiSelection = false; }
+        UpdateMultiControls();
         var protectedCount = _history.Items.Count(i => i.IsFavorite || i.IsPinned);
         var recentCount = _history.Items.Count - protectedCount;
         _hint.Text = !_history.Enabled ? "Histórico pausado · itens salvos permanecem disponíveis."
@@ -431,8 +482,8 @@ public sealed class ClipboardQuickWindow : Window
             : $"{recentCount}/{_history.MaxEntries} recentes · {protectedCount} favoritos ou fixados protegidos";
         _subtitle.Text = _history.Shortcut.Replace("+", " + ") +
                          " · Enter: colar · ☆: favorito · ◇: fixar · Esc: fechar";
-        _moveButton.IsEnabled = _list.SelectedItem is not null;
-        _deleteButton.IsEnabled = _list.SelectedItem is not null;
+        _moveButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
+        _deleteButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
         _enable.Content = _history.Enabled ? "Pausar histórico" : "Ativar histórico";
         _enable.Visibility = Visibility.Visible;
     }
@@ -441,6 +492,24 @@ public sealed class ClipboardQuickWindow : Window
     private FrameworkElement BuildCardRow(ClipboardHistoryItem item)
     {
         var row = new Grid { Margin = new Thickness(2, 4, 2, 4) };
+        var extraColumn = _multiSelectMode ? 1 : 0;
+        if (_multiSelectMode)
+        {
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(35) });
+            var ordinal = _orderedImageIds.IndexOf(item.Id) + 1;
+            var marker = new TextBlock
+            {
+                Text = item.Kind != "image" ? "—" : ordinal > 0 ? ordinal.ToString() : "□",
+                FontWeight = FontWeights.Bold, FontSize = 16,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                ToolTip = item.Kind == "image"
+                    ? "Clique para adicionar este print à sequência."
+                    : "Seleção múltipla disponível apenas para imagens."
+            };
+            marker.SetResourceReference(TextBlock.ForegroundProperty, "Lab.accent-text");
+            row.Children.Add(marker);
+        }
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -453,11 +522,11 @@ public sealed class ClipboardQuickWindow : Window
             Margin = new Thickness(4, 0, 2, 0),
             Padding = new Thickness(4, 1, 4, 1)
         };
-        Grid.SetColumn(star, 2);
+        Grid.SetColumn(star, 2 + extraColumn);
         star.Click += async (_, e) =>
         {
             e.Handled = true;
-            _list.SelectedItem = item;
+            if (!_multiSelectMode) _list.SelectedItem = item;
             star.IsEnabled = false;
             try { await _history.ChangeAsync(item, favorite: !item.IsFavorite); }
             catch (Exception) { /* Item remains unchanged on failures. */ }
@@ -473,11 +542,11 @@ public sealed class ClipboardQuickWindow : Window
             Margin = new Thickness(1, 0, 2, 0),
             Padding = new Thickness(3, 1, 3, 1)
         };
-        Grid.SetColumn(pin, 3);
+        Grid.SetColumn(pin, 3 + extraColumn);
         pin.Click += async (_, e) =>
         {
             e.Handled = true;
-            _list.SelectedItem = item;
+            if (!_multiSelectMode) _list.SelectedItem = item;
             pin.IsEnabled = false;
             try { await _history.ChangeAsync(item, pinned: !item.IsPinned); }
             catch (Exception) { /* Item remains unchanged on failures. */ }
@@ -492,7 +561,7 @@ public sealed class ClipboardQuickWindow : Window
                 Source = bitmap, Width = 90, Height = 62,
                 Stretch = Stretch.UniformToFill, Margin = new Thickness(3, 0, 8, 0)
             };
-            Grid.SetColumn(image, 0);
+            Grid.SetColumn(image, extraColumn);
             row.Children.Add(image);
         }
         var text = new StackPanel
@@ -519,7 +588,7 @@ public sealed class ClipboardQuickWindow : Window
         };
         note.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
         text.Children.Add(note);
-        Grid.SetColumn(text, 1);
+        Grid.SetColumn(text, 1 + extraColumn);
         row.Children.Add(text);
         return row;
     }
@@ -549,6 +618,8 @@ public sealed class ClipboardQuickWindow : Window
             set => SetValue(OwnerProperty, value);
         }
 
+        internal void RefreshMultiMarker() => UpdateContent();
+
         public ClipboardCardView()
         {
             CornerRadius = new CornerRadius(10);
@@ -567,8 +638,103 @@ public sealed class ClipboardQuickWindow : Window
         }
     }
 
+    private void OnListSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_multiSelectMode || _restoringMultiSelection)
+        {
+            var canEdit = !_multiSelectMode && _list.SelectedItem is ClipboardHistoryItem;
+            _moveButton.IsEnabled = canEdit;
+            _deleteButton.IsEnabled = canEdit;
+            return;
+        }
+        // WPF SelectionMode.Multiple makes plain clicks toggle selection.
+        // Preserve selection order independently of list sort/filter order.
+        foreach (var item in e.RemovedItems.OfType<ClipboardHistoryItem>())
+            _orderedImageIds.Remove(item.Id);
+        foreach (var item in e.AddedItems.OfType<ClipboardHistoryItem>())
+        {
+            if (item.Kind == "image")
+            {
+                if (!_orderedImageIds.Contains(item.Id) &&
+                    _orderedImageIds.Count < ClipboardSequentialPasteService.MaximumImages)
+                    _orderedImageIds.Add(item.Id);
+                else if (!_orderedImageIds.Contains(item.Id))
+                {
+                    _restoringMultiSelection = true;
+                    _list.SelectedItems.Remove(item);
+                    _restoringMultiSelection = false;
+                }
+            }
+            else
+            {
+                _restoringMultiSelection = true;
+                _list.SelectedItems.Remove(item);
+                _restoringMultiSelection = false;
+            }
+        }
+        UpdateMultiControls();
+        // Only visible card controls are updated; keep virtualized/offscreen
+        // thumbnails unloaded while selection order changes.
+        RefreshVisibleCardMarkers(_list);
+    }
+
+    private static void RefreshVisibleCardMarkers(DependencyObject node)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++)
+        {
+            var child = VisualTreeHelper.GetChild(node, i);
+            if (child is ClipboardCardView card) card.RefreshMultiMarker();
+            else RefreshVisibleCardMarkers(child);
+        }
+    }
+
+    private void SetMultiSelectMode(bool active)
+    {
+        _restoringMultiSelection = true;
+        try
+        {
+            _multiSelectMode = active;
+            _orderedImageIds.Clear();
+            _list.SelectionMode = active ? SelectionMode.Multiple : SelectionMode.Single;
+            _list.SelectedItems.Clear();
+        }
+        finally { _restoringMultiSelection = false; }
+        Refresh();
+    }
+
+    private void UpdateMultiControls()
+    {
+        _multiButton.Content = _multiSelectMode ? "Cancelar seleção" : "Selecionar vários prints";
+        _pasteManyButton.Visibility = _multiSelectMode ? Visibility.Visible : Visibility.Collapsed;
+        _pasteManyButton.IsEnabled = _multiSelectMode && _orderedImageIds.Count >= 2;
+        _pasteManyButton.Content = _orderedImageIds.Count >= 2
+            ? $"Colar {_orderedImageIds.Count} prints" : "Colar prints em sequência";
+        _multiHint.Visibility = _multiSelectMode ? Visibility.Visible : Visibility.Collapsed;
+        if (_multiSelectMode)
+            _multiHint.Text = _orderedImageIds.Count == 0
+                ? "Clique nos prints na ordem desejada (mínimo 2, máximo 15)."
+                : $"{_orderedImageIds.Count} selecionado(s) na ordem dos cliques · Esc durante a colagem cancela o restante. Nenhuma mensagem será enviada.";
+        _moveButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
+        _deleteButton.IsEnabled = !_multiSelectMode && _list.SelectedItem is not null;
+    }
+
+    private void PasteSelectedImages()
+    {
+        if (!_multiSelectMode) return;
+        var selected = ClipboardSequentialPasteService.ResolveSelection(
+            _history.Items, _orderedImageIds);
+        if (selected.Count < 2) return;
+        Hide();
+        SetMultiSelectMode(false);
+        _pasteMany(selected);
+    }
+
+    internal bool MultiSelectionEnabled => _multiSelectMode;
+    internal void EnableMultiSelectionForSmoke() => SetMultiSelectMode(true);
+
     private void SelectCurrent(bool copyOnly = false)
     {
+        if (_multiSelectMode) { PasteSelectedImages(); return; }
         if (_list.SelectedItem is not ClipboardHistoryItem item) return;
         Hide();
         if (copyOnly) _copyOnly(item);
