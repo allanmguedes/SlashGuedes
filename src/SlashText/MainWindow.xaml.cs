@@ -378,6 +378,19 @@ public partial class MainWindow : Window
                                 _clipboardQuickWindow.CancelMultiSelectionForSmoke();
                                 if (_clipboardQuickWindow.MultiSelectionEnabled)
                                     throw new InvalidOperationException("Modo de seleção múltipla não encerrou.");
+                                _clipboardQuickWindow.EnableOrganizeSelectionForSmoke();
+                                if (!_clipboardQuickWindow.OrganizeSelectionEnabled ||
+                                    _clipboardQuickWindow.MultiSelectionEnabled)
+                                    throw new InvalidOperationException("Seleção de organização não iniciou isolada da colagem.");
+                                _clipboardQuickWindow.EnableMultiSelectionForSmoke();
+                                if (_clipboardQuickWindow.OrganizeSelectionEnabled ||
+                                    !_clipboardQuickWindow.MultiSelectionEnabled)
+                                    throw new InvalidOperationException("Organização e colagem não podem ficar ativas juntas.");
+                                _clipboardQuickWindow.CancelMultiSelectionForSmoke();
+                                _clipboardQuickWindow.EnableOrganizeSelectionForSmoke();
+                                _clipboardQuickWindow.CancelOrganizeSelectionForSmoke();
+                                if (_clipboardQuickWindow.OrganizeSelectionEnabled)
+                                    throw new InvalidOperationException("Modo de organização não encerrou.");
                                 AuxiliaryWindowTheme.RequireReadable(ClipboardItemsList, "Main.ClipboardHistoryList");
                                 if (ClipboardItemsList.ItemContainerStyle is not { } clipboardItemStyle)
                                     throw new InvalidOperationException("Os itens do histórico não têm estilo próprio.");
