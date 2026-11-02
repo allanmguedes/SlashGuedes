@@ -34,7 +34,7 @@ public static class ClipboardSequentialPasteService
 
     public static async Task<Outcome> RunAsync(
         IReadOnlyList<ClipboardHistoryItem> images,
-        Func<bool> isTargetForeground,
+        Func<int, bool> isTargetReady,
         Func<ClipboardHistoryItem, bool> restoreClipboard,
         Func<CancellationToken, Task<ClipboardPasteService.Result>> paste,
         Func<CancellationToken, Task> waitBetween,
@@ -51,7 +51,7 @@ public static class ClipboardSequentialPasteService
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 // Never copy the next image if the original target lost focus.
-                if (!isTargetForeground()) return new Outcome(pasted, images.Count, StopReason.TargetChanged);
+                if (!isTargetReady(pasted)) return new Outcome(pasted, images.Count, StopReason.TargetChanged);
                 if (!restoreClipboard(image)) return new Outcome(pasted, images.Count, StopReason.CopyFailed);
                 cancellationToken.ThrowIfCancellationRequested();
                 var status = await paste(cancellationToken);
