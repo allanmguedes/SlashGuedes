@@ -521,8 +521,9 @@ public sealed class ClipboardQuickWindow : Window
         var dpi = VisualTreeHelper.GetDpi(this);
         var sx = dpi.DpiScaleX;
         var sy = dpi.DpiScaleY;
-        var useSavedPosition = _preferredLeft is { } savedX &&
-                               _preferredTop is { } savedY &&
+        var savedX = _preferredLeft ?? 0d;
+        var savedY = _preferredTop ?? 0d;
+        var useSavedPosition = _preferredLeft.HasValue && _preferredTop.HasValue &&
                                double.IsFinite(savedX) && double.IsFinite(savedY);
         // Use the remembered monitor when possible. Screen.FromPoint falls
         // back to the nearest connected monitor if one was unplugged.
