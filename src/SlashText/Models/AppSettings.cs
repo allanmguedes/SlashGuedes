@@ -26,7 +26,12 @@ public sealed class AppSettings
     public CaptureSettings Capture { get; set; } = new();
     public bool ClipboardMonitoringEnabled { get; set; }
     public bool ClipboardAutoPasteEnabled { get; set; } = true;
-    public int ClipboardMaxEntries { get; set; } = 25;
+    public int ClipboardMaxEntries { get; set; } = 50;
+    // One-time upgrade from the former 25-item SlashGuedes default.
+    public bool ClipboardLimit50MigrationApplied { get; set; }
+    // Remember a manually dragged Alt+V location across launches.
+    public double? ClipboardPopupLeft { get; set; }
+    public double? ClipboardPopupTop { get; set; }
     public string ClipboardShortcut { get; set; } = "Win+Shift+V";
 }
 
