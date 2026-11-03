@@ -371,6 +371,7 @@ public partial class MainWindow : Window
                                 }
                                 finally { SearchBox.Text = previousShortcutSearch; }
                                 _clipboardQuickWindow.ValidateSearchTextPresentation();
+                                _clipboardQuickWindow.ValidateMovableHeader();
                                 _clipboardQuickWindow.ValidateContrast();
                                 _clipboardQuickWindow.EnableMultiSelectionForSmoke();
                                 if (!_clipboardQuickWindow.MultiSelectionEnabled)
