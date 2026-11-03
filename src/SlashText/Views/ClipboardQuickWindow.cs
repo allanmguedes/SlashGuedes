@@ -28,6 +28,11 @@ public sealed class ClipboardQuickWindow : Window
     private readonly Button _pasteManyButton;
     private readonly TextBlock _multiHint;
     private readonly Action _manage;
+    private readonly Action<double, double> _onMoved;
+    private readonly StackPanel _dragHeader;
+    private double? _preferredLeft;
+    private double? _preferredTop;
+    private bool _isDraggingPopup;
     private readonly TextBox _search;
     // WPF text editing stays on the real TextBox; this independent TextBlock
     // makes the query legible even on machines where PART_ContentHost paints
@@ -64,13 +69,21 @@ public sealed class ClipboardQuickWindow : Window
     public ClipboardQuickWindow(ClipboardHistoryService history,
         Action<ClipboardHistoryItem> choose, Action<ClipboardHistoryItem> copyOnly,
         Action<IReadOnlyList<ClipboardHistoryItem>> pasteMany,
-        Action manage, Action enable)
+        Action manage, Action enable,
+        double? savedLeft, double? savedTop, Action<double, double> onMoved)
     {
         _history = history;
         _choose = choose;
         _copyOnly = copyOnly;
         _pasteMany = pasteMany;
         _manage = manage;
+        _onMoved = onMoved;
+        if (savedLeft is { } x && savedTop is { } y &&
+            double.IsFinite(x) && double.IsFinite(y))
+        {
+            _preferredLeft = x;
+            _preferredTop = y;
+        }
         Width = 560;
         Height = 630;
         MinWidth = 480;
@@ -101,17 +114,44 @@ public sealed class ClipboardQuickWindow : Window
         root.Child = grid;
         Content = root;
 
-        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 14) };
+        _dragHeader = new StackPanel
+        {
+            Margin = new Thickness(0, 0, 0, 14),
+            Background = Brushes.Transparent,
+            Cursor = Cursors.SizeAll,
+            ToolTip = "Segure e arraste este cabeçalho para mover o Alt+V."
+        };
+        _dragHeader.MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ClickCount != 1 || e.ButtonState != MouseButtonState.Pressed) return;
+            var previousLeft = Left;
+            var previousTop = Top;
+            _isDraggingPopup = true;
+            try { DragMove(); }
+            catch (InvalidOperationException) { /* Mouse was released before drag started. */ }
+            finally
+            {
+                _isDraggingPopup = false;
+                if (IsVisible && (Math.Abs(Left - previousLeft) > 0.5 ||
+                                  Math.Abs(Top - previousTop) > 0.5))
+                {
+                    _preferredLeft = Left;
+                    _preferredTop = Top;
+                    _onMoved(Left, Top);
+                }
+            }
+            e.Handled = true;
+        };
         var title = new TextBlock { Text = "SLASHGUEDES   /   HISTÓRICO", FontSize = 17,
             FontWeight = FontWeights.SemiBold };
         title.SetResourceReference(TextBlock.ForegroundProperty, "Lab.text");
-        header.Children.Add(title);
+        _dragHeader.Children.Add(title);
         _subtitle = new TextBlock { Text = "Enter para colar · Esc para fechar",
             Margin = new Thickness(0, 4, 0, 0), FontSize = 11 };
         _subtitle.SetResourceReference(TextBlock.ForegroundProperty, "Lab.muted");
-        header.Children.Add(_subtitle);
-        Grid.SetRow(header, 0);
-        grid.Children.Add(header);
+        _dragHeader.Children.Add(_subtitle);
+        Grid.SetRow(_dragHeader, 0);
+        grid.Children.Add(_dragHeader);
 
         _search = new TextBox { Height = 38, Margin = new Thickness(0, 0, 0, 12),
             VerticalContentAlignment = VerticalAlignment.Center,
@@ -463,7 +503,12 @@ public sealed class ClipboardQuickWindow : Window
         {
             if (e.Key == Key.Escape) { Hide(); e.Handled = true; }
         };
-        Deactivated += (_, _) => { _searchRefreshTimer.Stop(); Hide(); };
+        Deactivated += (_, _) =>
+        {
+            if (_isDraggingPopup) return;
+            _searchRefreshTimer.Stop();
+            Hide();
+        };
     }
 
     public void Open()
@@ -473,13 +518,31 @@ public sealed class ClipboardQuickWindow : Window
         if (_organizeMode) SetOrganizeMode(false);
         Refresh();
         var cursor = Forms.Control.MousePosition;
-        var screen = Forms.Screen.FromPoint(cursor).WorkingArea;
-        // Adapt popup size to the current monitor's available DIP space.
         var dpi = VisualTreeHelper.GetDpi(this);
-        Width = Math.Min(560, Math.Max(MinWidth, screen.Width / dpi.DpiScaleX - 24));
-        Height = Math.Min(630, Math.Max(MinHeight, screen.Height / dpi.DpiScaleY - 24));
-        Left = Math.Clamp(cursor.X - Width / 2, screen.Left, Math.Max(screen.Left, screen.Right - Width));
-        Top = Math.Clamp(cursor.Y - 28, screen.Top, Math.Max(screen.Top, screen.Bottom - Height));
+        var sx = dpi.DpiScaleX;
+        var sy = dpi.DpiScaleY;
+        var savedX = _preferredLeft ?? 0d;
+        var savedY = _preferredTop ?? 0d;
+        var useSavedPosition = _preferredLeft.HasValue && _preferredTop.HasValue &&
+                               double.IsFinite(savedX) && double.IsFinite(savedY);
+        // Use the remembered monitor when possible. Screen.FromPoint falls
+        // back to the nearest connected monitor if one was unplugged.
+        var anchor = useSavedPosition
+            ? new System.Drawing.Point(
+                (int)Math.Clamp(savedX * sx, int.MinValue + 1d, int.MaxValue - 1d),
+                (int)Math.Clamp(savedY * sy, int.MinValue + 1d, int.MaxValue - 1d))
+            : cursor;
+        var screen = Forms.Screen.FromPoint(anchor).WorkingArea;
+        Width = Math.Min(560, Math.Max(MinWidth, screen.Width / sx - 24));
+        Height = Math.Min(630, Math.Max(MinHeight, screen.Height / sy - 24));
+        var minimumLeft = screen.Left / sx;
+        var minimumTop = screen.Top / sy;
+        var maximumLeft = Math.Max(minimumLeft, screen.Right / sx - Width);
+        var maximumTop = Math.Max(minimumTop, screen.Bottom / sy - Height);
+        Left = Math.Clamp(useSavedPosition ? savedX : cursor.X / sx - Width / 2,
+            minimumLeft, maximumLeft);
+        Top = Math.Clamp(useSavedPosition ? savedY : cursor.Y / sy - 28,
+            minimumTop, maximumTop);
         Show();
         Activate();
         _search.Focus();
@@ -515,6 +578,13 @@ public sealed class ClipboardQuickWindow : Window
                     "O placeholder da pesquisa não foi restaurado.");
         }
         finally { _search.Text = original; }
+    }
+
+    internal void ValidateMovableHeader()
+    {
+        if (_dragHeader.Cursor != Cursors.SizeAll ||
+            _dragHeader.Background != Brushes.Transparent)
+            throw new InvalidOperationException("O Alt+V não possui área de arraste ativa.");
     }
 
     internal void ValidateContrast()

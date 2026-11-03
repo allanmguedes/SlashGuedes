@@ -22,6 +22,23 @@ internal static class ClipboardGuedesChecks
             "favoritos ou fixados não podem ser expurgados");
         Require(!removed.Any(i => i.Text is "Item 35" or "Item 39" or "Item 41"),
             "favoritos antigos permanecem");
+        Require(new AppSettings().ClipboardMaxEntries == 50 &&
+                ClipboardRetentionPolicy.DefaultRecentLimit == 50,
+            "novas instalações devem começar com 50 itens recentes");
+        var legacy = new AppSettings { ClipboardMaxEntries = 25 };
+        Require(ClipboardRetentionPolicy.UpgradeLegacyDefault(legacy) &&
+                legacy.ClipboardMaxEntries == 50 &&
+                legacy.ClipboardLimit50MigrationApplied,
+            "instalações antigas com padrão 25 devem migrar para 50");
+        legacy.ClipboardMaxEntries = 25;
+        Require(!ClipboardRetentionPolicy.UpgradeLegacyDefault(legacy) &&
+                legacy.ClipboardMaxEntries == 25,
+            "escolha explícita de 25 após migração deve ser preservada");
+        var customLimit = new AppSettings { ClipboardMaxEntries = 100 };
+        Require(ClipboardRetentionPolicy.UpgradeLegacyDefault(customLimit) &&
+                customLimit.ClipboardMaxEntries == 100,
+            "limite personalizado existente deve permanecer inalterado");
+
         Require(ClipboardRetentionPolicy.NormalizeLimit(1) == 10,
             "limite mínimo");
         Require(ClipboardRetentionPolicy.NormalizeLimit(9999) == 500,
@@ -135,6 +152,21 @@ internal static class ClipboardGuedesChecks
                 ],
                 Categories = ["Trabalho"]
             });
+            var preferences = new JsonFileStore<AppSettings>(
+                Path.Combine(AppPaths.DataDirectory, "settings.json"));
+            await preferences.SaveAsync(new AppSettings
+            {
+                ClipboardMaxEntries = 50,
+                ClipboardLimit50MigrationApplied = true,
+                ClipboardPopupLeft = 178.5,
+                ClipboardPopupTop = 92.25
+            });
+            var reloadedPreferences = await preferences.LoadAsync();
+            Require(reloadedPreferences.ClipboardMaxEntries == 50 &&
+                    reloadedPreferences.ClipboardLimit50MigrationApplied &&
+                    reloadedPreferences.ClipboardPopupLeft == 178.5 &&
+                    reloadedPreferences.ClipboardPopupTop == 92.25,
+                "limite e posição do Alt+V persistem após reabrir o aplicativo");
             using (var history = new ClipboardHistoryService())
             {
                 await history.LoadAsync(25);

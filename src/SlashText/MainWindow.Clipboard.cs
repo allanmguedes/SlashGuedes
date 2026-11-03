@@ -32,6 +32,22 @@ public partial class MainWindow
 
     private async Task StartClipboardAsync()
     {
+        // Upgrade the former 25-item default exactly once. A later manual choice
+        // of 25 (or an existing custom limit) is respected on subsequent launches.
+        if (AppPaths.IsSlashGuedes && !_settings.ClipboardLimit50MigrationApplied &&
+            !_settingsStore.IsProtected)
+        {
+            var previousLimit = _settings.ClipboardMaxEntries;
+            ClipboardRetentionPolicy.UpgradeLegacyDefault(_settings);
+            try { await _settingsStore.SaveAsync(_settings); }
+            catch (Exception error)
+            {
+                _settings.ClipboardMaxEntries = previousLimit;
+                _settings.ClipboardLimit50MigrationApplied = false;
+                AppDiagnosticLog.Write("clipboard.retention.upgrade_save_failed",
+                    ("exceptionType", error.GetType().Name));
+            }
+        }
         var recentLimit = ClipboardRetentionPolicy.NormalizeLimit(_settings.ClipboardMaxEntries);
         await _clipboardHistory.LoadAsync(recentLimit);
         _clipboardHistory.Attach(this, _settings.ClipboardShortcut, out var hotkeyWarning);
@@ -287,7 +303,9 @@ public partial class MainWindow
                 RefreshClipboardView();
                 ShowView(ClipboardView, ClipboardTabButton);
             },
-            () => ClipboardToggle_OnClick(this, new RoutedEventArgs()));
+            () => ClipboardToggle_OnClick(this, new RoutedEventArgs()),
+            _settings.ClipboardPopupLeft, _settings.ClipboardPopupTop,
+            (left, top) => _ = SaveClipboardPopupPositionAsync(left, top));
         _clipboardQuickWindow.Open();
         StatusText.Text = "Painel rápido aberto. Use Esc para fechar.";
         }
@@ -298,6 +316,24 @@ public partial class MainWindow
             AppDiagnosticLog.Write("clipboard.popup.failed",
                 ("exceptionType", error.GetType().Name),
                 ("hresult", $"0x{error.HResult:X8}"));
+        }
+    }
+
+    private async Task SaveClipboardPopupPositionAsync(double left, double top)
+    {
+        if (!double.IsFinite(left) || !double.IsFinite(top) || _settingsStore.IsProtected)
+            return;
+        var previousLeft = _settings.ClipboardPopupLeft;
+        var previousTop = _settings.ClipboardPopupTop;
+        _settings.ClipboardPopupLeft = left;
+        _settings.ClipboardPopupTop = top;
+        try { await SavePreferencesAsync(); }
+        catch (Exception error)
+        {
+            _settings.ClipboardPopupLeft = previousLeft;
+            _settings.ClipboardPopupTop = previousTop;
+            AppDiagnosticLog.Write("clipboard.popup.position_save_failed",
+                ("exceptionType", error.GetType().Name));
         }
     }
 
