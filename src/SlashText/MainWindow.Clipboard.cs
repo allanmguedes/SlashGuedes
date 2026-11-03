@@ -38,8 +38,7 @@ public partial class MainWindow
             !_settingsStore.IsProtected)
         {
             var previousLimit = _settings.ClipboardMaxEntries;
-            _settings.ClipboardLimit50MigrationApplied = true;
-            if (previousLimit == 25) _settings.ClipboardMaxEntries = 50;
+            ClipboardRetentionPolicy.UpgradeLegacyDefault(_settings);
             try { await _settingsStore.SaveAsync(_settings); }
             catch (Exception error)
             {
