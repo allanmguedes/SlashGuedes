@@ -4,7 +4,7 @@ namespace SlashText.Services;
 
 public static class ClipboardRetentionPolicy
 {
-    public const int DefaultRecentLimit = 25;
+    public const int DefaultRecentLimit = 50;
     public const int MinimumRecentLimit = 10;
     public const int MaximumRecentLimit = 500;
 
