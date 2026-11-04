@@ -84,7 +84,8 @@ internal static class BackupContentValidator
         token.ThrowIfCancellationRequested();
         if (value is null) throw new InvalidDataException();
         if (value is string) return;
-        if (value is float number && !float.IsFinite(number)) throw new InvalidDataException();
+        if (value is float single && !float.IsFinite(single)) throw new InvalidDataException();
+        if (value is double number && !double.IsFinite(number)) throw new InvalidDataException();
         if (value is IDictionary dictionary)
         {
             foreach (DictionaryEntry entry in dictionary) RequireSettingsMembers(entry.Value, token);
@@ -98,7 +99,17 @@ internal static class BackupContentValidator
             // Settings DTOs declare non-null reference members with defaults for absent legacy fields.
             // Explicit null is refused rather than installing a value that crashes later consumers.
             foreach (var property in value.GetType().GetProperties())
-                if (property.CanRead && property.GetIndexParameters().Length == 0) RequireSettingsMembers(property.GetValue(value), token);
+            {
+                if (!property.CanRead || property.GetIndexParameters().Length != 0) continue;
+                var member = property.GetValue(value);
+                // Nullable value types are optional by design. In preview.117,
+                // ClipboardPopupLeft/Top are null until the popup is first moved.
+                // Treating them as malformed made valid settings.json unreadable,
+                // resetting custom capture shortcuts in the running session.
+                if (member is null && Nullable.GetUnderlyingType(property.PropertyType) is not null)
+                    continue;
+                RequireSettingsMembers(member, token);
+            }
         }
     }
 
