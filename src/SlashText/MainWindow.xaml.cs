@@ -2756,18 +2756,23 @@ public partial class MainWindow : Window
             }
             if (result is not null)
             {
-                StatusText.Text = string.IsNullOrWhiteSpace(result.FilePath)
-                    ? UiText.Get("Captura longa copiada")
-                    : UiText.Format($"Captura longa salva: {Path.GetFileName(result.FilePath)}");
+                var historyProtected = _captureService.IsHistoryProtected;
+                StatusText.Text = historyProtected
+                    ? "Captura longa realizada, mas não contabilizada: histórico protegido."
+                    : string.IsNullOrWhiteSpace(result.FilePath)
+                        ? UiText.Get("Captura longa copiada")
+                        : UiText.Format($"Captura longa salva: {Path.GetFileName(result.FilePath)}");
                 AcceptCompletedCapture(result);
                 RefreshCaptureHistory();
                 ShowTrayBalloon(
                     3500,
-                    UiText.Get("Captura longa concluída"),
-                    string.IsNullOrWhiteSpace(result.FilePath)
-                        ? UiText.Get("Imagem copiada para o clipboard.")
-                        : UiText.Get("Clique para abrir a imagem."),
-                    Forms.ToolTipIcon.Info,
+                    historyProtected ? "Captura fora do histórico" : UiText.Get("Captura longa concluída"),
+                    historyProtected
+                        ? "O histórico não registrou o print. Verifique Configurações > Dados protegidos."
+                        : string.IsNullOrWhiteSpace(result.FilePath)
+                            ? UiText.Get("Imagem copiada para o clipboard.")
+                            : UiText.Get("Clique para abrir a imagem."),
+                    historyProtected ? Forms.ToolTipIcon.Warning : Forms.ToolTipIcon.Info,
                     result.FilePath);
             }
 
@@ -2897,19 +2902,24 @@ public partial class MainWindow : Window
 
             if (result is not null)
             {
-                StatusText.Text = string.IsNullOrWhiteSpace(result.FilePath)
-                    ? UiText.Format($"Captura de {type} copiada")
-                    : UiText.Format($"Captura salva: {Path.GetFileName(result.FilePath)}");
+                var historyProtected = _captureService.IsHistoryProtected;
+                StatusText.Text = historyProtected
+                    ? "Captura realizada, mas não contabilizada: histórico protegido. Abra Configurações > Dados protegidos."
+                    : string.IsNullOrWhiteSpace(result.FilePath)
+                        ? UiText.Format($"Captura de {type} copiada")
+                        : UiText.Format($"Captura salva: {Path.GetFileName(result.FilePath)}");
                 if (regionSession is not null) LoadCompletedRegionSession(regionSession);
                 AcceptCompletedCapture(result);
                 RefreshCaptureHistory();
                 ShowTrayBalloon(
                     3500,
-                    UiText.Get("Captura concluída"),
-                    string.IsNullOrWhiteSpace(result.FilePath)
-                        ? UiText.Get("Imagem copiada para o clipboard.")
-                        : UiText.Get("Clique para abrir a imagem."),
-                    Forms.ToolTipIcon.Info,
+                    historyProtected ? "Captura fora do histórico" : UiText.Get("Captura concluída"),
+                    historyProtected
+                        ? "O histórico está protegido e não registrou o print. Verifique Configurações > Dados protegidos."
+                        : string.IsNullOrWhiteSpace(result.FilePath)
+                            ? UiText.Get("Imagem copiada para o clipboard.")
+                            : UiText.Get("Clique para abrir a imagem."),
+                    historyProtected ? Forms.ToolTipIcon.Warning : Forms.ToolTipIcon.Info,
                     result.FilePath);
             }
 
