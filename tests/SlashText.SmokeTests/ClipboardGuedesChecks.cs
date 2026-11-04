@@ -121,6 +121,7 @@ internal static class ClipboardGuedesChecks
             ClipboardCategoryRules.ValidateNew(new string('X', 51), normalized)),
             "categoria com mais de 50 caracteres rejeitada");
         CheckCategoryPersistenceAsync().GetAwaiter().GetResult();
+        CheckCaptureShortcutSettingsCompatibilityAsync().GetAwaiter().GetResult();
 
         Require(!ClipboardPasteService.IsExternalTarget(IntPtr.Zero),
             "não enviar colagem quando não existe uma janela de destino");
@@ -203,6 +204,70 @@ internal static class ClipboardGuedesChecks
             AppPaths.Initialize(originalEnvironment);
             try { if (Directory.Exists(sandbox)) Directory.Delete(sandbox, true); }
             catch (IOException) { /* Isolated fixture is safe to clean later. */ }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    // Regression for preview.117: two new nullable Alt+V position fields
+    // caused valid legacy settings to be rejected and capture shortcuts to
+    // appear reset. Keep both old (absent) and new (explicit null) formats.
+    private static async Task CheckCaptureShortcutSettingsCompatibilityAsync()
+    {
+        var root = Path.Combine(Path.GetTempPath(),
+            "slashguedes-capture-settings-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var path = Path.Combine(root, "settings.json");
+        var store = new JsonFileStore<AppSettings>(path);
+        const string customCapture =
+            "\"capture\":{\"activeMonitorShortcut\":\"Ctrl+Alt+F9\"," +
+            "\"regionShortcut\":\"Ctrl+Alt+F10\"," +
+            "\"windowShortcut\":\"Ctrl+Alt+F11\"," +
+            "\"scrollingShortcut\":\"Ctrl+Alt+WheelDown\"}";
+        try
+        {
+            // Settings created before the popup-position upgrade.
+            var legacy = "{\"theme\":\"Dark\",\"clipboardMaxEntries\":25," + customCapture + "}";
+            await File.WriteAllTextAsync(path, legacy);
+            var loaded = await store.LoadAsync();
+            Require(store.ReadState == StoredReadState.Valid && !store.IsProtected &&
+                    loaded.Capture.ActiveMonitorShortcut == "Ctrl+Alt+F9" &&
+                    loaded.Capture.RegionShortcut == "Ctrl+Alt+F10" &&
+                    loaded.Capture.WindowShortcut == "Ctrl+Alt+F11" &&
+                    loaded.Capture.ScrollingShortcut == "Ctrl+Alt+WheelDown" &&
+                    loaded.Theme == "Dark",
+                "preferências antigas precisam manter os quatro atalhos de captura");
+            Require(await File.ReadAllTextAsync(path) == legacy,
+                "a leitura das preferências antigas não pode reescrevê-las");
+
+            // Settings saved by preview.117 before the user drags Alt+V.
+            var preview117 = "{\"clipboardPopupLeft\":null,\"clipboardPopupTop\":null," +
+                "\"clipboardLimit50MigrationApplied\":true," + customCapture + "}";
+            await File.WriteAllTextAsync(path, preview117);
+            loaded = await store.LoadAsync();
+            Require(store.ReadState == StoredReadState.Valid && !store.IsProtected &&
+                    loaded.ClipboardPopupLeft is null && loaded.ClipboardPopupTop is null &&
+                    loaded.Capture.ActiveMonitorShortcut == "Ctrl+Alt+F9" &&
+                    loaded.Capture.RegionShortcut == "Ctrl+Alt+F10" &&
+                    loaded.Capture.WindowShortcut == "Ctrl+Alt+F11",
+                "posições opcionais nulas não podem bloquear capturas e atalhos");
+            Require(await File.ReadAllTextAsync(path) == preview117,
+                "a leitura do arquivo da preview.117 não pode sobrescrever os atalhos");
+
+            // Re-saving an already-valid profile cannot reset custom capture shortcuts.
+            ClipboardRetentionPolicy.UpgradeLegacyDefault(loaded);
+            await store.SaveAsync(loaded);
+            var again = await store.LoadAsync();
+            Require(store.ReadState == StoredReadState.Valid && !store.IsProtected &&
+                    again.Capture.ActiveMonitorShortcut == "Ctrl+Alt+F9" &&
+                    again.Capture.RegionShortcut == "Ctrl+Alt+F10" &&
+                    again.Capture.WindowShortcut == "Ctrl+Alt+F11" &&
+                    again.Capture.ScrollingShortcut == "Ctrl+Alt+WheelDown",
+                "salvar preferências do histórico não deve mudar atalhos de prints");
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); }
+            catch (IOException) { }
             catch (UnauthorizedAccessException) { }
         }
     }
