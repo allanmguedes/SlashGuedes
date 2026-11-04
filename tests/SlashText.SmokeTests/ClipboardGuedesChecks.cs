@@ -122,6 +122,7 @@ internal static class ClipboardGuedesChecks
             "categoria com mais de 50 caracteres rejeitada");
         CheckCategoryPersistenceAsync().GetAwaiter().GetResult();
         CheckCaptureShortcutSettingsCompatibilityAsync().GetAwaiter().GetResult();
+        CheckCaptureRegistrationAsync().GetAwaiter().GetResult();
 
         Require(!ClipboardPasteService.IsExternalTarget(IntPtr.Zero),
             "não enviar colagem quando não existe uma janela de destino");
@@ -267,6 +268,41 @@ internal static class ClipboardGuedesChecks
         finally
         {
             try { Directory.Delete(root, recursive: true); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+    }
+
+    // A completed screenshot is recorded and survives reloading the same
+    // capture history. Work only with isolated test data, never the user's files.
+    private static async Task CheckCaptureRegistrationAsync()
+    {
+        var previous = AppPaths.Current;
+        var root = Path.Combine(Path.GetTempPath(),
+            "slashguedes-capture-counter-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            AppPaths.Initialize(new AppDataEnvironment(
+                DistributionMode.Portable, root, root, isSlashGuedes: true));
+            Directory.CreateDirectory(AppPaths.DataDirectory);
+            var output = Path.Combine(AppPaths.DataDirectory, "test-print.png");
+            var service = new CaptureService();
+            await service.LoadAsync();
+            Require(service.History.Count == 0 && !service.IsHistoryProtected,
+                "histórico de capturas novo inicia vazio e gravável");
+            using (var bitmap = new System.Drawing.Bitmap(8, 8))
+                await service.SaveEditedImageAsync(bitmap, output, new CaptureSettings());
+            Require(File.Exists(output) && service.History.Count == 1,
+                "a captura salva precisa ser contabilizada no histórico");
+            var reloaded = new CaptureService();
+            await reloaded.LoadAsync();
+            Require(reloaded.History.Count == 1 && !reloaded.IsHistoryProtected,
+                "contador de capturas permanece correto após reiniciar");
+        }
+        finally
+        {
+            AppPaths.Initialize(previous);
+            try { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
         }
